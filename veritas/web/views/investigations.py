@@ -4,7 +4,6 @@ from __future__ import annotations
 import io
 import os
 import json
-import re
 import tempfile
 from pathlib import Path
 
@@ -15,15 +14,43 @@ from veritas.claims import service
 from veritas.core import export
 from veritas.core.case import Case, sha256_file
 from veritas.investigations import dossier as INV
-from veritas.web.common import actor_name, cx, dossier_lists, load_dossier, load_settings, log_access
+from veritas.claims import assignment
+from veritas.web.common import (actor_name, current_user, cx, dossier_lists, has_perm, load_dossier, load_settings,
+                                log_access, send_evidence)
 
 bp = Blueprint("investigations", __name__)
 
 
 @bp.get("/investigaciones")
 def investigations():
+    """Expedientes y auditorías. Un perito ve aquí solo los encargos de su empresa ("Mis encargos")."""
     exps, audits = dossier_lists()
-    return render_template("investigations/list.html", expedientes=exps, audits=audits, empresa=load_settings().get("empresa", ""), active="inv")
+    u = current_user()
+    perito = bool(u and u["role"] == "perito")
+    exps.sort(key=lambda x: (bool(x["delivered"]), x["plazo"] or "9999"))
+    return render_template("investigations/list.html", expedientes=exps, audits=audits, perito=perito,
+                           empresa=load_settings().get("empresa", ""), active="inv", today=_today_iso())
+
+
+def _today_iso() -> str:
+    from datetime import date
+    return date.today().isoformat()
+
+
+def _open_dossier(cid):
+    """Expediente que se puede modificar: visible para el usuario y sin informe final entregado."""
+    case = load_dossier(cid, "investigacion")
+    if INV.delivered(case):
+        flash("El informe final ya se entregó: el expediente está cerrado.", "bad")
+        return None
+    return case
+
+
+def _claim_of(dossier_case):
+    """Siniestro del que se derivó el expediente (o None si el expediente se creó a mano)."""
+    sid = INV.load(dossier_case)["data"].get("siniestro_id")
+    claim = Case(cx.workdir / sid) if sid else None
+    return claim if claim and claim.meta_path.exists() else None
 
 
 @bp.post("/investigaciones/config")
@@ -76,16 +103,86 @@ def inv_new():
 def inv_view(cid):
     log_access("ver_expediente", cid)
     from veritas.investigations import audit as RA
-    a = INV.analyze(load_dossier(cid, "investigacion"))
+    case = load_dossier(cid, "investigacion")
+    a = INV.analyze(case)
     review = INV.review(a)
+    claim = _claim_of(case)
+    antecedentes = []
+    if claim is not None:
+        snap = service.snapshot(claim)
+        antecedentes = ([{"digest": p["digest"], "title": p["title"], "kind": "foto"} for p in snap["photos"]] +
+                        [{"digest": d["digest"], "title": d["title"], "kind": "documento"} for d in snap["docs"]])
     return render_template("investigations/dossier.html", a=a, d=a["data"], cid=cid, review=review, states=INV.STATES,
                            recommendations=INV.RECOMMENDATIONS, matrix=RA.topic_matrix(a["interviews"]), active="inv",
-                           answered=sum(1 for r in a["responses"].values() if r.get("estado")))
+                           answered=sum(1 for r in a["responses"].values() if r.get("estado")),
+                           delivered=INV.delivered(case), antecedentes=antecedentes, claim=claim, today=_today_iso())
+
+
+@bp.post("/investigacion/<cid>/entrevista")
+def inv_interview(cid):
+    case = _open_dossier(cid)
+    if case is not None:
+        f = request.form
+        try:
+            INV.add_interview(case, f.get("declarante", ""), f.get("rol", ""), f.get("fecha", ""), f.get("texto", ""),
+                              actor_name() or "perito")
+            flash("Entrevista agregada. Veritas la comparó con las demás declaraciones y los documentos.", "ok")
+        except ValueError as ex:
+            flash(str(ex), "bad")
+    return redirect(url_for("investigations.inv_view", cid=cid))
+
+
+@bp.post("/investigacion/<cid>/documentos")
+def inv_document(cid):
+    case = _open_dossier(cid)
+    if case is not None:
+        n = 0
+        with tempfile.TemporaryDirectory() as td:
+            for fs in request.files.getlist("docs"):
+                if fs and fs.filename:
+                    dest = Path(td) / (secure_filename(fs.filename) or "documento")
+                    fs.save(dest)
+                    INV.add_document(case, dest, actor_name() or "perito")
+                    n += 1
+        flash(f"{n} documento(s) agregado(s)." if n else "Elija al menos un documento.", "ok" if n else "bad")
+    return redirect(url_for("investigations.inv_view", cid=cid))
+
+
+@bp.post("/investigacion/<cid>/entregar")
+def inv_deliver(cid):
+    """El perito entrega su informe final: el expediente se cierra y el analista lo ve en el caso."""
+    case = _open_dossier(cid)
+    if case is None:
+        return redirect(url_for("investigations.inv_view", cid=cid))
+    data = INV.load(case)["data"]
+    actor = actor_name() or "perito"
+    try:
+        INV.deliver(case, actor, data.get("empresa") or load_settings().get("empresa", ""))
+    except ValueError as ex:
+        flash(str(ex), "bad")
+        return redirect(url_for("investigations.inv_view", cid=cid))
+    claim = _claim_of(case)
+    if claim is not None:
+        assignment.mark_delivered(claim, actor, cid)
+    log_access("entregar_informe", cid)
+    flash("Informe final entregado. El analista del caso ya puede verlo.", "ok")
+    return redirect(url_for("investigations.inv_view", cid=cid))
+
+
+@bp.get("/investigacion/<cid>/antecedente/<digest>")
+def inv_file(cid, digest):
+    """Fotos y documentos del siniestro, para que el perito los vea sin acceso al resto del caso."""
+    claim = _claim_of(load_dossier(cid, "investigacion"))
+    if claim is None or digest in claim.excluded():
+        abort(404)
+    return send_evidence(claim, digest, bool(request.args.get("mini")))
 
 
 @bp.post("/investigacion/<cid>/alerta/<int:idx>")
 def inv_response(cid, idx):
-    case = load_dossier(cid, "investigacion")
+    case = _open_dossier(cid)
+    if case is None:
+        return redirect(url_for("investigations.inv_view", cid=cid))
     INV.save_response(case, idx, request.form.get("estado", ""), request.form.get("hallazgo", "").strip(),
                       sorted(set(request.form.getlist("evidencia"))), actor_name())
     flash(f"Respuesta a la alerta {idx} guardada.", "ok")
@@ -94,7 +191,9 @@ def inv_response(cid, idx):
 
 @bp.post("/investigacion/<cid>/conclusion")
 def inv_conclusion(cid):
-    case = load_dossier(cid, "investigacion")
+    case = _open_dossier(cid)
+    if case is None:
+        return redirect(url_for("investigations.inv_view", cid=cid))
     INV.save_conclusion(case, request.form.get("recomendacion", ""), request.form.get("texto", "").strip(), actor_name())
     flash("Conclusión guardada.", "ok")
     return redirect(url_for("investigations.inv_view", cid=cid))
@@ -103,14 +202,18 @@ def inv_conclusion(cid):
 @bp.get("/investigacion/<cid>/informe")
 def inv_report(cid):
     case = load_dossier(cid, "investigacion")
-    return INV.build_report(case, INV.analyze(case), load_settings().get("empresa", ""))
+    if (case.root / "informe_final.html").exists():
+        return send_file(case.root / "informe_final.html", mimetype="text/html")
+    data = INV.load(case)["data"]
+    return INV.build_report(case, INV.analyze(case), data.get("empresa") or load_settings().get("empresa", ""))
 
 
 @bp.get("/investigacion/<cid>/exportar")
 def inv_export(cid):
-    case = Case(cx.workdir / cid)
-    if not re.fullmatch(r"[\w\-.]+", cid) or not case.meta_path.exists() or case.kind not in ("investigacion", "auditoria"):
+    kind = "auditoria" if cid.startswith("AUD-") else "investigacion"
+    if kind == "auditoria" and not has_perm("investigaciones"):
         abort(404)
+    case = load_dossier(cid, kind)
     if case.kind == "investigacion":
         html_doc = INV.build_report(case, INV.analyze(case), load_settings().get("empresa", ""))
     else:

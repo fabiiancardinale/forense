@@ -1,5 +1,5 @@
 {% extends "base.html" %}{% block title %}Usuarios{% endblock %}
-{% block heading %}<h1>Usuarios y accesos</h1><p class="sub">Quién puede entrar, con qué rol, y el registro de cada ingreso y de cada caso abierto.</p>{% endblock %}
+{% block heading %}<h1>Usuarios y empresas</h1><p class="sub">Quién puede entrar y con qué rol, las empresas de peritaje, y el registro de cada ingreso y de cada caso abierto.</p>{% endblock %}
 {% block body %}
 {% if not users %}<div class="flash info">Todavía no hay usuarios: Veritas está abierto para cualquiera en este equipo. Cree el primer usuario
 (administrador). Desde ese momento se pedirá usuario y contraseña para todo.</div>{% endif %}
@@ -7,11 +7,18 @@
 <div style="display:grid;gap:20px">
 <section class="panel"><div class="ph"><h2>Usuarios</h2><span class="hint">{{ users|length }}</span></div>
 {% if users %}<div class="scroll"><table><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Estado</th><th></th></tr>
-{% for u, d in users.items() %}<tr><td class="mono">{{ u }}</td><td>{{ d.name }}</td><td>{{ roles[d.role] }}</td>
+{% for u, d in users.items() %}<tr><td class="mono">{{ u }}</td><td>{{ d.name }}</td><td>{{ roles.get(d.role, d.role) }}{% if d.empresa %}<div class="hint">{{ d.empresa }}</div>{% endif %}</td>
 <td>{% if d.active is not sameas false %}<span class="badge ok">Activo</span>{% else %}<span class="badge none">Desactivado</span>{% endif %}</td>
 <td style="text-align:right"><form method="post" action="{{ url_for('admin.user_toggle', username=u) }}" style="display:inline">
 <button class="btn sm ghost" type="submit">{{ 'Desactivar' if d.active is not sameas false else 'Activar' }}</button></form></td></tr>{% endfor %}</table></div>
 {% else %}<div class="pb"><p class="hint" style="margin:0">Sin usuarios.</p></div>{% endif %}</section>
+<section class="panel" id="empresas"><div class="ph"><h2>Empresas de peritaje</h2><span class="hint">A ellas se derivan las entrevistas. Cree después un usuario «Perito externo» para cada perito.</span></div><div class="pb">
+{% if firms %}<table class="mini" style="margin-bottom:12px"><tr><th>Empresa</th><th>RUT</th><th>Contacto</th><th class="num">Peritos</th></tr>
+{% for f in firms %}<tr><td><b>{{ f.nombre }}</b></td><td>{{ f.rut or '—' }}</td><td>{{ f.contacto or '—' }}</td>
+<td class="num">{{ users.values()|selectattr('role', 'equalto', 'perito')|selectattr('empresa', 'equalto', f.nombre)|list|length }}</td></tr>{% endfor %}</table>{% endif %}
+<form class="toolbar" method="post" action="{{ url_for('admin.firm_add') }}"><input name="nombre" placeholder="Nombre de la empresa" required style="flex:2;min-width:180px" aria-label="Nombre de la empresa">
+<input name="rut" placeholder="RUT" style="flex:1;min-width:110px" aria-label="RUT"><input name="contacto" placeholder="Correo o teléfono" style="flex:1;min-width:150px" aria-label="Contacto">
+<button class="btn" type="submit">Agregar empresa</button></form></div></section>
 <section class="panel"><div class="ph"><h2>Registro de accesos</h2><span class="hint">últimos {{ log|length }}</span></div>
 {% if log %}<div class="scroll" style="max-height:520px"><table><tr><th>Hora (UTC)</th><th>Usuario</th><th>Acción</th><th>Caso o detalle</th><th>Equipo</th></tr>
 {% for e in log %}<tr><td class="nowrap">{{ e.ts[:16]|replace('T',' ') }}</td><td>{{ e.user }}</td><td>{{ actions.get(e.action, e.action) }}</td>
@@ -23,9 +30,11 @@
 <div><label for="nu">Usuario</label><input id="nu" name="usuario" required placeholder="ana.perez" autocomplete="off"></div>
 <div><label for="nn">Nombre completo</label><input id="nn" name="nombre" required></div>
 <div><label for="nr">Rol</label><select id="nr" name="rol" style="width:100%">{% for k, v in roles.items() %}<option value="{{ k }}" {{ 'selected' if not users and k == 'administrador' }}>{{ v }}</option>{% endfor %}</select></div>
+<div id="empbox"><label for="ne">Empresa (solo peritos)</label><select id="ne" name="empresa" style="width:100%"><option value="">—</option>{% for f in firms %}<option>{{ f.nombre }}</option>{% endfor %}</select></div>
 <div><label for="np">Contraseña</label><input id="np" name="clave" type="password" autocomplete="new-password" {{ 'required' if not users }}>
 <span class="hint">Mínimo 10 caracteres. Para actualizar un usuario existente sin cambiar su clave, déjela en blanco.</span></div>
 <button class="btn pri" type="submit">Guardar usuario</button></form>
+<script>(()=>{const r=document.getElementById('nr'),b=document.getElementById('empbox');const f=()=>{b.hidden=r.value!=='perito'};r.onchange=f;f()})();</script>
 <dl class="kv" style="margin-top:16px;font-size:12.5px">{% for k, v in role_help.items() %}<dt>{{ roles[k] }}</dt><dd style="font-weight:400">{{ v }}</dd>{% endfor %}</dl>
 </div></section></aside></div>
 {% endblock %}

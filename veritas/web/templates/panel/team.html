@@ -1,0 +1,52 @@
+{% extends "base.html" %}{% block title %}Equipo{% endblock %}
+{% block heading %}<h1>Equipo</h1><p class="sub">Cómo van los casos de cada analista y de cada empresa de peritaje, al {{ today }}.</p>{% endblock %}
+{% block actions %}<a class="btn" href="{{ url_for('claims.index') }}">Cola completa</a>{% endblock %}
+{% block body %}
+<div class="tiles">
+<div class="tile accent-blue"><div class="lbl">Casos abiertos</div><b>{{ k.open }}</b><span>{{ k.unassigned }} sin analista asignado</span></div>
+<div class="tile accent-red"><div class="lbl">Atrasados</div><b>{{ k.late }}</b><span>sin movimiento, enlace vencido o peritaje fuera de plazo</span></div>
+<div class="tile accent-grn"><div class="lbl">Fraudes confirmados</div><b>{{ k.fraud }}</b><span>${{ money(k.fraud_amount) }} reclamados</span></div>
+</div>
+
+<section class="panel"><div class="ph"><h2>Carga por analista</h2><span class="hint">Haga clic en un nombre para ver sus casos</span></div>
+{% if rows %}<div class="scroll"><table class="teamtbl"><tr><th>Analista</th><th>Casos abiertos</th><th class="num">Riesgo alto</th>
+<th class="num">Esperando asegurado</th><th class="num">En peritaje</th><th class="num">Atrasados</th><th class="num">Cerrados</th>
+<th class="num">Fraudes</th><th class="num">Monto en fraudes</th></tr>
+{% for r in rows %}<tr><td><a href="{{ url_for('claims.index', analista=r.user or '-') }}"><b>{{ r.name }}</b></a></td>
+<td><div style="display:flex;align-items:center;gap:8px"><b style="min-width:22px">{{ r.open }}</b><div class="bar" style="flex:1"><i style="width:{{ 100 * r.open / top }}%"></i></div></div></td>
+<td class="num">{{ r.high or '—' }}</td><td class="num">{{ r.waiting or '—' }}</td><td class="num">{{ r.derived or '—' }}</td>
+<td class="num">{% if r.late %}<span class="late">{{ r.late }}</span>{% else %}—{% endif %}</td>
+<td class="num">{{ r.closed or '—' }}</td><td class="num">{{ r.fraud or '—' }}</td>
+<td class="num nowrap">{{ '$' ~ money(r.fraud_amount) if r.fraud_amount else '—' }}</td></tr>{% endfor %}
+</table></div>{% else %}<div class="pb"><p class="hint" style="margin:0">Aún no hay casos.</p></div>{% endif %}</section>
+
+<div class="cols2" style="margin-top:20px">
+<section class="panel"><div class="ph"><h2>Casos atrasados</h2><span class="hint">Abiertos con más de {{ stale }} días sin movimiento, enlace vencido o peritaje fuera de plazo</span></div>
+{% if late %}<table class="mini">{% for c in late %}<tr class="row" onclick="location.href='{{ url_for('claims.case_view', cid=c.id) }}'">
+<td class="nowrap"><a href="{{ url_for('claims.case_view', cid=c.id) }}"><b>{{ c.numero }}</b></a><div class="hint">{{ c.owner_name }}</div></td>
+<td>{% for r in c.late %}<div class="hint" style="color:var(--red)">{{ r }}</div>{% endfor %}</td>
+<td><span class="badge {{ c.level }}">{{ level_text.get(c.level, c.rec) }}</span></td></tr>{% endfor %}</table>
+{% else %}<div class="pb"><p class="hint" style="margin:0">No hay casos atrasados.</p></div>{% endif %}</section>
+
+<section class="panel"><div class="ph"><h2>Empresas de peritaje</h2></div>
+{% if firms %}<table class="mini"><tr><th>Empresa</th><th class="num">Derivados</th><th class="num">Entregados</th><th class="num">Atrasados</th><th class="num">Días promedio</th><th class="num">Fraudes</th></tr>
+{% for f in firms %}<tr><td><b>{{ f.empresa }}</b></td><td class="num">{{ f.derived }}</td><td class="num">{{ f.delivered }}</td>
+<td class="num">{% if f.late %}<span class="late">{{ f.late }}</span>{% else %}—{% endif %}</td><td class="num">{{ f.avg_days if f.avg_days is not none else '—' }}</td>
+<td class="num">{{ f.fraud or '—' }}{% if f.fraud_amount %}<div class="hint">${{ money(f.fraud_amount) }}</div>{% endif %}</td></tr>{% endfor %}</table>
+{% else %}<div class="pb"><p class="hint" style="margin:0">Aún no se ha derivado ningún caso a peritaje.</p></div>{% endif %}</section>
+</div>
+
+<section class="panel" style="margin-top:20px" id="reasignar"><div class="ph"><h2>Reasignar casos</h2><span class="hint">Por vacaciones, licencia o sobrecarga. Queda registrado en cada caso.</span></div><div class="pb">
+{% if open_cases %}<form method="post" action="{{ url_for('panel.reassign') }}">
+<div class="toolbar" style="margin-bottom:12px">
+{% if team %}<select name="analista" required aria-label="Nuevo analista"><option value="">Pasar a…</option>{% for a in team %}<option value="{{ a.username }}">{{ a.name }}</option>{% endfor %}</select>
+{% else %}<input name="analista_nombre" placeholder="Nombre del analista" required aria-label="Nombre del analista">{% endif %}
+<input name="motivo" placeholder="Motivo" style="flex:1;min-width:180px" aria-label="Motivo">
+<button class="btn pri" type="submit">Reasignar los marcados</button></div>
+<div class="scroll" style="max-height:420px"><table class="mini"><tr><th><input type="checkbox" aria-label="Marcar todos" onclick="document.querySelectorAll('input[name=cid]').forEach(x=>x.checked=this.checked)"></th><th>N° siniestro</th><th>Analista</th><th>Asegurado</th><th>Estado</th><th class="num">Días sin movimiento</th></tr>
+{% for c in open_cases %}<tr><td><input type="checkbox" name="cid" value="{{ c.id }}" aria-label="Marcar {{ c.numero }}"></td>
+<td><a href="{{ url_for('claims.case_view', cid=c.id) }}">{{ c.numero }}</a></td><td>{{ c.owner_name }}</td><td>{{ c.asegurado }}</td>
+<td><span class="badge {{ c.level }}">{{ level_text.get(c.level, c.rec) }}</span></td><td class="num">{{ c.idle }}</td></tr>{% endfor %}</table></div>
+</form>{% else %}<p class="hint" style="margin:0">No hay casos abiertos.</p>{% endif %}
+</div></section>
+{% endblock %}

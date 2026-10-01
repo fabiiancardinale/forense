@@ -9,7 +9,7 @@ from flask import Flask, abort, current_app, g, redirect, render_template, reque
 from veritas.accounts import users as U
 from veritas.claims import service
 from veritas.core.case import Case
-from veritas.web.common import LEVEL_TEXT, cx
+from veritas.web.common import LEVEL_TEXT, claim_visible, cx
 from veritas.web.icons import icon
 from veritas.web.views import admin, auth, claims, investigations, panel, portal, portfolio, tools
 
@@ -98,9 +98,11 @@ def nav_context() -> dict:
         return {}
     n = 0
     for d in cx.workdir.iterdir():
-        if (d / "case.json").exists():
-            last = service.last_analysis(Case(d)) or {}
-            if last.get("level") == "bad":
-                dec = service.current_decision(Case(d))
-                n += not dec or dec["subject"] == "en_revision"
+        if not (d / "case.json").exists():
+            continue
+        case = Case(d)
+        if case.kind != "claim" or (service.last_analysis(case) or {}).get("level") != "bad" or not claim_visible(case):
+            continue
+        dec = service.current_decision(case)
+        n += not dec or dec["subject"] == "en_revision"
     return {"nav_pending": n}

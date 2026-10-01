@@ -1,0 +1,6 @@
+<div class="toolbar" style="margin-bottom:12px">
+<form method="post" action="{{ url_for('claims.verify', cid=c.id) }}"><button class="btn" type="submit">{{ icon('shield', 15) }}Verificar integridad</button></form>
+<a class="btn" href="{{ url_for('claims.report', cid=c.id) }}#linea" target="informe">{{ icon('timeline', 15) }}Línea de tiempo</a>
+<a class="btn" href="{{ url_for('claims.report', cid=c.id) }}" target="_blank">{{ icon('external', 15) }}Abrir en otra pestaña</a>
+<span class="hint">Analizado {{ c.analyzed }}. El paquete verificable permite a un tercero comprobar que nada se alteró.</span></div>
+<iframe class="report" name="informe" src="{{ url_for('claims.report', cid=c.id) }}" title="Informe del siniestro"></iframe>

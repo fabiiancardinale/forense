@@ -6,6 +6,7 @@ import json
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
 
 from veritas.accounts import users as U
+from veritas.claims import assignment
 from veritas.web.common import cx, load_settings, log_access
 
 bp = Blueprint("admin", __name__)
@@ -16,7 +17,7 @@ def users_view():
     first = not cx.store.enabled()
     if request.method == "POST":
         err = cx.store.add(request.form.get("usuario", ""), request.form.get("nombre", ""), request.form.get("rol", ""),
-                        request.form.get("clave", ""))
+                           request.form.get("clave", ""), request.form.get("empresa", ""))
         if err:
             flash(err, "bad")
         else:
@@ -30,8 +31,20 @@ def users_view():
                 log_access("usuario", f"guardó {uname}")
                 flash(f"Usuario {uname} guardado.", "ok")
         return redirect(url_for("admin.users_view"))
-    return render_template("admin/users.html", users=cx.store.all(), log=cx.store.entries(), roles=U.ROLES, role_help=U.ROLE_HELP,
-                           actions=U.ACTION_LABELS, active="usuarios")
+    return render_template("admin/users.html", users=cx.store.all(), log=cx.store.entries(), roles=U.ROLES,
+                           role_help=U.ROLE_HELP, actions=U.ACTION_LABELS, firms=assignment.firms(cx.workdir),
+                           active="usuarios")
+
+
+@bp.post("/usuarios/empresas")
+def firm_add():
+    """Empresas de peritaje a las que los analistas pueden derivar casos."""
+    err = assignment.save_firm(cx.workdir, request.form.get("nombre", ""), request.form.get("rut", ""),
+                               request.form.get("contacto", ""))
+    flash(err or "Empresa guardada.", "bad" if err else "ok")
+    if not err:
+        log_access("usuario", f"guardó la empresa {request.form.get('nombre', '').strip()}")
+    return redirect(url_for("admin.users_view") + "#empresas")
 
 
 @bp.post("/usuarios/<username>/estado")

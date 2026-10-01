@@ -1,0 +1,51 @@
+<div class="layout-side">
+<div style="display:grid;gap:16px">
+{% if todo %}<section class="panel"><div class="ph"><h2>Qué falta</h2></div><div class="pb"><ul class="todo">
+{% for lvl, text, t in todo %}<li class="{{ lvl }}"><a href="{{ url_for('claims.case_view', cid=c.id, tab=t if t != 'resumen' else None) }}">{{ text }}</a></li>{% endfor %}
+</ul></div></section>{% endif %}
+
+<section class="panel"><div class="ph"><h2>Alertas principales</h2>
+<span class="r hint">{{ n_findings }} en total · <a href="{{ url_for('claims.case_view', cid=c.id, tab='informe') }}">ver informe completo</a></span></div>
+<div class="pb">{% if top %}<div class="flist">
+{% for f in top %}<article class="fcard {{ f.severity }}">
+{% if f.ref %}<a class="fpic" href="{{ url_for('claims.evidence_file', cid=c.id, digest=f.ref.digest) }}" target="_blank" rel="noopener" title="Abrir {{ f.ref.title }}">
+<img src="{{ url_for('claims.evidence_file', cid=c.id, digest=f.ref.digest, mini=1) }}" alt="{{ f.ref.title }}" loading="lazy"><small>{{ f.ref.title }}</small></a>{% endif %}
+<div><div class="ft"><span class="sev {{ f.severity }}">{{ f.severity|capitalize }}</span> <b>{{ f.title }}</b></div>
+<p>{{ f.summary }}</p>
+{% if f.guide %}<details class="why"><summary>Por qué importa y qué hacer</summary><p><b>Por qué importa:</b> {{ f.guide[0] }}</p><p><b>Qué hacer:</b> {{ f.guide[1] }}</p></details>{% endif %}
+</div></article>{% endfor %}</div>
+{% else %}<p class="muted" style="margin:0">Veritas no encontró alertas en este caso.</p>{% endif %}</div></section>
+</div>
+
+<aside>
+<section class="panel" id="decision"><div class="ph"><h2>Decisión</h2></div><div class="pb">
+{% if can('editar_siniestros') %}<form method="post" action="{{ url_for('claims.decide', cid=c.id) }}" style="display:grid;gap:10px">
+<select name="decision" required aria-label="Decisión">{% for k, v in decisions.items() %}<option value="{{ k }}" {{ 'selected' if c.decision == k }}>{{ v }}</option>{% endfor %}</select>
+{% if current_user %}<input type="hidden" name="actor" value="{{ current_user.name }}">{% else %}<input name="actor" placeholder="Su nombre" required aria-label="Su nombre">{% endif %}
+<input name="nota" placeholder="Nota (opcional)" aria-label="Nota">
+<button class="btn pri" type="submit">Registrar decisión</button></form>{% endif %}
+{% if history %}<div class="hist">{% for h in history|reverse %}
+<div class="hint"><b class="dec {{ h.subject }}">{{ h.data.label }}</b> · {{ h.actor }} · {{ h.ts[:16]|replace('T',' ') }} UTC{% if h.data.note %}<br>{{ h.data.note }}{% endif %}</div>{% endfor %}</div>
+{% else %}<p class="hint" style="margin:10px 0 0">Cada decisión queda en la cadena de custodia con su autor.</p>{% endif %}
+</div></section>
+
+<section class="panel"><div class="ph"><h2>Datos del siniestro</h2></div><div class="pb">
+<dl class="kv">
+<dt>Asegurado</dt><dd>{{ decl.asegurado or '—' }}</dd><dt>RUT</dt><dd>{{ decl.rut or '—' }}</dd>
+<dt>Póliza</dt><dd>{{ decl.poliza or '—' }}</dd><dt>Patente</dt><dd>{{ decl.patente or '—' }}</dd>
+<dt>Lugar</dt><dd>{{ decl.lugar or '—' }}</dd><dt>Teléfono</dt><dd>{{ decl.telefono or '—' }}</dd>
+<dt>Correo</dt><dd>{{ decl.email or '—' }}</dd><dt>Taller</dt><dd>{{ decl.taller or '—' }}</dd>
+</dl>
+{% if decl.descripcion %}<p class="hint" style="margin:10px 0 0">{{ decl.descripcion }}</p>{% endif %}
+</div></section>
+
+<section class="panel"><div class="ph"><h2>Analista responsable</h2></div><div class="pb">
+<p style="margin:0 0 8px"><b>{{ c.owner_name }}</b></p>
+{% if can_reassign %}<form method="post" action="{{ url_for('panel.reassign') }}" style="display:grid;gap:8px">
+<input type="hidden" name="cid" value="{{ c.id }}"><input type="hidden" name="volver" value="caso">
+{% if team %}<select name="analista" required aria-label="Nuevo analista"><option value="">Reasignar a…</option>{% for a in team %}<option value="{{ a.username }}" {{ 'selected' if a.username == c.owner }}>{{ a.name }}</option>{% endfor %}</select>
+{% else %}<input name="analista_nombre" placeholder="Nombre del analista" required aria-label="Nombre del analista">{% endif %}
+<input name="motivo" placeholder="Motivo (vacaciones, carga…)" aria-label="Motivo">
+<button class="btn sm" type="submit">Reasignar</button></form>{% endif %}
+</div></section>
+</aside></div>

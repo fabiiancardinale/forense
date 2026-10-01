@@ -23,7 +23,7 @@ def login():
             session.clear()
             session["user"] = u["username"]
             cx.store.log(u["username"], "ingreso", "", request.remote_addr or "")
-            return redirect(nxt or url_for("panel.dashboard" if U.can(u["role"], "ver_siniestros") else "investigations"))
+            return redirect(nxt or url_for("panel.dashboard" if U.can(u["role"], "ver_siniestros") else "investigations.investigations"))
         cx.store.log(request.form.get("usuario", "")[:40], "ingreso_fallido", "", request.remote_addr or "")
         return render_template("auth/login.html", error=err, usuario=request.form.get("usuario"), next=nxt), 401
     return render_template("auth/login.html", error=None, next=nxt)

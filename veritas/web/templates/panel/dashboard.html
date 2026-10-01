@@ -1,13 +1,14 @@
 {% extends "base.html" %}{% block title %}Panel{% endblock %}
-{% block heading %}<h1>Panel</h1><p class="sub">Resumen al {{ today }} · {{ cases|length }} siniestro(s) en la cartera</p>{% endblock %}
-{% block actions %}<a class="btn" href="{{ url_for('tools.photo_check') }}">{{ icon('camera', 15) }}Revisar foto</a>
-<a class="btn pri" href="{{ url_for('claims.new_claim') }}">{{ icon('plus', 15, '#fff') }}Nuevo siniestro</a>{% endblock %}
+{% block heading %}<h1>{{ 'Mis casos' if mine else 'Panel' }}</h1><p class="sub">Resumen al {{ today }} · {{ cases|length }} siniestro(s) {{ 'a su cargo' if mine else 'en la cartera' }}</p>{% endblock %}
+{% block actions %}{% if can('equipo') %}<a class="btn" href="{{ url_for('panel.team') }}">{{ icon('users', 15) }}Equipo</a>{% endif %}<a class="btn" href="{{ url_for('tools.photo_check') }}">{{ icon('camera', 15) }}Revisar foto</a>
+{% if can('editar_siniestros') %}<a class="btn pri" href="{{ url_for('claims.new_claim') }}">{{ icon('plus', 15, '#fff') }}Nuevo siniestro</a>{% endif %}{% endblock %}
 {% block body %}
 {% if cases %}
 <div class="tiles">
 <div class="tile accent-red"><div class="lbl">{{ icon('alert', 14) }}Derivados sin decisión</div><b>{{ k.pend_bad }}</b><span>de {{ counts.bad }} derivados a investigación</span></div>
 <div class="tile accent-amb"><div class="lbl">{{ icon('clock', 14) }}Revisión manual pendiente</div><b>{{ k.pend_warn }}</b><span>de {{ counts.warn }} con alertas medias</span></div>
-<div class="tile accent-blue"><div class="lbl">{{ icon('network', 14) }}Redes detectadas</div><b>{{ k.rings }}</b><span>{{ k.involved }} siniestros involucrados · {{ k.pairs }} par(es)</span></div>
+{% if can('redes') and not mine %}<div class="tile accent-blue"><div class="lbl">{{ icon('network', 14) }}Redes detectadas</div><b>{{ k.rings }}</b><span>{{ k.involved }} siniestros involucrados · {{ k.pairs }} par(es)</span></div>
+{% else %}<div class="tile accent-blue"><div class="lbl">{{ icon('folder', 14) }}En peritaje</div><b>{{ expert|length }}</b><span>{{ expert|selectattr('derivation.state', 'equalto', 'atrasado')|list|length }} fuera de plazo</span></div>{% endif %}
 <div class="tile accent-grn"><div class="lbl">{{ icon('money', 14) }}Monto en revisión</div><b>${{ money(k.monto_pend) }}</b><span>reclamado en derivados sin decisión</span></div>
 </div>
 <div class="layout-side">
@@ -23,13 +24,18 @@
 <td><span class="badge {{ c.level }}">{{ level_text.get(c.level, c.rec) }}</span></td></tr>{% endfor %}</table></div>
 {% else %}<div class="pb"><p class="hint" style="margin:0">No hay casos con alertas pendientes de decisión.</p></div>{% endif %}
 </section>
+{% if expert %}<section class="panel"><div class="ph"><h2>En peritaje</h2><span class="hint">Casos derivados a una empresa de peritaje, por plazo</span></div>
+<table class="mini">{% for c in expert %}<tr class="row" onclick="location.href='{{ url_for('claims.case_view', cid=c.id, tab='peritaje') }}'">
+<td class="nowrap"><a href="{{ url_for('claims.case_view', cid=c.id, tab='peritaje') }}"><b>{{ c.numero }}</b></a><div class="hint">{{ c.owner_name }}</div></td>
+<td>{{ c.derivation.empresa }}</td><td class="hint nowrap">plazo {{ c.derivation.plazo or '—' }}</td>
+<td style="text-align:right"><span class="st {{ c.derivation.state }}">{{ c.derivation.state_label }}</span></td></tr>{% endfor %}</table></section>{% endif %}
 {% if waiting %}<section class="panel"><div class="ph"><h2>Esperando al asegurado</h2><span class="hint">Enlaces enviados que aún no se completan</span></div>
-<table class="mini">{% for w in waiting %}<tr class="row" onclick="location.href='{{ url_for('claims.case_view', cid=w.id) }}#portal'">
+<table class="mini">{% for w in waiting %}<tr class="row" onclick="location.href='{{ url_for('claims.case_view', cid=w.id, tab='asegurado') }}'">
 <td class="nowrap"><a href="{{ url_for('claims.case_view', cid=w.id) }}"><b>{{ w.numero }}</b></a><div class="hint">{{ w.asegurado }}</div></td>
 <td style="min-width:140px"><div class="dist" style="margin:0"><i class="d-ok" style="width:{{ w.pct }}%"></i></div><span class="hint">{{ w.done }} de {{ w.total }} pasos</span></td>
 <td class="hint nowrap">enviado hace {{ w.days }} día(s)</td>
 <td style="text-align:right">{% if w.expired %}<span class="badge bad">Vencido</span>{% elif w.opened %}<span class="badge warn">Abierto</span>{% else %}<span class="badge none">Sin abrir</span>{% endif %}</td></tr>{% endfor %}</table></section>{% endif %}
-<section class="panel"><div class="ph"><h2>Investigaciones</h2><span class="hint">Expedientes en curso e informes auditados</span>
+{% if can('peritaje') %}<section class="panel"><div class="ph"><h2>Investigaciones</h2><span class="hint">Expedientes en curso e informes auditados</span>
 <a class="r btn sm" href="{{ url_for('investigations.investigations') }}">Ver todo</a></div>
 {% if expedientes or audits %}<table class="mini">
 {% for x in expedientes[:4] %}<tr class="row" onclick="location.href='{{ url_for('investigations.inv_view', cid=x.id) }}'"><td class="nowrap">{{ icon('folder', 15) }} <a href="{{ url_for('investigations.inv_view', cid=x.id) }}"><b>{{ x.numero }}</b></a></td>
@@ -39,7 +45,7 @@
 <td class="hint">Auditoría · {{ x.ts }}</td>
 <td style="text-align:right"><span class="badge {{ 'bad' if x.alta else ('warn' if x.media else 'ok') }}">{{ x.alta }} alta · {{ x.media }} media</span></td></tr>{% endfor %}
 </table>{% else %}<div class="pb"><p class="hint" style="margin:0">Aún no hay expedientes ni auditorías. <a href="{{ url_for('investigations.investigations') }}">Auditar un informe</a></p></div>{% endif %}
-</section>
+</section>{% endif %}
 </div>
 <aside>
 <section class="panel"><div class="ph"><h2>Estado de la cartera</h2></div><div class="pb">
@@ -49,16 +55,17 @@
 <span><i style="background:var(--grn)"></i>Sin alertas {{ counts.ok }}</span>{% if counts.none %}<span><i style="background:#b8c2cf"></i>Sin analizar {{ counts.none }}</span>{% endif %}</div>
 <dl class="kv" style="margin-top:14px"><dt>Fraudes confirmados</dt><dd>{{ k.fraude }}</dd><dt>Legítimos</dt><dd>{{ k.legitimo }}</dd><dt>Sin decisión</dt><dd>{{ k.sin_decision }}</dd></dl>
 </div></section>
-<section class="panel"><div class="ph"><h2>Redes principales</h2><a class="r btn sm" href="{{ url_for('portfolio.networks') }}">Ver redes</a></div>
+{% if can('redes') %}<section class="panel"><div class="ph"><h2>Redes principales</h2><a class="r btn sm" href="{{ url_for('portfolio.networks') }}">Ver redes</a></div>
 {% if comps %}<table class="mini">{% for c in comps[:3] %}<tr class="row" onclick="location.href='{{ url_for('portfolio.networks') }}'">
 <td><b>{{ 'Red' if c.members|length >= 3 else 'Par' }} de {{ c.members|length }}</b><div class="hint">{{ c.reasons[0][0] if c.reasons else '' }}</div></td>
 <td class="num nowrap"><b>${{ money(c.monto) }}</b></td></tr>{% endfor %}</table>
 {% else %}<div class="pb"><p class="hint" style="margin:0">No se encontraron redes. Importe el historial para buscarlas en toda la cartera.</p></div>{% endif %}
-</section>
+</section>{% endif %}
 <section class="panel"><div class="ph"><h2>Accesos rápidos</h2></div><div class="pb"><div class="quick">
-<a href="{{ url_for('claims.new_claim') }}">{{ icon('plus', 16) }}Nuevo siniestro</a><a href="{{ url_for('tools.photo_check') }}">{{ icon('camera', 16) }}Revisar foto</a>
-<a href="{{ url_for('investigations.investigations') }}">{{ icon('filecheck', 16) }}Auditar informe</a><a href="{{ url_for('investigations.inv_new') }}">{{ icon('folder', 16) }}Nuevo expediente</a>
-<a href="{{ url_for('portfolio.import_view') }}">{{ icon('upload', 16) }}Importar historial</a><a href="{{ url_for('portfolio.metrics_view') }}">{{ icon('chart', 16) }}Métricas</a>
+{% if can('editar_siniestros') %}<a href="{{ url_for('claims.new_claim') }}">{{ icon('plus', 16) }}Nuevo siniestro</a>{% endif %}<a href="{{ url_for('tools.photo_check') }}">{{ icon('camera', 16) }}Revisar foto</a>
+{% if can('investigaciones') %}<a href="{{ url_for('investigations.investigations') }}">{{ icon('filecheck', 16) }}Auditar informe</a><a href="{{ url_for('investigations.inv_new') }}">{{ icon('folder', 16) }}Nuevo expediente</a>{% endif %}
+{% if can('cartera') %}<a href="{{ url_for('portfolio.import_view') }}">{{ icon('upload', 16) }}Importar historial</a><a href="{{ url_for('portfolio.metrics_view') }}">{{ icon('chart', 16) }}Métricas</a>{% endif %}
+{% if can('equipo') %}<a href="{{ url_for('panel.team') }}">{{ icon('users', 16) }}Equipo</a>{% endif %}
 </div></div></section>
 </aside></div>
 {% else %}

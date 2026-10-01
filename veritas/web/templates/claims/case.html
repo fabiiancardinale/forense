@@ -1,93 +1,21 @@
 {% extends "base.html" %}{% block title %}{{ c.numero }}{% endblock %}
 {% block crumbs %}<a href="{{ url_for('claims.index') }}">Cola de trabajo</a> / {{ c.numero }}{% endblock %}
 {% block heading %}<h1>Siniestro {{ c.numero }} <span class="badge {{ c.level }}">{{ c.rec }}</span></h1>
-<p class="sub">{{ c.patente }} · {{ c.asegurado }} · ocurrido {{ c.fecha }} · analizado {{ c.analyzed }}</p>
-<div class="toolbar" style="gap:18px;margin-top:10px;font-size:13px"><span class="muted">Riesgo</span><span class="risk {{ c.level }}" style="--w:{{ c.score if c.score is number else 0 }}%;margin-left:-10px"><i></i>{{ c.score }}</span>
-<span class="muted">Monto</span><b style="margin-left:-10px">{{ '$' ~ money(c.monto) if c.monto else '—' }}</b>
-<span class="muted">Decisión</span><a href="#decision" class="dec {{ c.decision or '' }}" style="margin-left:-10px">{{ c.decision_label or 'Pendiente' }}</a></div>{% endblock %}
+<p class="sub">{{ c.patente }} · {{ c.asegurado }} · ocurrido {{ c.fecha }}</p>
+<dl class="casefacts">
+<div><dt>Riesgo</dt><dd><span class="risk {{ c.level }}" style="--w:{{ c.score if c.score is number else 0 }}%"><i></i>{{ c.score }}</span></dd></div>
+<div><dt>Monto</dt><dd>{{ '$' ~ money(c.monto) if c.monto else '—' }}</dd></div>
+<div><dt>Analista</dt><dd>{{ c.owner_name }}</dd></div>
+<div><dt>Peritaje</dt><dd>{% if c.derivation %}<a href="{{ url_for('claims.case_view', cid=c.id, tab='peritaje') }}" class="st {{ c.derivation.state }}">{{ c.derivation.state_label }}</a>{% else %}<span class="muted">No derivado</span>{% endif %}</dd></div>
+<div><dt>Asegurado</dt><dd>{% if c.portal %}<a href="{{ url_for('claims.case_view', cid=c.id, tab='asegurado') }}" class="st p-{{ c.portal }}">{{ {'enviado': 'Enlace enviado', 'abierto': 'Abrió el enlace', 'recibido': 'Entregó todo', 'vencido': 'Enlace vencido'}[c.portal] }}</a>{% else %}<span class="muted">Sin enlace</span>{% endif %}</dd></div>
+<div><dt>Decisión</dt><dd><span class="dec {{ c.decision or '' }}">{{ c.decision_label or 'Pendiente' }}</span></dd></div>
+</dl>{% endblock %}
 {% block actions %}
-<form method="post" action="{{ url_for('claims.reanalyze', cid=c.id) }}" data-busy="Analizando…"><button class="btn" type="submit">{{ icon('refresh', 15) }}Reanalizar</button></form>
-<form method="post" action="{{ url_for('claims.verify', cid=c.id) }}"><button class="btn" type="submit">{{ icon('shield', 15) }}Verificar integridad</button></form>
-<a class="btn" href="{{ url_for('claims.report', cid=c.id) }}#linea" target="informe">{{ icon('timeline', 15) }}Línea de tiempo</a>
-<a class="btn" href="{{ url_for('claims.report', cid=c.id) }}" target="_blank">{{ icon('external', 15) }}Abrir informe</a>
+{% if can('editar_siniestros') %}<form method="post" action="{{ url_for('claims.reanalyze', cid=c.id) }}" data-busy="Analizando…"><input type="hidden" name="tab" value="{{ tab }}"><button class="btn" type="submit">{{ icon('refresh', 15) }}Reanalizar</button></form>{% endif %}
 <a class="btn pri" href="{{ url_for('claims.export_zip', cid=c.id) }}">{{ icon('download', 15, '#fff') }}Paquete verificable</a>{% endblock %}
 {% block body %}
-<div class="layout-side">
-<div><iframe class="report" name="informe" src="{{ url_for('claims.report', cid=c.id) }}" title="Informe del siniestro"></iframe></div>
-<aside>
-<section class="panel portalpanel" id="portal"><div class="ph"><h2>{{ icon('link', 16) }} Portal del asegurado</h2>
-{% if cap %}<span class="r">{% if pr.finished %}<span class="badge ok">Entregado</span>{% elif cap_state %}<span class="badge none">{{ cap_state }}</span>{% elif cap.opened %}<span class="badge warn">Abierto</span>{% else %}<span class="badge none">Enviado</span>{% endif %}</span>{% endif %}</div><div class="pb">
-{% if cap %}
-<div class="dist" style="margin:0 0 6px"><i class="d-ok" style="width:{{ pr.pct }}%"></i></div>
-<div class="hint" style="margin-bottom:10px">{{ pr.done }} de {{ pr.total }} pasos{% if pr.finished %} · enviado {{ pr.finished[8:10] }}-{{ pr.finished[5:7] }} {{ pr.finished[11:16] }}{% elif cap.opened %} · abierto por el asegurado{% endif %}</div>
-<ul class="checklist">
-<li class="{{ 'ok' if pr.photos_ok }}">Fotos: {{ pr.photos|length + pr.shots_done|length }}</li>
-{% if pr.photos %}<li class="sub thumbs"><div class="capthumbs">{% for f in pr.photos %}<a href="{{ url_for('claims.evidence_file', cid=c.id, digest=f.sha256) }}" target="_blank" rel="noopener" title="Abrir {{ f.title or f.original_name }}">
-<img src="{{ url_for('claims.evidence_file', cid=c.id, digest=f.sha256, mini=1) }}" alt="{{ f.title or f.original_name }}" loading="lazy">
-<span>{{ f.title or f.original_name }}</span><small>{{ f.server_time[8:10] }}-{{ f.server_time[5:7] }} {{ f.server_time[11:16] }}</small></a>{% endfor %}</div></li>{% endif %}
-<li class="{{ 'ok' if pr.docs_ok }}">Documentos: {{ pr.docs|length }}</li>
-{% for f in pr.docs %}<li class="ok sub"><a href="{{ url_for('claims.evidence_file', cid=c.id, digest=f.sha256) }}" target="_blank" rel="noopener">{{ f.title or f.original_name }}</a> <span class="hint">{{ f.server_time[8:10] }}-{{ f.server_time[5:7] }} {{ f.server_time[11:16] }}</span></li>{% endfor %}
-{% if pr.story %}<li class="ok">Relato del asegurado</li>{% endif %}
-</ul>
-{% if pr.requested and not pr.finished %}<p class="hint" style="margin:8px 0 0">Se le pidió: {{ pr.requested|join(', ') }}.</p>{% endif %}
-{% if not pr.finished and not cap_state %}
-{% if cap_local %}<div class="flash bad" style="margin:0 0 10px;font-size:13px"><b>El asegurado no podrá abrir este enlace.</b>
-Apunta a {{ 'la red interna' if cap_lan else 'este computador' }} ({{ cap_url.split('/c/')[0] }}), por eso WhatsApp tampoco lo muestra como enlace.
-Cierre Veritas y ábralo con <code>iniciar_publico.bat</code>: el enlace pasa a ser https://…trycloudflare.com y funciona desde cualquier celular.
-En producción, configure el dominio de la compañía en Configuración.</div>{% endif %}
-<div class="sharebtns">
-{% if wa_url %}<a class="btn pri" href="{{ wa_url }}" target="_blank" rel="noopener">Enviar por WhatsApp</a>{% endif %}
-{% if mail_url %}<a class="btn" href="{{ mail_url }}">Enviar por correo</a>{% endif %}
-<button class="btn" type="button" onclick="navigator.clipboard.writeText(document.getElementById('capmsg').value);this.textContent='Mensaje copiado'">Copiar mensaje</button></div>
-{% if not wa_url %}<p class="hint" style="margin:6px 0 0">Sin teléfono en la declaración: copie el mensaje y envíelo por el medio que use.</p>{% endif %}
-<textarea id="capmsg" readonly rows="4" class="hint" style="margin-top:10px;font-size:12.5px">{{ share_msg }}</textarea>
-<details style="margin-top:8px"><summary class="hint">Enlace, código QR y código</summary>
-<div style="display:flex;gap:12px;align-items:flex-start;margin-top:8px">{% if cap_qr %}<img src="data:image/png;base64,{{ cap_qr }}" alt="Código QR del enlace" style="width:104px;height:104px;border:1px solid var(--line);border-radius:8px;flex:none">{% endif %}
-<dl class="kv"><dt>Código</dt><dd style="letter-spacing:.12em">{{ cap.code }}</dd><dt>Vence</dt><dd>{{ cap.expires[:16]|replace('T',' ') }}</dd></dl></div>
-<input readonly value="{{ cap_url }}" onclick="this.select()" class="mono" style="margin-top:8px" aria-label="Enlace">
-</details>
-{% endif %}
-<details style="margin-top:10px"><summary class="hint">{{ 'Pedir más antecedentes (enlace nuevo)' if pr.finished or cap_state else 'Cambiar documentos o renovar el enlace' }}</summary>
-<form method="post" action="{{ url_for('claims.capture_link', cid=c.id) }}" style="margin-top:8px"><input type="hidden" name="docs_sent" value="1">
-{% for k, v in doc_types.items() if k != 'otro' %}<label style="font-weight:400;display:flex;gap:6px;margin:3px 0"><input type="checkbox" name="docs" value="{{ k }}" style="width:auto" {{ 'checked' if k in cap.doc_ids }}> {{ v }}</label>{% endfor %}
-<input name="docs_custom" value="{{ (cap.custom or [])|join('; ') }}" placeholder="Otros documentos (separe con punto y coma)" style="font-size:12.5px;margin-top:4px">
-<button class="btn sm" type="submit" style="margin-top:6px">Crear enlace nuevo</button>
-<p class="hint" style="margin:6px 0 0">El enlace anterior deja de funcionar. Lo ya recibido se conserva.</p></form></details>
-{% else %}
-<p class="hint" style="margin:0 0 10px">Envíe al asegurado un enlace donde toma las fotos con la cámara en vivo y sube sus documentos originales, sin pasar por WhatsApp.</p>
-<form method="post" action="{{ url_for('claims.capture_link', cid=c.id) }}"><input type="hidden" name="docs_sent" value="1">
-{% for k, v in doc_types.items() if k != 'otro' %}<label style="font-weight:400;display:flex;gap:6px;margin:3px 0"><input type="checkbox" name="docs" value="{{ k }}" style="width:auto" {{ 'checked' if k in default_docs }}> {{ v }}</label>{% endfor %}
-<input name="docs_custom" placeholder="Otros documentos (separe con punto y coma)" style="font-size:12.5px;margin-top:4px">
-<button class="btn pri" type="submit" style="width:100%;margin-top:8px">{{ icon('link', 15, '#fff') }}Crear enlace para el asegurado</button></form>
-{% endif %}
-</div></section>
-<section class="panel" id="decision"><div class="ph"><h2>Decisión del liquidador</h2></div><div class="pb">
-<form method="post" action="{{ url_for('claims.decide', cid=c.id) }}" style="display:grid;gap:10px">
-<select name="decision" required style="width:100%">{% for k, v in decisions.items() %}<option value="{{ k }}" {{ 'selected' if c.decision == k }}>{{ v }}</option>{% endfor %}</select>
-{% if current_user %}<input type="hidden" name="actor" value="{{ current_user.name }}">{% else %}<input name="actor" placeholder="Su nombre" required>{% endif %}<input name="nota" placeholder="Nota (opcional)">
-<button class="btn pri" type="submit">Registrar decisión</button></form>
-{% if history %}<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:10px">{% for h in history|reverse %}
-<div class="hint" style="margin:4px 0"><b class="dec {{ h.subject }}">{{ h.data.label }}</b> · {{ h.actor }} · {{ h.ts[:16]|replace('T',' ') }} UTC{% if h.data.note %}<br>{{ h.data.note }}{% endif %}</div>{% endfor %}</div>
-{% else %}<p class="hint" style="margin:10px 0 0">Cada decisión queda en la cadena de custodia con su autor y sirve para medir la precisión de Veritas.</p>{% endif %}
-</div></section>
-<section class="panel"><div class="ph"><h2>Evidencia</h2></div><div class="pb">
-<form method="post" action="{{ url_for('claims.add_photos', cid=c.id) }}" enctype="multipart/form-data" data-busy="Analizando…" style="display:grid;gap:10px">
-<input type="file" name="fotos" multiple accept="image/*,.heic,.pdf,application/pdf,.txt,.zip" required aria-label="Fotos o documentos">
-<button class="btn" type="submit">{{ icon('upload', 15) }}Agregar y reanalizar</button></form>
-<p class="hint" style="margin:10px 0 0">{{ c.photos }} foto(s) en el caso. Se guardan los originales, sin modificarlos.</p>
-{% if files %}<details style="margin-top:10px"{{ ' open' if request.args.get('archivos') }}><summary class="hint">Archivos del caso ({{ files|length }}) · quitar uno agregado por error</summary>
-<ul class="evfiles">{% for f in files %}<li class="{{ 'off' if f.excluded }}">
-<a href="{{ url_for('claims.evidence_file', cid=c.id, digest=f.digest) }}" target="_blank" rel="noopener">{{ f.title }}</a>
-<span class="hint">{{ f.kind }} · {{ f.who }}</span>
-{% if f.excluded %}<div class="hint">Quitado del análisis por {{ f.excluded.actor }}: {{ f.excluded.data.reason }}</div>
-{% if can('editar_siniestros') %}<form method="post" action="{{ url_for('claims.evidence_restore', cid=c.id, digest=f.digest) }}"><button class="linkbtn" type="submit">Restaurar</button></form>{% endif %}
-{% elif can('editar_siniestros') %}<details><summary class="linkbtn">Quitar</summary>
-<form method="post" action="{{ url_for('claims.evidence_exclude', cid=c.id, digest=f.digest) }}" style="display:grid;gap:6px;margin-top:6px">
-<select name="motivo" required><option value="">Motivo…</option><option>Se agregó por error</option><option>Es de otro siniestro</option><option>Está duplicado</option><option>Archivo ilegible o dañado</option></select>
-<button class="btn sm" type="submit">Quitar del análisis</button></form></details>{% endif %}</li>{% endfor %}</ul>
-<p class="hint" style="margin:6px 0 0">Quitar no borra el archivo: queda guardado y registrado en la cadena de custodia (quién, cuándo y por qué), pero deja de analizarse y de aparecer en el informe.</p></details>{% endif %}</div></section>
-{% if accesos %}<section class="panel"><div class="ph"><h2>Accesos a este caso</h2></div>
-<table class="mini">{% for e in accesos %}<tr><td class="nowrap hint">{{ e.ts[5:16]|replace('T',' ') }}</td><td>{{ e.user }}</td>
-<td class="hint">{{ {'ver_caso': 'abrió', 'decision': 'decidió'}.get(e.action, e.action) }}</td></tr>{% endfor %}</table></section>{% endif %}
-</aside></div>
+<nav class="tabs" aria-label="Secciones del caso">{% for k, label in tabs %}
+<a href="{{ url_for('claims.case_view', cid=c.id, tab=k if k != 'resumen' else None) }}" class="{{ 'on' if tab == k }}"{{ ' aria-current=page' if tab == k }}>{{ label }}
+{%- if k == 'fotos' %} <span class="c">{{ n_photos }}</span>{% elif k == 'documentos' %} <span class="c">{{ n_docs }}</span>{% elif k == 'resumen' and n_findings %} <span class="c">{{ n_findings }}</span>{% endif %}</a>{% endfor %}</nav>
+{% include "claims/case/" ~ tab ~ ".html" %}
 {% endblock %}

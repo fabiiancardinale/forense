@@ -1,0 +1,7 @@
+{% if i.excluded %}<div class="hint off-note">Quitado del análisis por {{ i.excluded.actor }}: {{ i.excluded.data.reason }}</div>
+{% if can('editar_siniestros') %}<form method="post" action="{{ url_for('claims.evidence_restore', cid=c.id, digest=i.digest) }}"><input type="hidden" name="tab" value="{{ tab }}"><button class="linkbtn" type="submit">Restaurar</button></form>{% endif %}
+{% elif can('editar_siniestros') %}<details class="rm"><summary class="linkbtn">Quitar</summary>
+<form method="post" action="{{ url_for('claims.evidence_exclude', cid=c.id, digest=i.digest) }}"><input type="hidden" name="tab" value="{{ tab }}">
+<select name="motivo" required aria-label="Motivo"><option value="">Motivo…</option><option>Se agregó por error</option><option>Es de otro siniestro</option><option>Está duplicado</option><option>Archivo ilegible o dañado</option></select>
+<button class="btn sm" type="submit">Quitar del análisis</button>
+<p class="hint">No se borra: queda en la cadena de custodia.</p></form></details>{% endif %}

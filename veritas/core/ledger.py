@@ -19,6 +19,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
     Ed25519PublicKey,
 )
 
+_CACHE: dict[str, tuple] = {}     # ruta -> ((ruta, tamaño, mtime), entradas)
 GENESIS = "0" * 64
 
 
@@ -62,9 +63,18 @@ class Ledger:
 
     # ---- lectura / escritura -----------------------------------------
     def entries(self) -> list[dict]:
-        if not self.path.exists():
+        """Entradas de la cadena. Se guarda en memoria mientras el archivo no cambie (mismo tamaño y fecha)."""
+        try:
+            st = self.path.stat()
+        except OSError:
             return []
-        return [json.loads(line) for line in self.path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        key = (str(self.path), st.st_size, st.st_mtime_ns)
+        hit = _CACHE.get(key[0])
+        if hit and hit[0] == key:
+            return [{**e, "data": dict(e["data"])} for e in hit[1]]
+        items = [json.loads(line) for line in self.path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        _CACHE[key[0]] = (key, items)
+        return [{**e, "data": dict(e["data"])} for e in items]
 
     def append(self, actor: str, action: str, subject: str, data: dict | None = None) -> dict:
         entries = self.entries()

@@ -198,6 +198,7 @@ def _analyze_claim(case: Case, registry_path: Path | None = None, use_llm: bool 
         result["trigger"] = f"reanálisis por vínculo con {trigger}"
     case.ledger.append("veritas", "claim_analyzed", decl["numero"], result)
     case.ledger.seal()
+    write_snapshot(case, photos, docs, findings)
     (case.root / "informe.html").write_text(
         report.build_claim(case, decl, decl_ev, photos, findings, verified, rec, docs=docs, net=net, score=score),
         encoding="utf-8")
@@ -211,6 +212,42 @@ def _analyze_claim(case: Case, registry_path: Path | None = None, use_llm: bool 
                     analyze_claim(other, registry_path, use_llm, cascade=False, trigger=decl["numero"])
                     result["reanalyzed"].append(nb)
     return result
+
+
+# ---- resumen para la ficha del caso ----------------------------------------------------
+SNAPSHOT = "analisis.json"
+
+
+def write_snapshot(case: Case, photos, docs, findings) -> None:
+    """Guarda fotos, documentos y hallazgos del último análisis, para mostrarlos sin volver a analizar.
+    Es un derivado del análisis (la fuente de verdad es la evidencia y la cadena de custodia)."""
+    def ev_of(f):
+        return sorted({e.split(":")[0] for e in f.evidence})
+
+    def photo(p):
+        m = p.meta
+        portal = m.get("portal") or {}
+        return {"digest": p.digest, "name": p.name, "title": portal.get("title") or p.name, "taken": m.get("taken"),
+                "camera": " ".join(filter(None, [m.get("make"), m.get("model")])) or None, "gps": m.get("gps"),
+                "received": m.get("received"), "origin": "asegurado (portal)" if portal or m.get("secure_capture") else "analista",
+                "secure": bool(m.get("secure_capture"))}
+
+    def doc(d):
+        m = d.meta
+        return {"digest": d.digest, "name": d.name, "title": m.get("title") or d.name, "producer": m.get("producer") or
+                m.get("creator"), "versions": len(m.get("versions") or []), "scanned": bool(m.get("ocr"))}
+
+    data = {"photos": [photo(p) for p in photos], "docs": [doc(d) for d in docs],
+            "findings": [{"rule": f.rule, "severity": f.severity, "title": f.title, "summary": f.summary,
+                          "category": f.category, "evidence": ev_of(f)} for f in findings]}
+    (case.root / SNAPSHOT).write_text(json.dumps(data, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
+
+
+def snapshot(case: Case) -> dict:
+    try:
+        return json.loads((case.root / SNAPSHOT).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {"photos": [], "docs": [], "findings": []}
 
 
 # ---- decisiones del liquidador --------------------------------------------------

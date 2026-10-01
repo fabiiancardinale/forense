@@ -1,0 +1,16 @@
+{% set upload_label = 'Agregar fotos' %}{% include "claims/case/_upload.html" %}
+{% if items %}<div class="evgrid">
+{% for i in items %}<article class="evcard{{ ' off' if i.excluded }}{{ ' ' ~ i.worst if i.worst }}">
+<a class="pic" href="{{ url_for('claims.evidence_file', cid=c.id, digest=i.digest) }}" target="_blank" rel="noopener" title="Abrir en tamaño completo">
+<img src="{{ url_for('claims.evidence_file', cid=c.id, digest=i.digest, mini=1) }}" alt="{{ i.title }}" loading="lazy">
+{% if i.findings %}<span class="sev {{ i.worst }}">{{ i.findings|length }} alerta{{ 's' if i.findings|length > 1 }}</span>{% endif %}</a>
+<div class="body"><b class="t">{{ i.title }}</b>
+<dl class="kv sm">
+<dt>Subió</dt><dd>{{ i.who }}{% if i.info.secure %} · cámara del portal{% endif %}</dd>
+<dt>Tomada</dt><dd>{{ (i.info.taken or '')[:16]|replace('T',' ') or 'sin fecha' }}</dd>
+<dt>Cámara</dt><dd>{{ i.info.camera or '—' }}</dd>
+<dt>Ubicación</dt><dd>{{ 'sí (GPS)' if i.info.gps else 'no' }}</dd></dl>
+{% if i.findings %}<ul class="flinks">{% for f in i.findings %}<li class="{{ f.severity }}">{{ f.title }}</li>{% endfor %}</ul>{% endif %}
+<div class="acts">{% include "claims/case/_remove.html" %}</div>
+</div></article>{% endfor %}</div>
+{% else %}<div class="card empty"><h2>Aún no hay fotos</h2><p>Agréguelas arriba o pídaselas al asegurado en la pestaña Asegurado.</p></div>{% endif %}

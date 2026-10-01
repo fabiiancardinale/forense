@@ -97,6 +97,57 @@ def save_conclusion(case: Case, recomendacion: str, texto: str, actor: str) -> N
     case.ledger.append(actor or "investigador", "conclusion", recomendacion, {"recomendacion": recomendacion, "texto": texto})
 
 
+# ---- trabajo del perito después de crear el expediente -------------------------------------
+def add_interview(case: Case, declarante: str, rol: str, fecha: str, texto: str, actor: str) -> None:
+    if delivered(case):
+        raise ValueError("El informe final ya se entregó; el expediente está cerrado.")
+    if not declarante.strip() or len(texto.strip()) < 20:
+        raise ValueError("Indique el declarante y pegue la transcripción (preguntas y respuestas).")
+    n = sum(1 for e in case.active_evidence() if e["data"].get("note") == "entrevista") + 1
+    with tempfile.TemporaryDirectory() as td:
+        q = Path(td) / f"entrevista_{n}.json"
+        q.write_text(json.dumps({"declarante": declarante.strip(), "rol": rol.strip(), "fecha": fecha.strip(), "texto": texto},
+                                indent=2, ensure_ascii=False), encoding="utf-8")
+        case.add_evidence(q, analyst=actor, note="entrevista")
+
+
+def add_document(case: Case, path: Path, actor: str) -> None:
+    if delivered(case):
+        raise ValueError("El informe final ya se entregó; el expediente está cerrado.")
+    case.add_evidence(path, analyst=actor, note="documento")
+
+
+def delivered(case: Case) -> dict | None:
+    return next(({"actor": e["actor"], "ts": e["ts"]} for e in case.ledger.entries() if e["action"] == "dossier_delivered"), None)
+
+
+def deliver(case: Case, actor: str, empresa: str = "") -> Path:
+    """Cierra el expediente y guarda el informe final (HTML) dentro del caso, con su hash en la custodia."""
+    if delivered(case):
+        raise ValueError("El informe final ya se entregó.")
+    a = analyze(case)
+    if not a["conclusion"]:
+        raise ValueError("Antes de entregar, escriba la conclusión y la recomendación.")
+    html_doc = build_report(case, a, empresa)
+    out = case.root / "informe_final.html"
+    out.write_text(html_doc, encoding="utf-8")
+    import hashlib
+    case.ledger.append(actor, "dossier_delivered", hashlib.sha256(html_doc.encode("utf-8")).hexdigest(),
+                       {"interviews": len(a["interviews"]), "findings": len(a["findings"])})
+    return out
+
+
+def progress(case: Case) -> dict:
+    """Avance del expediente para mostrarlo al analista y al jefe."""
+    x = load(case)
+    alerts = len(x["data"].get("alertas", []))
+    return {"interviews": len(x["interviews"]), "docs": len(x["docs"]), "alerts": alerts,
+            "answered": sum(1 for r in x["responses"].values() if r.get("estado")),
+            "conclusion": x["conclusion"], "delivered": delivered(case),
+            "interview_list": [{"declarante": i.declarante, "rol": i.rol, "fecha": i.fecha, "n": len(i.items)}
+                               for i in x["interviews"]]}
+
+
 # ---- análisis -------------------------------------------------------------------------------
 def evidence_index(x: dict) -> dict[str, dict]:
     """id de evidencia -> {label, text, kind} para citar y mostrar."""

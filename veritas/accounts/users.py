@@ -1,10 +1,11 @@
-"""Usuarios, roles y registro de accesos.
+"""Usuarios, roles, permisos y registro de accesos.
 
 Roles:
-  administrador  todo, más usuarios y configuración
-  jefe           todo lo de siniestros e investigaciones, redes, métricas e importación
-  liquidador     siniestros: ver, crear, agregar evidencia, decidir, pedir captura segura; ver redes
-  investigador   investigaciones y auditorías; ver siniestros (sin decidir)
+  administrador  todo, más usuarios, empresas de peritaje y configuración
+  jefe           ve todos los casos y el panel de equipo; reasigna casos; redes, métricas e importación
+  analista       sus propios casos: registrar, agregar evidencia, portal del asegurado, derivar a perito, decidir
+  investigador   investigador interno: expedientes y auditorías de informes
+  perito         perito o empresa externa: solo los expedientes derivados a su empresa
 
 Mientras no exista ningún usuario, Veritas funciona abierto en este equipo (modo demo). Al crear
 el primer usuario (que debe ser administrador) se exige iniciar sesión para todo.
@@ -23,37 +24,52 @@ from pathlib import Path
 
 from werkzeug.security import check_password_hash, generate_password_hash
 
-ROLES = {"administrador": "Administrador", "jefe": "Jefe de siniestros", "liquidador": "Liquidador",
-         "investigador": "Investigador"}
+ROLES = {"administrador": "Administrador", "jefe": "Jefe de siniestros", "analista": "Analista",
+         "investigador": "Investigador interno", "perito": "Perito externo"}
+LEGACY_ROLES = {"liquidador": "analista"}          # nombres de rol de versiones anteriores
 PERMS = {
-    "ver_siniestros": {"administrador", "jefe", "liquidador", "investigador"},
-    "editar_siniestros": {"administrador", "jefe", "liquidador"},
-    "investigaciones": {"administrador", "jefe", "investigador"},
-    "redes": {"administrador", "jefe", "liquidador"},
+    "ver_siniestros": {"administrador", "jefe", "analista", "investigador"},
+    "editar_siniestros": {"administrador", "jefe", "analista"},
+    "ver_todos": {"administrador", "jefe", "investigador"},        # sin esto, solo los casos propios
+    "equipo": {"administrador", "jefe"},                           # panel de equipo y reasignar casos
+    "investigaciones": {"administrador", "jefe", "investigador"},  # crear expedientes, auditorías, ver todos
+    "peritaje": {"administrador", "jefe", "investigador", "perito"},  # trabajar un expediente
+    "redes": {"administrador", "jefe", "analista"},
     "cartera": {"administrador", "jefe"},
     "admin": {"administrador"},
 }
-# endpoint -> permiso necesario (los que no están aquí son públicos: ingreso y enlace de captura)
+# endpoint -> permiso necesario (los que no están aquí son públicos: ingreso y portal del asegurado)
 ENDPOINTS = {
-    "panel.dashboard": "ver_siniestros", "claims.index": "ver_siniestros", "claims.case_view": "ver_siniestros", "claims.report": "ver_siniestros",
-    "claims.doc_version": "ver_siniestros", "claims.evidence_file": "ver_siniestros", "claims.export_zip": "ver_siniestros", "claims.verify": "ver_siniestros", "tools.photo_check": "ver_siniestros",
-    "claims.new_claim": "editar_siniestros", "claims.add_photos": "editar_siniestros", "claims.reanalyze": "editar_siniestros",
-    "claims.decide": "editar_siniestros", "claims.evidence_exclude": "editar_siniestros", "claims.evidence_restore": "editar_siniestros", "claims.capture_link": "editar_siniestros", "claims.load_demo": "editar_siniestros",
-    "investigations.investigations": "investigaciones", "investigations.inv_settings": "investigaciones", "investigations.inv_demo": "investigaciones",
-    "investigations.inv_new": "investigaciones", "investigations.inv_view": "investigaciones", "investigations.inv_response": "investigaciones",
-    "investigations.inv_conclusion": "investigaciones", "investigations.inv_report": "investigaciones", "investigations.inv_export": "investigaciones",
-    "investigations.audit_upload": "investigaciones", "investigations.audit_view": "investigaciones",
-    "portfolio.networks": "redes", "portfolio.metrics_view": "cartera", "portfolio.import_view": "cartera", "portfolio.import_demo": "cartera",
-    "portfolio.template_download": "cartera", "portfolio.export_xlsx": "cartera",
-    "admin.settings": "admin", "admin.users_view": "admin", "admin.user_toggle": "admin",
+    "panel.dashboard": None, "panel.team": "equipo", "panel.reassign": "equipo",
+    "claims.index": "ver_siniestros", "claims.case_view": "ver_siniestros", "claims.report": "ver_siniestros",
+    "claims.doc_version": "ver_siniestros", "claims.evidence_file": "ver_siniestros", "claims.export_zip": "ver_siniestros",
+    "claims.verify": "ver_siniestros", "claims.new_claim": "editar_siniestros", "claims.add_photos": "editar_siniestros",
+    "claims.reanalyze": "editar_siniestros", "claims.decide": "editar_siniestros", "claims.capture_link": "editar_siniestros",
+    "claims.load_demo": "editar_siniestros", "claims.evidence_exclude": "editar_siniestros",
+    "claims.evidence_restore": "editar_siniestros", "claims.derive": "editar_siniestros",
+    "claims.derive_cancel": "editar_siniestros", "claims.dossier_report": "ver_siniestros",
+    "investigations.investigations": "peritaje", "investigations.inv_view": "peritaje",
+    "investigations.inv_response": "peritaje", "investigations.inv_conclusion": "peritaje",
+    "investigations.inv_report": "peritaje", "investigations.inv_export": "peritaje",
+    "investigations.inv_interview": "peritaje", "investigations.inv_document": "peritaje",
+    "investigations.inv_deliver": "peritaje", "investigations.inv_file": "peritaje",
+    "investigations.inv_settings": "investigaciones", "investigations.inv_demo": "investigaciones",
+    "investigations.inv_new": "investigaciones", "investigations.audit_upload": "investigaciones",
+    "investigations.audit_view": "investigaciones",
+    "portfolio.networks": "redes", "portfolio.metrics_view": "cartera", "portfolio.import_view": "cartera",
+    "portfolio.import_demo": "cartera", "portfolio.template_download": "cartera", "portfolio.export_xlsx": "cartera",
+    "tools.photo_check": "ver_siniestros",
+    "admin.settings": "admin", "admin.users_view": "admin", "admin.user_toggle": "admin", "admin.firm_add": "admin",
 }
-ROLE_HELP = {"administrador": "Todo, más usuarios y configuración.",
-             "jefe": "Siniestros, investigaciones, redes, métricas e importación.",
-             "liquidador": "Siniestros: ver, crear, agregar evidencia, decidir y pedir captura segura; ver redes.",
-             "investigador": "Expedientes y auditorías; ver siniestros sin decidir."}
+ROLE_HELP = {"administrador": "Todo, más usuarios, empresas de peritaje y configuración.",
+             "jefe": "Ve todos los casos y el panel de equipo, reasigna casos; redes, métricas e importación.",
+             "analista": "Sus propios casos: registrar, evidencia, portal del asegurado, derivar a perito y decidir.",
+             "investigador": "Investigador interno: expedientes y auditorías de informes.",
+             "perito": "Perito o empresa externa: solo los expedientes derivados a su empresa."}
 ACTION_LABELS = {"ingreso": "Ingresó", "ingreso_fallido": "Ingreso fallido", "salida": "Salió", "ver_caso": "Abrió el caso",
                  "decision": "Registró decisión", "descarga": "Descargó", "ver_expediente": "Abrió expediente",
-                 "usuario": "Cambió un usuario", "exporta_excel": "Exportó a Excel"}
+                 "usuario": "Cambió un usuario", "exporta_excel": "Exportó a Excel", "reasignar": "Reasignó un caso",
+                 "derivar": "Derivó a perito", "entregar_informe": "Entregó informe final", "quitar_archivo": "Quitó un archivo"}
 MAX_FAILS, LOCK_SECONDS = 5, 300
 USERNAME = re.compile(r"^[a-z0-9._-]{3,32}$")
 
@@ -66,9 +82,20 @@ class Store:
 
     def all(self) -> dict:
         try:
-            return json.loads(self.path.read_text(encoding="utf-8"))
+            users = json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             return {}
+        for u in users.values():
+            u["role"] = LEGACY_ROLES.get(u.get("role"), u.get("role"))
+        return users
+
+    def by_role(self, *roles: str) -> list[dict]:
+        return sorted(({**u, "username": k} for k, u in self.all().items() if u.get("role") in roles and u.get("active", True)),
+                      key=lambda u: u["name"].lower())
+
+    def display_name(self, username: str) -> str:
+        u = self.all().get(username or "")
+        return u["name"] if u else (username or "")
 
     def _save(self, users: dict) -> None:
         self.path.write_text(json.dumps(users, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -80,9 +107,10 @@ class Store:
         u = self.all().get(username)
         return {**u, "username": username} if u else None
 
-    def add(self, username: str, name: str, role: str, password: str) -> str | None:
+    def add(self, username: str, name: str, role: str, password: str, empresa: str = "") -> str | None:
         """Crea o actualiza un usuario. Devuelve un mensaje de error o None."""
         username = username.strip().lower()
+        role = LEGACY_ROLES.get(role, role)
         if not USERNAME.fullmatch(username):
             return "El usuario debe tener 3 a 32 letras minúsculas, números, punto, guion o guion bajo."
         if role not in ROLES:
@@ -95,7 +123,10 @@ class Store:
         if password and len(password) < 10:
             return "La contraseña debe tener al menos 10 caracteres."
         u = users.get(username, {"created": _now()})
-        u.update({"name": name.strip() or username, "role": role, "active": True})
+        if role == "perito" and not empresa.strip():
+            return "Un perito debe pertenecer a una empresa de peritaje."
+        u.update({"name": name.strip() or username, "role": role, "active": True,
+                  "empresa": empresa.strip() if role == "perito" else ""})
         if password:
             u["pw"] = generate_password_hash(password)
         users[username] = u
@@ -145,8 +176,10 @@ class Store:
 
 
 def allowed(role: str | None, endpoint: str | None) -> bool:
-    perm = ENDPOINTS.get(endpoint or "")
-    return perm is None or (role in PERMS[perm])
+    if endpoint not in ENDPOINTS:
+        return endpoint == "static"          # una vista nueva sin permiso declarado queda cerrada
+    perm = ENDPOINTS[endpoint]
+    return perm is None or role in PERMS[perm]
 
 
 def can(role: str | None, perm: str) -> bool:

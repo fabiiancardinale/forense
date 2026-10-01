@@ -1,0 +1,15 @@
+{% set upload_label = 'Agregar documentos o chats' %}{% include "claims/case/_upload.html" %}
+{% if items %}<section class="panel"><div class="scroll"><table>
+<tr><th></th><th>Documento</th><th>Tipo</th><th>Subió</th><th>Programa que lo generó</th><th>Alertas</th><th></th></tr>
+{% for i in items %}<tr class="{{ 'off' if i.excluded }}">
+<td style="width:56px">{% if i.is_image %}<img class="docthumb" src="{{ url_for('claims.evidence_file', cid=c.id, digest=i.digest, mini=1) }}" alt="" loading="lazy">{% else %}<span class="docicon">{{ (i.name.rsplit('.', 1)[-1] if '.' in i.name else '')|upper }}</span>{% endif %}</td>
+<td><a href="{{ url_for('claims.evidence_file', cid=c.id, digest=i.digest) }}" target="_blank" rel="noopener"><b>{{ i.title }}</b></a>
+{% if i.title != i.name %}<div class="hint">{{ i.name }}</div>{% endif %}
+{% if i.info.versions %}<div class="hint">{{ i.info.versions }} versión(es) anterior(es) recuperada(s){% for n in range(1, i.info.versions + 1) %} · <a href="{{ url_for('claims.doc_version', cid=c.id, digest=i.digest, n=n) }}">v{{ n }}</a>{% endfor %}</div>{% endif %}</td>
+<td class="nowrap">{{ i.kind_label }}{% if i.info.scanned %}<div class="hint">leído con OCR</div>{% endif %}</td>
+<td class="nowrap">{{ i.who }}<div class="hint">{{ i.received[:16]|replace('T',' ') }}</div></td>
+<td>{{ i.info.producer or '—' }}</td>
+<td>{% if i.findings %}<ul class="flinks">{% for f in i.findings %}<li class="{{ f.severity }}">{{ f.title }}</li>{% endfor %}</ul>{% else %}<span class="muted">—</span>{% endif %}</td>
+<td class="nowrap">{% include "claims/case/_remove.html" %}</td></tr>{% endfor %}
+</table></div></section>
+{% else %}<div class="card empty"><h2>Aún no hay documentos</h2><p>Agregue presupuestos, facturas, partes o chats arriba, o pídaselos al asegurado en la pestaña Asegurado.</p></div>{% endif %}

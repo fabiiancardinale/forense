@@ -54,7 +54,7 @@ def test_register_case_and_portal_for_insured(tmp_path):
     assert c.post("/nuevo", data=form, content_type="multipart/form-data").status_code == 302
     case = Case(work / "SIN-2026-2001")
     tok = capture.load(case)["token"]
-    page = c.get("/caso/SIN-2026-2001").get_data(as_text=True)
+    page = c.get("/caso/SIN-2026-2001?tab=asegurado").get_data(as_text=True)
     assert "https://wa.me/56981234567?text=" in page and "mailto:ana@example.com" in page
     assert "Esperando al asegurado" in c.get("/").get_data(as_text=True)
     portal = c.get(f"/c/{tok}").get_data(as_text=True)
@@ -88,7 +88,7 @@ def test_register_case_and_portal_for_insured(tmp_path):
     assert (case.evidence_dir / stored["subject"]).read_bytes() == raw      # archivo original, byte a byte
     photo = next(p for p in service.run_analysis(case)[2] if "parachoques" in p.name)
     assert photo.meta["make"] == "Apple" and photo.meta["taken"] == "2026-09-30T19:14:00"
-    case_page = c.get("/caso/SIN-2026-2001").get_data(as_text=True)
+    case_page = c.get("/caso/SIN-2026-2001?tab=asegurado").get_data(as_text=True)
     assert "Entregado" in case_page and "Parachoques trasero" in case_page and "Licencia de conducir" in case_page
     assert "Parachoques trasero" in (work / "SIN-2026-2001" / "informe.html").read_text(encoding="utf-8")
     assert c.get("/c/" + "z" * 30).status_code == 404
@@ -162,7 +162,7 @@ def test_portal_uploads_show_in_case_and_report(tmp_path):
     buf = io.BytesIO(); Image.new("RGB", (400, 300), (120, 90, 60)).save(buf, "JPEG")
     cl.post(f"/c/{tok}/archivo", data={"kind": "photo", "titulo": "parachoque", "archivo": (io.BytesIO(buf.getvalue()), "a.jpg")},
             content_type="multipart/form-data")
-    h = cl.get(f"/caso/{cid}", base_url=B).get_data(as_text=True)      # sin que el asegurado presione Terminar
+    h = cl.get(f"/caso/{cid}?tab=asegurado", base_url=B).get_data(as_text=True)      # sin que el asegurado presione Terminar
     assert "capthumbs" in h and "parachoque" in (root / "informe.html").read_text(encoding="utf-8")
     import re
     mini = re.search(r'/caso/[^"]+/archivo/[0-9a-f]{64}\?mini=1', h).group(0)

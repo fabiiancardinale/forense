@@ -10,6 +10,9 @@
 <div><label>Fecha y hora del siniestro *</label><input type="datetime-local" name="fecha_siniestro" required value="{{ f.fecha_siniestro }}"></div>
 <div><label>Fecha de denuncia</label><input type="date" name="fecha_denuncia" value="{{ f.fecha_denuncia }}"></div>
 <div><label>Patente</label><input name="patente" value="{{ f.patente }}" placeholder="ABCD-12"></div>
+{% if assign_choice and team %}<div><label for="an">Analista responsable</label><select id="an" name="analista">{% for a in team %}<option value="{{ a.username }}" {{ 'selected' if (f.analista or (current_user.username if current_user)) == a.username }}>{{ a.name }}</option>{% endfor %}</select></div>
+{% elif not auth_on %}<div><label for="an">Analista responsable</label><input id="an" name="analista" value="{{ f.analista }}" placeholder="Nombre del analista" list="analistas">
+<datalist id="analistas">{% for a in team %}<option value="{{ a.name }}">{% endfor %}</datalist></div>{% endif %}
 <div class="full"><label>Lugar</label><input name="lugar" value="{{ f.lugar }}" placeholder="Dirección o referencia"></div>
 <div><label>Latitud <span class="hint">(opcional)</span></label><input name="lat" value="{{ f.lat }}" placeholder="-33.4263"></div>
 <div><label>Longitud <span class="hint">(opcional)</span></label><input name="lon" value="{{ f.lon }}" placeholder="-70.6167"></div>

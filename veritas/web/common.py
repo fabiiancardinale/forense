@@ -9,10 +9,11 @@ import json
 import re
 from pathlib import Path
 
-from flask import abort, current_app, g, request
+from flask import abort, current_app, g, request, send_file
 from werkzeug.utils import secure_filename
 
-from veritas.claims import service
+from veritas.accounts import users as U
+from veritas.claims import assignment, service
 from veritas.core.case import Case
 from veritas.investigations import dossier as INV
 
@@ -50,6 +51,41 @@ class _Context:
 cx = _Context()
 
 
+# ---- usuario actual y acceso a casos ------------------------------------------------------------
+def current_user() -> dict | None:
+    return getattr(g, "user", None)
+
+
+def has_perm(perm: str) -> bool:
+    """En modo demo (sin usuarios) todo está permitido."""
+    u = current_user()
+    return not cx.store.enabled() or (u is not None and U.can(u["role"], perm))
+
+
+def sees_all_claims() -> bool:
+    return has_perm("ver_todos")
+
+
+def claim_visible(case: Case) -> bool:
+    """Un analista solo ve sus casos; jefe, administrador e investigador ven todos."""
+    if sees_all_claims():
+        return True
+    o, u = assignment.owner(case), current_user()
+    return bool(o and u and o["user"] == u["username"])
+
+
+def dossier_visible(case: Case) -> bool:
+    """Un perito solo ve los expedientes derivados a su empresa (y a él, si se nombró a un perito)."""
+    if has_perm("investigaciones"):
+        return True
+    u = current_user()
+    if not u or u["role"] != "perito":
+        return False
+    data = INV.load(case)["data"]
+    return (data.get("empresa", "").lower() == (u.get("empresa") or "").lower()
+            and data.get("perito") in ("", None, u["username"]))
+
+
 def amount(v) -> int:
     digits = re.sub(r"[^0-9]", "", str(v or "").split(",")[0])
     return int(digits) if digits else 0
@@ -70,7 +106,7 @@ def load_claim(cid: str) -> Case:
     if not SAFE_ID.fullmatch(cid):
         abort(404)
     case = Case(cx.workdir / cid)
-    if not case.meta_path.exists() or case.kind != "claim":
+    if not case.meta_path.exists() or case.kind != "claim" or not claim_visible(case):
         abort(404)
     return case
 
@@ -90,7 +126,23 @@ def summarize(case: Case) -> dict:
         "analyzed": last.get("ts", "—").replace("T", " ").rstrip("Z")[:16] + " UTC" if last else "—",
         "created": case.ledger.entries()[0]["ts"],
         "monto": amount(decl.get("monto_reclamado")),
+        **_work_state(case),
     }
+
+
+def _work_state(case: Case) -> dict:
+    """Quién lo tiene, en qué está y hace cuánto no se mueve."""
+    from veritas.portal import links
+    o = assignment.owner(case)
+    d = assignment.derivation(case)
+    cap = links.load(case)
+    portal = None
+    if cap:
+        portal = ("recibido" if cap.get("finished") else "vencido" if links.status(cap) else
+                  "abierto" if cap.get("opened") else "enviado")
+    return {"owner": o["user"] if o else None,
+            "owner_name": cx.store.display_name(o["user"]) or o["name"] if o else "Sin asignar",
+            "derivation": d, "portal": portal, "idle": assignment.idle_days(case)}
 
 
 def save_uploads(files, folder: Path) -> tuple[list[Path], list[str]]:
@@ -116,12 +168,13 @@ def save_uploads(files, folder: Path) -> tuple[list[Path], list[str]]:
     return saved, rejected
 
 
-def claim_list() -> list[dict]:
+def claim_list(everyone: bool = False) -> list[dict]:
+    """Siniestros visibles para el usuario actual (todos, con `everyone`, si tiene permiso)."""
     cases = []
     for d in sorted(cx.workdir.iterdir()):
         if (d / "case.json").exists():
             c = Case(d)
-            if c.kind == "claim":
+            if c.kind == "claim" and ((everyone and sees_all_claims()) or claim_visible(c)):
                 cases.append(summarize(c))
     # cola de trabajo: primero el mayor riesgo, luego los más recientes
     cases.sort(key=lambda c: c["created"], reverse=True)
@@ -179,7 +232,7 @@ def load_dossier(cid: str, kind: str) -> Case:
     if not SAFE_ID.fullmatch(cid):
         abort(404)
     case = Case(cx.workdir / cid)
-    if not case.meta_path.exists() or case.kind != kind:
+    if not case.meta_path.exists() or case.kind != kind or (kind == "investigacion" and not dossier_visible(case)):
         abort(404)
     return case
 
@@ -187,14 +240,18 @@ def load_dossier(cid: str, kind: str) -> Case:
 def dossier_lists():
     exps = []
     for c in INV.list_cases(cx.workdir, "investigacion"):
+        if not dossier_visible(c):
+            continue
         a = INV.analyze(c)
         d = a["data"]
         exps.append({"id": c.root.name, "numero": d.get("numero"), "aseguradora": d.get("aseguradora", ""),
+                     "empresa": d.get("empresa", ""), "plazo": d.get("plazo", ""), "siniestro_id": d.get("siniestro_id"),
+                     "delivered": INV.delivered(c),
                      "fecha": (d.get("fecha_ocurrencia") or "").replace("T", " ")[:16], "interviews": len(a["interviews"]),
                      "findings": len(a["findings"]), "alerts": len(d.get("alertas", [])),
                      "answered": sum(1 for r in a["responses"].values() if r.get("estado")), "pending": len(INV.review(a))})
     audits = []
-    for c in INV.list_cases(cx.workdir, "auditoria"):
+    for c in (INV.list_cases(cx.workdir, "auditoria") if has_perm("investigaciones") else []):
         run = next((e for e in reversed(c.ledger.entries()) if e["action"] == "audit_run"), None)
         first = c.ledger.entries()[0]
         audits.append({"id": c.root.name, "name": run["subject"] if run else c.name, "ts": first["ts"][:16].replace("T", " "),
@@ -208,3 +265,46 @@ def portal_case(token):
     if not case:
         abort(404)
     return case, data
+
+
+def analysts() -> list[dict]:
+    """Personas que pueden tener casos: usuarios analistas (y jefes), o en modo demo, los nombres ya usados."""
+    if cx.store.enabled():
+        return [{"username": u["username"], "name": u["name"]} for u in cx.store.by_role("analista", "jefe")]
+    seen = {}
+    for d in sorted(cx.workdir.iterdir()):
+        if (d / "case.json").exists() and Case(d).kind == "claim":
+            o = assignment.owner(Case(d))
+            if o:
+                seen[o["user"]] = o["name"]
+    return [{"username": k, "name": v} for k, v in sorted(seen.items(), key=lambda kv: kv[1].lower())]
+
+
+MIME = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".pdf": "application/pdf", ".webp": "image/webp"}
+
+
+def send_evidence(case: Case, digest: str, mini: bool = False):
+    """Entrega un archivo de evidencia tal cual (o una miniatura JPEG). Las fotos HEIC se convierten para verlas."""
+    import io
+    if not re.fullmatch(r"[0-9a-f]{64}", digest or "") or not service.has_evidence(case, digest):
+        abort(404)
+    path = case.evidence_dir / digest
+    name = next((e["data"]["original_name"] for e in case.ledger.entries()
+                 if e["action"] == "evidence_added" and e["subject"] == digest), "archivo")
+    ext = Path(name).suffix.lower()
+    if mini or ext in (".heic", ".heif"):
+        try:
+            from PIL import Image, ImageOps
+            with Image.open(path) as img:
+                img = ImageOps.exif_transpose(img).convert("RGB")
+                if mini:
+                    img.thumbnail((360, 360))
+                buf = io.BytesIO()
+                img.save(buf, "JPEG", quality=82)
+            return send_file(io.BytesIO(buf.getvalue()), mimetype="image/jpeg", max_age=3600)
+        except Exception:
+            if mini:
+                abort(404)
+    mime = MIME.get(ext, "application/octet-stream")
+    log_access("ver_archivo", name)
+    return send_file(path, mimetype=mime, download_name=name, as_attachment=mime == "application/octet-stream")
