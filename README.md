@@ -14,22 +14,56 @@ forman una red, uno sospechoso conectado a ellos (SIN-2026-0987) y uno limpio (S
 
 A mano: `pip install flask cryptography pillow openpyxl pdfplumber numpy qrcode` (opcionales `c2pa-python` y `rapidocr_onnxruntime` para OCR) y luego `python -m veritas.web`.
 
-**Usuarios:** mientras no exista ningún usuario, Veritas queda abierto en este equipo (modo demo). En *Usuarios y accesos*
-se crea el primer usuario, que debe ser administrador; desde ese momento se pide usuario y contraseña para todo. Roles:
-administrador (todo), jefe de siniestros (siniestros, investigaciones, redes, métricas, importación), liquidador (siniestros:
-ver, crear, decidir, captura segura; ver redes) e investigador (expedientes y auditorías; ver siniestros sin decidir). Las
+**Usuarios:** mientras no exista ningún usuario, Veritas queda abierto en este equipo (modo demo). En *Usuarios y empresas*
+se crea el primer usuario, que debe ser administrador; desde ese momento se pide usuario y contraseña para todo. Las
 contraseñas se guardan solo como hash; tras 5 intentos fallidos el usuario se bloquea 5 minutos. Cada ingreso, salida, caso
-abierto, decisión y descarga queda en `accesos.jsonl` y se ve en la pantalla de usuarios y en cada caso. El autor de cada
-decisión es el usuario que inició sesión.
+abierto, decisión, derivación, reasignación y descarga queda en `accesos.jsonl`.
+
+## Roles y flujo de trabajo
+
+| Rol | Ve | Hace |
+|---|---|---|
+| **Analista** | Solo sus casos (*Mis casos*) | Registra siniestros, envía el enlace al asegurado, agrega o quita evidencia, deriva a un perito, decide |
+| **Jefe de siniestros** | Todos los casos y el panel *Equipo* | Lo mismo que el analista, más reasignar casos, redes, métricas e importación |
+| **Perito externo** | Solo los expedientes derivados a su empresa (*Mis encargos*) y las fotos y documentos de esos siniestros | Carga entrevistas y documentos, responde las alertas, escribe la conclusión y entrega el informe final |
+| **Investigador interno** | Expedientes y auditorías | Crea expedientes y audita informes PDF |
+| **Administrador** | Todo | Usuarios, empresas de peritaje y configuración |
+
+1. El analista registra el siniestro (queda a su nombre) y envía el enlace al asegurado.
+2. Lo que sube el asegurado entra solo al caso y Veritas lo reanaliza.
+3. Si el riesgo lo amerita, el analista **deriva las entrevistas** a una empresa de peritaje (y, si quiere, a un perito en
+   particular) con un plazo, instrucciones y las alertas que debe aclarar. Veritas crea el expediente del perito.
+4. El perito entra con su usuario, ve solo sus encargos, carga las entrevistas, responde cada alerta y **entrega el informe final**.
+5. El analista ve el avance en la pestaña *Peritaje* del caso, abre el informe final y registra la decisión.
+6. El jefe ve en *Equipo* la carga de cada analista, los casos atrasados (sin movimiento por 7 días, enlace vencido o
+   peritaje fuera de plazo), los resultados por analista y por empresa de peritaje, y reasigna casos marcándolos.
+
+Quién tiene cada caso, cada derivación y cada reasignación quedan en la cadena de custodia del caso (no en un archivo editable).
+Un caso ajeno no existe para el analista: la dirección responde "no encontrado".
+
+## Dónde está cada cosa
+
+Cada caso tiene las mismas pestañas, siempre en el mismo orden:
+
+| Pestaña | Contenido |
+|---|---|
+| Resumen | Qué falta por hacer, las alertas principales con la foto a la que se refieren, los datos del siniestro, la decisión y el analista responsable |
+| Fotos | Todas las fotos (del asegurado y del analista) con fecha, cámara, GPS y sus alertas; agregar o quitar |
+| Documentos | PDF, documentos fotografiados y chats, con el programa que los generó, versiones ocultas recuperadas y alertas |
+| Peritaje | Derivar a un perito, o el avance de la derivación: entrevistas, alertas respondidas, conclusión e informe final |
+| Asegurado | Enlace del portal, botones de envío, avance y lo que subió |
+| Informe | El informe completo de Veritas, verificación de integridad y línea de tiempo |
+| Historial | Cadena de custodia en palabras simples y quién abrió el caso |
 
 **Excel:** la cola de trabajo, las redes y las métricas se descargan en Excel con el botón *Excel* de cada pantalla.
 
 Secciones de la interfaz (menú lateral):
 
-- **Panel:** lo primero que se ve. Casos derivados sin decisión, revisión manual pendiente, redes detectadas, monto en revisión,
+- **Panel / Mis casos:** lo primero que se ve (el analista ve solo lo suyo). Casos derivados sin decisión, casos en peritaje, revisión manual pendiente, redes detectadas, monto en revisión,
   la lista de prioridad, el estado de la cartera, las redes principales, las investigaciones en curso y accesos rápidos.
 
-- **Cola de trabajo:** todos los siniestros ordenados por riesgo, con búsqueda, filtros con conteo (derivar, revisión, alertas sin decisión), monto y decisión. En el caso, el informe ocupa el centro y a la derecha están la decisión, la evidencia y el enlace de captura.
+- **Cola de trabajo:** los siniestros ordenados por riesgo, con búsqueda, filtros con conteo, monto, lo que está en curso (asegurado o peritaje) y la decisión. El jefe ve la columna Analista y puede filtrar por analista.
+- **Equipo** (jefe): carga por analista, casos atrasados, empresas de peritaje y reasignación.
 - **Redes:** todas las redes de la cartera, con su grafo, los datos compartidos, los asegurados involucrados y el monto reclamado.
 - **Métricas:** cuántos fraudes confirmados detecta Veritas, qué porcentaje de sus alertas resulta fraude, las falsas alarmas,
   el monto detectado, las señales más frecuentes y los casos a revisar para ajustar umbrales.
@@ -114,6 +148,29 @@ cantidad y gravedad de alertas: **no es una probabilidad de fraude**.
 2. **Evidencia verificable por terceros.** Cadena de custodia con hash encadenado y firma Ed25519. El paquete exportado incluye `verify.py`: un juez, auditor o perito contraparte comprueba la integridad sin instalar Veritas ni confiar en quien lo emitió.
 3. **Análisis cruzado.** Las señales débiles por separado (una cuenta compartida, un relato parecido, un PDF editado) se vuelven evidentes al verse juntas y conectadas con otros casos.
 
+## Estructura del código
+
+```
+veritas/
+  core/            cadena de custodia (ledger), casos y evidencia, línea de tiempo, verificador de citas, paquete verificable
+  forensics/       motores de análisis, sin dependencia de la web: metadatos y píxeles de fotos, OCR, PDF y sus versiones,
+                   chats de WhatsApp, lugares, validación chilena (RUT, patentes), póliza, relato, red de siniestros
+  claims/          siniestros: análisis (analysis.py), orquestación (service.py), informe (report.py), guía por alerta,
+                   asignación y derivación (assignment.py), importación del historial, Excel
+  portal/          enlace del asegurado (links.py) y dirección pública con cloudflared (tunnel.py)
+  investigations/  expedientes de peritos (dossier.py), entrevistas y auditoría de informes PDF
+  accounts/        usuarios, roles, permisos por vista y registro de accesos
+  web/             interfaz: app.py (fábrica y seguridad), common.py (acceso a casos), views/ (una sección por archivo),
+                   templates/ (una carpeta por sección), static/ (estilos)
+  cli.py           línea de comandos
+tests/             una prueba por área (test_core, test_claims, test_forensics, test_portal, test_team, ...)
+demo/              generadores de datos ficticios
+```
+
+Las dependencias van en una sola dirección: `web` usa `claims`, `investigations`, `portal` y `accounts`; estos usan
+`forensics` y `core`; `core` no depende de nadie. Cada vista declara su permiso en `accounts/users.py` (`ENDPOINTS`);
+una vista nueva sin permiso declarado queda cerrada.
+
 ## Línea de comandos
 
 ```bash
@@ -157,7 +214,7 @@ rejillas); el enlace de captura segura y el código en papel cubren ese caso.
   las cifras reales solo se conocen con un piloto sobre datos de la aseguradora.
 - Todos los datos, fotos y documentos del ejemplo son sintéticos e inventados.
 - La firma usa una clave local por caso; para peso probatorio fuerte conviene sellado de tiempo externo (RFC 3161) y claves en HSM/KMS. No se ha validado legalmente en tribunales chilenos.
-- Interfaz de un solo usuario, local. Datos personales: en producción requiere control de acceso, cifrado y cumplimiento de la ley de protección de datos.
+- Corre en un equipo (o en un servidor de la red interna). Datos personales: en producción requiere cifrado en disco, respaldo y cumplimiento de la ley de protección de datos.
 
 ## Hoja de ruta sugerida
 
@@ -165,5 +222,5 @@ rejillas); el enlace de captura segura y el código en papel cubren ese caso.
 2. Extracción de texto y OCR de documentos: montos, RUT del taller, patentes en fotos.
 3. Detección de imágenes generadas por IA con un modelo propio (sin enviar fotos a terceros).
 4. API para que el sistema de siniestros de la aseguradora envíe los casos automáticamente.
-5. Usuarios, roles y auditoría; sellado de tiempo externo.
+5. Sellado de tiempo externo (RFC 3161) y despliegue en un servidor de la compañía con su dominio.
 6. Piloto con BCI Seguros: lote de siniestros cerrados y anonimizados, con fraudes confirmados, para medir detección y falsas alarmas.
