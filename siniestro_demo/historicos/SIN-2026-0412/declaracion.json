@@ -1,0 +1,23 @@
+{
+  "numero": "SIN-2026-0412",
+  "poliza": "AUT-40110021",
+  "asegurado": "Asegurado histórico A",
+  "rut": "11.111.111-1",
+  "telefono": "+56 9 8765 4321",
+  "email": "cliente.a@example.com",
+  "direccion": "Los Olmos 450, Maipú",
+  "cuenta_bancaria": "00-123-45678-90",
+  "patente": "HJKL-21",
+  "taller": "Taller Los Aromos",
+  "fecha_siniestro": "2026-04-12T21:10:00",
+  "fecha_denuncia": "2026-04-13",
+  "lugar": "Av. Pajaritos 3000, Maipú",
+  "lat": -33.51,
+  "lon": -70.757,
+  "inicio_poliza": "2025-01-10",
+  "fin_poliza": "2027-01-10",
+  "suma_asegurada": "6.000.000",
+  "monto_reclamado": "1.200.000",
+  "testigos": 0,
+  "descripcion": "Me encontraba detenido en el semáforo de la avenida cuando un vehículo que venía por detrás me impactó en el parachoques trasero. El otro conductor se dio a la fuga sin dejar sus datos. Revisé los daños y tomé fotografías en el lugar."
+}

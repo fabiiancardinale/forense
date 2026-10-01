@@ -1,0 +1,23 @@
+{
+  "numero": "SIN-2026-0601",
+  "poliza": "AUT-39880410",
+  "asegurado": "Asegurado histórico C",
+  "rut": "33.333.333-3",
+  "telefono": "+56 9 4444 9090",
+  "email": "cliente.c@example.com",
+  "direccion": "Av. Grecia 2100, Ñuñoa",
+  "cuenta_bancaria": "00-987-65432-10",
+  "patente": "WXYZ-10",
+  "taller": "Taller Los Aromos",
+  "fecha_siniestro": "2026-06-21T13:20:00",
+  "fecha_denuncia": "2026-06-22",
+  "lugar": "Av. Irarrázaval 3400, Ñuñoa",
+  "lat": -33.454,
+  "lon": -70.596,
+  "inicio_poliza": "2024-11-02",
+  "fin_poliza": "2026-11-02",
+  "suma_asegurada": "7.000.000",
+  "monto_reclamado": "980.000",
+  "testigos": 1,
+  "descripcion": "Al salir del estacionamiento del supermercado otro auto retrocedió y golpeó la puerta del conductor. Intercambiamos datos, pero después el número del otro conductor no contestaba."
+}

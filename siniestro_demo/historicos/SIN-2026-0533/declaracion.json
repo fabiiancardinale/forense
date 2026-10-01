@@ -1,0 +1,23 @@
+{
+  "numero": "SIN-2026-0533",
+  "poliza": "AUT-40220987",
+  "asegurado": "Asegurado histórico B",
+  "rut": "22.222.222-2",
+  "telefono": "+56 9 5555 1212",
+  "email": "cliente.b@example.com",
+  "direccion": "Pasaje Las Rosas 12, La Florida",
+  "cuenta_bancaria": "00-123-45678-90",
+  "patente": "PRTS-77",
+  "taller": "Taller Los Aromos",
+  "fecha_siniestro": "2026-05-30T20:45:00",
+  "fecha_denuncia": "2026-05-31",
+  "lugar": "Av. Vicuña Mackenna 7100, La Florida",
+  "lat": -33.5227,
+  "lon": -70.5983,
+  "inicio_poliza": "2026-05-20",
+  "fin_poliza": "2027-05-20",
+  "suma_asegurada": "5.500.000",
+  "monto_reclamado": "1.900.000",
+  "testigos": 0,
+  "descripcion": "Estaba detenido en el semáforo de la avenida cuando un vehículo que venía por detrás me impactó en el parachoques trasero. El otro conductor se dio a la fuga sin dejar sus datos. Revisé los daños y saqué fotografías en el lugar."
+}

@@ -1,0 +1,89 @@
+<!doctype html><html lang=es><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><title>Informe Intrusión en servidor de finanzas</title><style>
+:root{--ink:#16202c;--muted:#5b6673;--line:#e3e7ec;--bg:#f6f8fa;--card:#fff;--accent:#0f4c81;
+--red:#b3261e;--redbg:#fdecea;--amb:#8a5300;--ambbg:#fff4e0;--grn:#146c2e;--grnbg:#e7f5ec}
+*{box-sizing:border-box}body{margin:0;font:14.5px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;color:var(--ink);background:var(--bg)}
+header{background:var(--ink);color:#fff;padding:28px 0 24px}
+.wrap{max-width:1000px;margin:0 auto;padding:0 20px}
+.brand{font-size:12px;letter-spacing:.18em;text-transform:uppercase;opacity:.7}
+header h1{margin:6px 0 4px;font-size:26px}header p{margin:0;opacity:.75}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:-18px 0 8px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.tile b{display:block;font-size:24px}.tile span{color:var(--muted);font-size:12.5px}
+section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 22px;margin:16px 0}
+h2{font-size:16px;margin:0 0 12px}
+.checks{display:flex;flex-wrap:wrap;gap:8px}.chk{padding:6px 12px;border-radius:99px;font-weight:600;font-size:13px}
+.ok{background:var(--grnbg);color:var(--grn)}.bad{background:var(--redbg);color:var(--red)}
+.claims{margin:0;padding-left:18px}.claims li{margin:6px 0}
+.cite{display:inline-block;font:11.5px ui-monospace,monospace;background:#eef3f9;color:var(--accent);
+border-radius:4px;padding:0 5px;margin-left:2px;text-decoration:none}
+.note{color:var(--muted);font-size:13px;margin:10px 0 0}
+.finding{border-left:4px solid var(--line);padding:6px 0 6px 14px;margin:10px 0}
+.finding.alta{border-color:var(--red)}.finding.media{border-color:var(--amb)}
+.sev{font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;margin-right:6px}
+.sev.alta{background:var(--redbg);color:var(--red)}.sev.media{background:var(--ambbg);color:var(--amb)}
+.finding p{margin:4px 0;color:var(--muted)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;color:var(--muted);font-weight:600;border-bottom:2px solid var(--line);padding:6px 8px}
+td{border-bottom:1px solid var(--line);padding:6px 8px;vertical-align:top}
+tr.hit td{background:#fffaf0}tr:target td{background:#fff1a8}
+code{font:12px ui-monospace,monospace}
+.scroll{overflow-x:auto}
+footer{color:var(--muted);font-size:12px;text-align:center;padding:20px 0 40px}
+</style>
+<header><div class="wrap"><div class="brand">Veritas · Informe de incidente</div><h1>Intrusión en servidor de finanzas</h1><p>Detectado 2026-09-28 03:10:00 UTC</p></div></header>
+<div class="wrap"><div class="tiles">
+<div class="tile"><b>13</b><span>eventos analizados</span></div>
+<div class="tile"><b>1</b><span>equipos</span></div>
+<div class="tile"><b>5</b><span>hallazgos</span></div>
+<div class="tile"><b>4</b><span>de severidad alta</span></div>
+<div class="tile"><b>✓</b><span>evidencia íntegra</span></div>
+</div>
+<section><h2>Integridad de la evidencia</h2><div class="checks">
+<span class="chk ok">Cadena de custodia: cadena íntegra (4 entradas)</span>
+<span class="chk ok">Hashes de evidencia coinciden</span>
+<span class="chk ok">Firma digital válida (Ed25519)</span></div>
+<p class="note">Cualquier tercero puede comprobar esto con <code>verify.py</code>, incluido en el paquete exportado.</p></section>
+<section><h2>Resumen</h2><ul class=claims>
+<li>7 intentos fallidos y luego un acceso exitoso del usuario admin.contab en 10 min <a class="cite" href="#ev-ffcae8ec:2">2</a> <a class="cite" href="#ev-ffcae8ec:3">3</a> <a class="cite" href="#ev-ffcae8ec:4">4</a> <a class="cite" href="#ev-ffcae8ec:5">5</a> <a class="cite" href="#ev-ffcae8ec:6">6</a> <a class="cite" href="#ev-ffcae8ec:7">7</a></li>
+<li>Se ejecutó PowerShell ofuscado en SRV-FIN-01 <a class="cite" href="#ev-ffcae8ec:10">10</a></li>
+<li>Se agregó una cuenta a un grupo privilegiado en SRV-FIN-01 <a class="cite" href="#ev-ffcae8ec:11">11</a></li>
+<li>Se instaló un servicio en SRV-FIN-01 <a class="cite" href="#ev-ffcae8ec:12">12</a></li>
+<li>Verificar si es legítimo (persistencia) <a class="cite" href="#ev-ffcae8ec:12">12</a></li>
+<li>Se borró el registro de seguridad en SRV-FIN-01 <a class="cite" href="#ev-ffcae8ec:13">13</a></li>
+<li>Suele indicar ocultamiento de huellas <a class="cite" href="#ev-ffcae8ec:13">13</a></li>
+</ul>
+<p class="note">Cada afirmación enlaza al evento que la respalda. 0 afirmación(es) sin evidencia fueron descartadas automáticamente.</p></section>
+<section><h2>Hallazgos</h2>
+<div class="finding alta"><span class="sev alta">ALTA</span><b>Posible fuerza bruta con acceso exitoso (admin.contab)</b><p>7 intentos fallidos y luego un acceso exitoso del usuario admin.contab en 10 min.</p><p>2026-09-28 03:10:00 · evidencia <a class="cite" href="#ev-ffcae8ec:2">2</a><a class="cite" href="#ev-ffcae8ec:3">3</a><a class="cite" href="#ev-ffcae8ec:4">4</a><a class="cite" href="#ev-ffcae8ec:5">5</a><a class="cite" href="#ev-ffcae8ec:6">6</a><a class="cite" href="#ev-ffcae8ec:7">7</a><a class="cite" href="#ev-ffcae8ec:8">8</a><a class="cite" href="#ev-ffcae8ec:9">9</a></p></div>
+<div class="finding alta"><span class="sev alta">ALTA</span><b>PowerShell con comando codificado</b><p>Se ejecutó PowerShell ofuscado en SRV-FIN-01.</p><p>2026-09-28 03:22:10 · evidencia <a class="cite" href="#ev-ffcae8ec:10">10</a></p></div>
+<div class="finding alta"><span class="sev alta">ALTA</span><b>Usuario agregado a grupo de administradores</b><p>Se agregó una cuenta a un grupo privilegiado en SRV-FIN-01.</p><p>2026-09-28 03:25:44 · evidencia <a class="cite" href="#ev-ffcae8ec:11">11</a></p></div>
+<div class="finding media"><span class="sev media">MEDIA</span><b>Servicio nuevo instalado</b><p>Se instaló un servicio en SRV-FIN-01. Verificar si es legítimo (persistencia).</p><p>2026-09-28 03:31:02 · evidencia <a class="cite" href="#ev-ffcae8ec:12">12</a></p></div>
+<div class="finding alta"><span class="sev alta">ALTA</span><b>Registro de auditoría borrado</b><p>Se borró el registro de seguridad en SRV-FIN-01. Suele indicar ocultamiento de huellas.</p><p>2026-09-28 03:40:00 · evidencia <a class="cite" href="#ev-ffcae8ec:13">13</a></p></div>
+</section>
+<section><h2>Plazos de reporte (Ley 21.663)</h2><table><tr><th>Obligación</th><th>Fecha límite</th></tr>
+<tr><td>Alerta inicial al CSIRT (3 horas)</td><td><b>2026-09-28 06:10 UTC</b></td></tr>
+<tr><td>Actualización (72 horas)</td><td><b>2026-10-01 03:10 UTC</b></td></tr>
+<tr><td>Informe final (15 días corridos)</td><td><b>2026-10-13 03:10 UTC</b></td></tr>
+</table><p class="note">Contado desde la primera señal del incidente. Confirmar con la ANCI y asesoría legal.</p></section>
+<section><h2>Línea de tiempo</h2><div class="scroll"><table><tr><th>#</th><th>Hora (UTC)</th><th>Equipo</th><th>Evento</th><th>Usuario</th><th>Detalle</th></tr>
+<tr id="ev-ffcae8ec:1"><td><code>1</code></td><td>02:10:00</td><td>SRV-FIN-01</td><td>4624</td><td>mperez</td><td>Logon normal interactivo</td></tr>
+<tr id="ev-ffcae8ec:2" class="hit"><td><code>2</code></td><td>03:10:00</td><td>SRV-FIN-01</td><td>4625</td><td>admin.contab</td><td>Logon fallido desde 203.0.113.50</td></tr>
+<tr id="ev-ffcae8ec:3" class="hit"><td><code>3</code></td><td>03:11:00</td><td>SRV-FIN-01</td><td>4625</td><td>admin.contab</td><td>Logon fallido desde 203.0.113.50</td></tr>
+<tr id="ev-ffcae8ec:4" class="hit"><td><code>4</code></td><td>03:12:00</td><td>SRV-FIN-01</td><td>4625</td><td>admin.contab</td><td>Logon fallido desde 203.0.113.50</td></tr>
+<tr id="ev-ffcae8ec:5" class="hit"><td><code>5</code></td><td>03:13:00</td><td>SRV-FIN-01</td><td>4625</td><td>admin.contab</td><td>Logon fallido desde 203.0.113.50</td></tr>
+<tr id="ev-ffcae8ec:6" class="hit"><td><code>6</code></td><td>03:14:00</td><td>SRV-FIN-01</td><td>4625</td><td>admin.contab</td><td>Logon fallido desde 203.0.113.50</td></tr>
+<tr id="ev-ffcae8ec:7" class="hit"><td><code>7</code></td><td>03:15:00</td><td>SRV-FIN-01</td><td>4625</td><td>admin.contab</td><td>Logon fallido desde 203.0.113.50</td></tr>
+<tr id="ev-ffcae8ec:8" class="hit"><td><code>8</code></td><td>03:16:00</td><td>SRV-FIN-01</td><td>4625</td><td>admin.contab</td><td>Logon fallido desde 203.0.113.50</td></tr>
+<tr id="ev-ffcae8ec:9" class="hit"><td><code>9</code></td><td>03:18:30</td><td>SRV-FIN-01</td><td>4624</td><td>admin.contab</td><td>Logon exitoso desde 203.0.113.50</td></tr>
+<tr id="ev-ffcae8ec:10" class="hit"><td><code>10</code></td><td>03:22:10</td><td>SRV-FIN-01</td><td>4104</td><td>admin.contab</td><td>powershell.exe -enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQA</td></tr>
+<tr id="ev-ffcae8ec:11" class="hit"><td><code>11</code></td><td>03:25:44</td><td>SRV-FIN-01</td><td>4732</td><td>admin.contab</td><td>Miembro agregado al grupo Administradores: soporte_tmp</td></tr>
+<tr id="ev-ffcae8ec:12" class="hit"><td><code>12</code></td><td>03:31:02</td><td>SRV-FIN-01</td><td>7045</td><td>SYSTEM</td><td>Servicio instalado: UpdSvcHost</td></tr>
+<tr id="ev-ffcae8ec:13" class="hit"><td><code>13</code></td><td>03:40:00</td><td>SRV-FIN-01</td><td>1102</td><td>admin.contab</td><td>Se borró el registro de auditoría</td></tr>
+</table></div></section>
+<section><h2>Cadena de custodia</h2><div class="scroll"><table><tr><th>#</th><th>Hora</th><th>Quién</th><th>Acción</th><th>Hash</th></tr>
+<tr><td>0</td><td>2026-09-29 15:35:14Z</td><td>root</td><td>case_created</td><td><code>c32454aaa5871bb6…</code></td></tr>
+<tr><td>1</td><td>2026-09-29 15:35:14Z</td><td>root</td><td>evidence_added</td><td><code>81690cdd971f6a22…</code></td></tr>
+<tr><td>2</td><td>2026-09-29 15:35:14Z</td><td>veritas</td><td>timeline_built</td><td><code>19295092c02b0330…</code></td></tr>
+<tr><td>3</td><td>2026-09-29 15:35:14Z</td><td>veritas</td><td>analysis_run</td><td><code>c08d40bcb0b38b04…</code></td></tr>
+</table></div></section>
+<footer>Generado por Veritas v0.1 · prototipo</footer></div></html>

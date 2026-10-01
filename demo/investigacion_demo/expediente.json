@@ -1,0 +1,18 @@
+{
+  "numero": "SIN-DEMO-4471",
+  "aseguradora": "Compañía de Seguros (demo)",
+  "tipo": "Colisión",
+  "fecha_ocurrencia": "2026-09-15T16:45:00",
+  "direccion": "Av. Los Leones 1200",
+  "comuna": "Providencia · Santiago",
+  "vehiculo": "Hatchback 2021 - DEMO11",
+  "patente": "DEMO11",
+  "rut_asegurado": "11.111.111-1",
+  "descripcion": "PÉRDIDA DE CONTROL DEL VEHÍCULO AL ESQUIVAR A OTRO AUTOMÓVIL, IMPACTANDO CONTRA UNA BARRERA. AIRBAGS ACTIVADOS: SÍ",
+  "alertas": [
+    "posible uso comercial",
+    "indica que fue a dejar a su padre al médico: solicitar respaldo de la hora médica",
+    "pedir carta app",
+    "pedir direcciones de origen y destino"
+  ]
+}
