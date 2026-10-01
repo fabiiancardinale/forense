@@ -1,5 +1,5 @@
 {% if can('editar_siniestros') %}<form class="uploadbar" method="post" action="{{ url_for('claims.add_photos', cid=c.id) }}" enctype="multipart/form-data" data-busy="Analizando…">
 <input type="hidden" name="tab" value="{{ tab }}">
-<label>{{ icon('upload', 15) }} <span>{{ upload_label }}</span><input type="file" name="fotos" multiple accept="image/*,.heic,.pdf,application/pdf,.txt,.zip" required></label>
-<button class="btn sm" type="submit">Agregar y reanalizar</button>
-<span class="hint">Se guardan los originales sin modificarlos. Lo que sube el asegurado por el portal aparece aquí solo.</span></form>{% endif %}
+<label class="btn">{{ icon('upload', 15) }}{{ upload_label }}<input type="file" name="fotos" multiple accept="image/*,.heic,.pdf,application/pdf,.txt,.zip" required hidden onchange="this.form.querySelector('.fname').textContent=[...this.files].map(f=>f.name).join(', ');this.form.querySelector('.go').hidden=!this.files.length"></label>
+<span class="fname hint">Se guardan los originales sin modificarlos. Lo que sube el asegurado por el portal aparece aquí solo.</span>
+<button class="btn pri sm go" type="submit" hidden>Agregar y reanalizar</button></form>{% endif %}

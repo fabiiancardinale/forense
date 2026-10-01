@@ -3,38 +3,40 @@
 --navy:#0b1f36;--navy2:#132c4a;--accent:#14508c;--accent2:#0e3d6c;--accentbg:#eaf2fb;
 --red:#b42318;--redbg:#fef3f2;--redln:#fecdca;--amb:#b54708;--ambbg:#fffaeb;--ambln:#fedf89;
 --grn:#067647;--grnbg:#ecfdf3;--grnln:#abefc6;--gray:#475467;--graybg:#f2f4f7;
---amber:#c77d00;--radius:10px;--shadow:0 1px 2px rgba(16,24,40,.05);--side:244px}
+--amber:#c77d00;--radius:10px;--shadow:0 1px 2px rgba(16,24,40,.05);--side:228px;--gap:20px}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{margin:0}
 body{font:14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased}
 a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 /* ---- estructura ---- */
 .side{position:fixed;inset:0 auto 0 0;width:var(--side);background:var(--navy);color:#c6d2e0;display:flex;flex-direction:column;z-index:20}
-.brand{display:flex;align-items:center;gap:10px;padding:18px 20px 16px;color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,.07)}
+.brand{display:flex;align-items:center;gap:10px;padding:16px 18px 14px;color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,.07)}
 .brand:hover{text-decoration:none}
 .brand .mark{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#2f7ac4,#14508c);display:grid;place-items:center}
 .brand b{font-size:15px;letter-spacing:.14em;display:block;line-height:1.1}.brand small{font-size:11.5px;color:#8fa3ba;letter-spacing:.02em}
-.navs{flex:1;overflow-y:auto;padding:10px 10px 16px}
-.navs .grp{font-size:10.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#7b90a8;padding:16px 12px 6px}
-.navs a{display:flex;align-items:center;gap:10px;color:#c6d2e0;padding:8px 12px;border-radius:7px;font-weight:500;font-size:13.5px;position:relative}
+.navs{flex:1;overflow-y:auto;padding:8px 10px 12px}
+.navs .grp{font-size:10.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#6f849c;padding:14px 12px 4px}
+.navs a{display:flex;align-items:center;gap:10px;color:#c6d2e0;padding:7px 12px;border-radius:7px;font-weight:500;font-size:13.5px;position:relative;line-height:1.35}
 .navs a:hover{background:rgba(255,255,255,.06);color:#fff;text-decoration:none}
 .navs a.on{background:rgba(255,255,255,.1);color:#fff}
 .navs a.on::before{content:"";position:absolute;left:-10px;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:#5aa0e6}
 .navs a .n{margin-left:auto;background:#b42318;color:#fff;font-size:11px;font-weight:700;border-radius:99px;padding:0 7px;line-height:18px}
 .navs svg{flex:none;opacity:.9}
-.sidefoot{padding:12px 20px 16px;border-top:1px solid rgba(255,255,255,.07);font-size:11.5px;color:#7b90a8}
+.sidefoot{padding:12px 18px 14px;border-top:1px solid rgba(255,255,255,.07);font-size:11.5px;color:#7b90a8}
 .sidefoot b{color:#c6d2e0;font-weight:500}
 .userbox{display:flex;align-items:center;gap:10px}.userbox .av{width:30px;height:30px;border-radius:50%;background:#2f7ac4;color:#fff;
 display:grid;place-items:center;font-weight:700;flex:none}.userbox a{margin-left:auto;color:#8ec5ff;font-size:12px}
 .mtop{display:none}
 .wrap{margin-left:var(--side);min-height:100vh}
-.pagehead{background:var(--card);border-bottom:1px solid var(--line);padding:18px 32px 16px;display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap}
+.pagehead{background:var(--card);border-bottom:1px solid var(--line);padding:18px 32px;display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap}
 .pagehead .tt{flex:1 1 560px;min-width:260px}
 .crumbs{font-size:12.5px;color:var(--muted);margin-bottom:4px}.crumbs a{color:var(--muted)}.crumbs a:hover{color:var(--accent)}
 h1{font-size:21px;line-height:1.25;margin:0;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .sub{color:var(--muted);margin:4px 0 0;font-size:13.5px;max-width:860px}
 .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-main{padding:24px 32px 64px;max-width:1440px}
+main{padding:24px 32px 64px;max-width:1360px}
+main>*+*{margin-top:var(--gap)}
 h2{font-size:15px;margin:0;font-weight:600}
 /* ---- componentes ---- */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--line2);background:var(--card);color:var(--ink2);
@@ -50,7 +52,7 @@ padding:7px 13px;border-radius:8px;font:600 13px Inter,system-ui,sans-serif;curs
 .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
 .panel>.ph{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .panel>.ph h2{margin:0}.panel>.ph .r{margin-left:auto}.panel>.pb{padding:16px 18px}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:20px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
 .tile{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);position:relative}
 .tile b,.tile .big{display:block;font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1.15;margin-bottom:2px}
 .tile span{color:var(--muted);font-size:12.5px}
@@ -99,8 +101,8 @@ h3.sec:first-child{border:0;padding-top:0;margin-top:0}
 .chip .c{font-weight:500;color:var(--muted);margin-left:4px}
 .dec{display:inline-block;font-size:12.5px;font-weight:600;color:var(--muted);white-space:nowrap}
 .dec.fraude{color:var(--red)}.dec.legitimo{color:var(--grn)}.dec.en_revision{color:var(--amb)}.dec.rechazado{color:var(--gray)}
-.cols2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px}
-.layout-side{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px;align-items:start}
+.cols2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:var(--gap)}
+.layout-side{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:var(--gap);align-items:start}
 .layout-side>aside{display:grid;gap:16px;position:sticky;top:16px}
 .bars{display:grid;grid-template-columns:minmax(120px,max-content) 1fr;gap:8px 12px;align-items:center;font-size:13px}
 .bars .track{position:relative;height:18px}
@@ -241,3 +243,51 @@ table.custody td{vertical-align:top}
 .teamtbl .bar i{display:block;height:100%;background:var(--accent)}
 .late{color:var(--red);font-weight:600}
 form.cols2 select,form.cols2 input,form.cols2 textarea{width:100%}
+
+/* ==== Sistema de secciones ==================================================================
+   Cada página se arma con bloques <section class="block"> con su encabezado (.bh: título,
+   explicación corta y acciones a la derecha) seguido de su contenido (panel, tabla o tarjetas). */
+.block>.bh{display:flex;align-items:flex-end;gap:12px;margin:0 0 10px;flex-wrap:wrap}
+.block>.bh h2{font-size:15px;font-weight:650}.block>.bh p{margin:2px 0 0;color:var(--muted);font-size:12.5px}
+.block>.bh .r{margin-left:auto;display:flex;gap:8px}
+.stack{display:grid;gap:var(--gap);align-content:start}
+.sidefoot.demo{display:flex;gap:9px;align-items:flex-start;font-size:12px;color:#9fb1c5}
+.sidefoot.demo a{color:#8ec5ff}.dotw{flex:none;width:8px;height:8px;border-radius:50%;background:#fdb022;margin-top:5px}
+
+/* ---- cola de trabajo ---- */
+.filterbar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+.filterbar .search{flex:1 1 240px;max-width:340px}
+.fsel{display:flex;align-items:center;gap:8px;margin-left:auto}.fsel label{margin:0;font-weight:500;color:var(--muted)}
+.fsel select{min-width:170px}
+table.queue{table-layout:fixed}
+table.queue td{padding-top:10px;padding-bottom:10px}
+.strong{font-weight:650;color:var(--ink)}a.strong:hover{color:var(--accent)}
+.line2{font-size:12.5px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ellip{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#b8c2cf;margin-right:6px;vertical-align:1px}
+.dot.en_curso,.dot.p-abierto{background:var(--accent)}.dot.entregado{background:var(--grn)}
+.dot.atrasado,.dot.p-vencido{background:var(--red)}.dot.derivado,.dot.p-enviado{background:var(--amber)}
+.tablefoot{padding:9px 16px;border-top:1px solid var(--line);background:#fafbfc}
+a.tile{display:block;color:inherit;text-decoration:none}a.tile:hover{border-color:var(--line2);box-shadow:0 2px 6px rgba(16,24,40,.08)}
+.panel>.ph h2{display:flex;align-items:center;gap:7px}
+
+/* ---- encabezado del caso: datos clave y pestañas pegadas al encabezado ---- */
+.pagehead:has(.tabs){padding-bottom:0}
+.pagehead .tabs{flex-basis:100%;margin:4px 0 0;border-bottom:0}
+.pagehead .tabs a{padding:10px 14px 11px}
+.casefacts{display:flex;flex-wrap:wrap;gap:0;margin:14px 0 2px;font-size:13px;border:1px solid var(--line);border-radius:8px;background:#fafbfc;width:fit-content;max-width:100%}
+.casefacts>div{padding:8px 16px;border-left:1px solid var(--line);min-width:110px}.casefacts>div:first-child{border-left:0}
+.casefacts dt{font-size:10.5px;letter-spacing:.06em}
+.uploadbar{border-style:solid;background:var(--card);box-shadow:var(--shadow)}
+.uploadbar label.btn{margin:0;font-weight:600}.uploadbar .fname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.docname{display:flex;gap:12px;align-items:center}.docname>img,.docname>.docicon{flex:none;width:40px;height:40px}
+.doctable td{vertical-align:top}.doctable .flinks{padding-left:14px}
+td.num details.rm{text-align:left}
+.loadbar{display:flex;align-items:center;gap:10px}.loadbar b{min-width:20px;font-variant-numeric:tabular-nums}
+.loadbar .bar{flex:1;height:6px;border-radius:99px;background:#eef1f5;overflow:hidden;max-width:160px}.loadbar .bar i{display:block;height:100%;background:var(--accent)}
+.late-reason{font-size:13px;color:var(--red)}.late-reason+.late-reason{margin-top:2px}
+table.queue input[type=checkbox]{width:auto}
+table.queue th{white-space:normal;line-height:1.3;vertical-align:bottom}
+.grid select,.stackform select{width:100%}
+.casefacts>div{padding:7px 13px;min-width:0}
+.filterbar .search{max-width:300px}

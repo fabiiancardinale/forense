@@ -1,7 +1,12 @@
-<div class="layout-side"><section class="panel"><div class="ph"><h2>Cadena de custodia</h2><span class="r hint">Cada acción queda encadenada con la anterior y firmada: no se puede borrar ni alterar sin que se note.</span></div>
-<div class="scroll"><table class="mini custody"><tr><th>Fecha (UTC)</th><th>Quién</th><th>Qué</th><th>Detalle</th><th>Huella</th></tr>
-{% for r in rows %}<tr><td class="nowrap hint">{{ r.ts[:16]|replace('T',' ') }}</td><td>{{ r.actor }}</td><td class="nowrap">{{ r.what }}</td><td class="hint">{{ r.detail }}</td><td class="mono hint">{{ r.hash[:10] }}…</td></tr>{% endfor %}
+<section class="block"><div class="bh"><div><h2>Cadena de custodia</h2><p>Cada acción queda encadenada con la anterior y firmada: no se puede borrar ni alterar sin que se note. La más reciente arriba.</p></div></div>
+<div class="panel"><table class="queue">
+<colgroup><col style="width:15%"><col style="width:13%"><col style="width:21%"><col><col style="width:12%"></colgroup>
+<thead><tr><th>Fecha (UTC)</th><th>Quién</th><th>Qué</th><th>Detalle</th><th>Huella</th></tr></thead>
+<tbody>{% for r in rows %}<tr><td class="nowrap hint">{{ r.ts[8:10] }}-{{ r.ts[5:7] }}-{{ r.ts[:4] }} {{ r.ts[11:16] }}</td><td class="ellip">{{ r.actor }}</td><td>{{ r.what }}</td>
+<td class="hint">{{ r.detail }}</td><td class="mono hint ellip" title="{{ r.hash }}">{{ r.hash[:10] }}…</td></tr>{% endfor %}</tbody>
 </table></div></section>
-<aside><section class="panel"><div class="ph"><h2>Quién abrió el caso</h2></div><div class="pb">
-{% if accesos %}<table class="mini">{% for e in accesos %}<tr><td class="nowrap hint">{{ e.ts[5:16]|replace('T',' ') }}</td><td>{{ e.user }}</td><td class="hint">{{ {'ver_caso': 'abrió', 'decision': 'decidió', 'descarga': 'descargó', 'derivar': 'derivó', 'ver_archivo': 'vio un archivo', 'quitar_archivo': 'quitó un archivo'}.get(e.action, e.action) }}</td></tr>{% endfor %}</table>
-{% else %}<p class="hint" style="margin:0">El registro de accesos se activa al crear usuarios.</p>{% endif %}</div></section></aside></div>
+<section class="block"><div class="bh"><div><h2>Quién abrió el caso</h2><p>Registro de accesos de los usuarios</p></div></div>
+<div class="panel">{% if accesos %}<table class="queue"><colgroup><col style="width:15%"><col style="width:20%"><col></colgroup>
+<thead><tr><th>Fecha (UTC)</th><th>Usuario</th><th>Acción</th></tr></thead>
+<tbody>{% for e in accesos %}<tr><td class="nowrap hint">{{ e.ts[8:10] }}-{{ e.ts[5:7] }} {{ e.ts[11:16] }}</td><td>{{ e.user }}</td><td>{{ {'ver_caso': 'Abrió el caso', 'decision': 'Registró una decisión', 'descarga': 'Descargó', 'derivar': 'Derivó a peritaje', 'ver_archivo': 'Vio un archivo', 'quitar_archivo': 'Quitó un archivo', 'reasignar': 'Reasignó'}.get(e.action, e.action) }}</td></tr>{% endfor %}</tbody></table>
+{% else %}<div class="pb hint">El registro de accesos se activa al crear usuarios.</div>{% endif %}</div></section>

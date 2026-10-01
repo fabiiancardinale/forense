@@ -27,7 +27,7 @@ def test_web_create_claim_with_documents_verify_export(demo_src, tmp_path):
     index = c.get("/siniestros").get_data(as_text=True)
     assert "SIN-2026-5000" in index and 'class="risk bad"' in index
     dash = c.get("/").get_data(as_text=True)
-    assert "Derivados sin decisión" in dash and "SIN-2026-5000" in dash
+    assert "Riesgo alto sin decidir" in dash and "SIN-2026-5000" in dash
     assert "Integridad verificada" in c.post("/caso/SIN-2026-5000/verificar", follow_redirects=True).get_data(as_text=True)
     r = c.get("/caso/SIN-2026-5000/exportar")
     assert r.mimetype == "application/zip" and "verify.py" in zipfile.ZipFile(_io.BytesIO(r.data)).namelist()
@@ -48,7 +48,7 @@ def test_web_validation_and_demo(tmp_path):
     assert c.get("/caso/..%2Fetc").status_code == 404
     page = c.post("/demo", follow_redirects=True).get_data(as_text=True)
     assert all(n in page for n in ("SIN-2026-0412", "SIN-2026-0533", "SIN-2026-0601", ACTUAL, LIMPIO))
-    assert "Derivar a la unidad" in page and "Sin alertas" in page
+    assert "Derivar a investigación" in page and "Sin alertas" in page
     assert "ya estaba cargado" in c.post("/demo", follow_redirects=True).get_data(as_text=True)
 
 
