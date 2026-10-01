@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from .chile import norm_plate, plates_in, ruts_in
+from veritas.forensics.chile import norm_plate, plates_in, ruts_in
 
 CHAT_EXT = {".txt", ".zip"}
 # Android: "20/09/26, 18:41 - Nombre: texto" · iOS: "[20/09/26, 18:41:12] Nombre: texto"
@@ -130,7 +130,7 @@ def looks_like_chat(path: Path) -> bool:
 # ---- análisis ----------------------------------------------------------------------------------
 def analyze(decl: dict, decl_ev: str, chats: list[tuple[str, Chat]], registry: list[dict]) -> list:
     """chats: lista de (prefijo de evidencia, Chat). Devuelve hallazgos de la categoría Comunicaciones."""
-    from .detections import Finding
+    from veritas.core.detections import Finding
     out = []
     t0 = datetime.fromisoformat(decl["fecha_siniestro"])
     plate = norm_plate(decl.get("patente"))
@@ -201,7 +201,7 @@ def analyze(decl: dict, decl_ev: str, chats: list[tuple[str, Chat]], registry: l
 def relevant(chat: Chat, t0: datetime, limit: int = 40) -> list[Message]:
     """Mensajes para la línea de tiempo: los que hablan del hecho, los de libreto, los borrados
     y los cercanos al siniestro (±6 h)."""
-    from .places import mention
+    from veritas.forensics.places import mention
     keep = [m for m in chat.messages if EVENT_WORDS.search(m.text) or SCRIPT.search(m.text) or m.deleted
             or abs(m.ts - t0) <= timedelta(hours=6) or (abs(m.ts - t0) <= timedelta(days=2) and mention(m.text))]
     return keep[:limit]

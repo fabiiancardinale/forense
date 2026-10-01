@@ -24,8 +24,8 @@ import unicodedata
 from datetime import date, datetime
 from pathlib import Path
 
-from . import service
-from .case import Case, sha256_file
+from veritas.claims import service
+from veritas.core.case import Case, sha256_file
 
 TEMPLATE_COLUMNS = ["numero", "fecha_siniestro", "fecha_denuncia", "asegurado", "rut", "telefono", "email", "direccion",
                     "cuenta_bancaria", "patente", "lugar", "taller", "testigos", "parte_policial", "poliza",

@@ -18,12 +18,13 @@ import re
 import tempfile
 from pathlib import Path
 
-from . import assistant
-from . import interviews as I
-from . import report_audit as RA
-from .case import Case
-from .detections import Finding
-from .timeline import Timeline
+from veritas.paths import DEMO_DIR as _DEMO
+from veritas.core import assistant
+from veritas.investigations import interviews as I
+from veritas.investigations import audit as RA
+from veritas.core.case import Case
+from veritas.core.detections import Finding
+from veritas.core.timeline import Timeline
 
 STATES = ["Descartado", "Acreditado", "Acreditado con matices", "No descartado", "Indeterminado", "Confirmado"]
 RECOMMENDATIONS = ["Aprobar el pago", "Aprobar con observaciones", "Rechazar el reclamo", "Continuar la investigación"]
@@ -279,7 +280,7 @@ def build_report(case: Case, a: dict, empresa: str = "") -> str:
              "".join(f'<tr id="{re.sub(r"[^0-9a-z]", "", doc["ev"])}"><td>{i}</td><td>{e(doc["name"])}</td><td><code>{doc["digest"][:16]}…</code></td></tr>'
                      for i, doc in enumerate(a["docs"], 1)) + "</table>")
 
-    from .ledger import verify_chain
+    from veritas.core.ledger import verify_chain
     ok, msg = verify_chain(case.ledger.entries())
     h.append("<h2>7. Metodología y alcance</h2>")
     h.append(f"<p>El informe se elaboró sobre el expediente del siniestro: {len(a['docs'])} documento(s) y {len(a['interviews'])} entrevista(s). "
@@ -309,7 +310,7 @@ def run_audit(case: Case) -> dict:
 
 
 # ---- listados, ejemplo y vista de auditoría -----------------------------------------------------
-DEMO_DIR = Path(__file__).resolve().parent.parent / "demo" / "investigacion_demo"
+DEMO_DIR = _DEMO / "investigacion_demo"
 
 
 def list_cases(workdir: Path, kind: str) -> list[Case]:
@@ -342,7 +343,7 @@ def load_demo(workdir: Path) -> list[str]:
         done.append(cid)
     pdf = DEMO_DIR / "informe_para_auditar.pdf"
     if pdf.exists():
-        from .case import sha256_file
+        from veritas.core.case import sha256_file
         aid = "AUD-" + sha256_file(pdf)[:8]
         if not (Path(workdir) / aid / "case.json").exists():
             c = create_audit(workdir, aid, pdf, actor="Revisor demo")

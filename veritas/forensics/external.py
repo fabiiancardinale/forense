@@ -107,7 +107,7 @@ def run(case, photos, cfg: dict) -> dict:
 
 
 def findings(photos, results: dict) -> list:
-    from .detections import Finding
+    from veritas.core.detections import Finding
     out = []
     for p in photos:
         r = results.get(p.digest) or {}

@@ -21,9 +21,10 @@ from jinja2 import DictLoader
 from markupsafe import Markup
 from werkzeug.utils import secure_filename
 
-from . import export, service
-from .case import Case, sha256_file
-from .ledger import verify_chain, verify_seal
+from veritas.core import export
+from veritas.claims import service
+from veritas.core.case import Case, sha256_file
+from veritas.core.ledger import verify_chain, verify_seal
 
 FORM_FIELDS = ("numero", "poliza", "asegurado", "rut", "telefono", "email", "direccion", "cuenta_bancaria", "patente",
                "lugar", "taller", "testigos", "parte_policial", "fecha_denuncia", "inicio_poliza", "fin_poliza",
@@ -1055,7 +1056,7 @@ def _amount(v) -> int:
     digits = re.sub(r"[^0-9]", "", str(v or "").split(",")[0])
     return int(digits) if digits else 0
 
-from .capture import DEFAULT_DOCS, DOC_TYPES  # noqa: E402
+from veritas.portal.links import DEFAULT_DOCS, DOC_TYPES  # noqa: E402
 
 LEVEL_TEXT = {"bad": "Derivar a investigación", "warn": "Revisión manual", "ok": "Sin alertas", "none": "Esperando evidencia"}
 
@@ -1072,7 +1073,7 @@ def create_app(workdir: Path) -> Flask:
         key_path.write_bytes(os.urandom(32))
     app.secret_key = key_path.read_bytes()
     app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax")
-    from . import users as U
+    from veritas.accounts import users as U
     store = U.Store(workdir)
     app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024
     app.config.setdefault("PUBLIC_BASE", "http://127.0.0.1:8765")
@@ -1225,7 +1226,7 @@ def create_app(workdir: Path) -> Flask:
              "legitimo": sum(1 for c in cases if c["decision"] == "legitimo"),
              "sin_decision": len(undecided)}
         priority = [c for c in undecided if c["level"] in ("bad", "warn")][:10]
-        from . import capture
+        from veritas.portal import links as capture
         from datetime import datetime as _dt
         waiting = []
         for c in cases:
@@ -1289,7 +1290,7 @@ def create_app(workdir: Path) -> Flask:
             dpath.write_text(json.dumps(decl, indent=2, ensure_ascii=False), encoding="utf-8")
             case = service.create_claim(workdir, cid, dpath, photos)
         if send_link:
-            from . import capture
+            from veritas.portal import links as capture
             capture.create_link(case, actor=_actor() or "liquidador", docs=f.getlist("docs"),
                                 custom=f.get("docs_custom", "").split(";"))
         r = service.analyze_claim(case, registry)
@@ -1316,7 +1317,8 @@ def create_app(workdir: Path) -> Flask:
         if not (case.root / "informe.html").exists() or seen != n_ev:
             service.analyze_claim(case, registry)
             mark.write_text(str(n_ev))
-        from . import capture, tunnel
+        from veritas.portal import links as capture
+        from veritas.portal import tunnel
         import base64
         cap = capture.load(case)
         cap_url = cap_qr = None
@@ -1437,8 +1439,9 @@ def create_app(workdir: Path) -> Flask:
         return redirect(url_for("case_view", cid=cid))
 
     def _comps():
-        from . import claims as _claims, network
-        from .report import _net_svg
+        from veritas.claims import analysis as _claims
+        from veritas.forensics import network
+        from veritas.claims.report import _net_svg
         comps = network.components(_claims.load_registry(registry))
         for c in comps:
             for m in c["members"]:
@@ -1468,11 +1471,11 @@ def create_app(workdir: Path) -> Flask:
 
     @app.get("/metricas")
     def metrics_view():
-        from .report import RULE_NAMES
+        from veritas.claims.report import RULE_NAMES
         return render_template("metricas.html", m=service.metrics(workdir), rule_names=RULE_NAMES, active="metricas")
 
     def _import(path: Path, actor: str, name: str):
-        from . import importer
+        from veritas.claims import importer
         rep = importer.import_history(workdir, path, actor=actor, original_name=name)
         return render_template("importar.html", report=rep, nets=len(_comps()) if not rep.get("error") else 0, active="importar")
 
@@ -1502,12 +1505,12 @@ def create_app(workdir: Path) -> Flask:
 
     @app.get("/plantilla.csv")
     def template_download():
-        from . import importer
+        from veritas.claims import importer
         return send_file(io.BytesIO(importer.template_csv().encode("utf-8")), mimetype="text/csv",
                          as_attachment=True, download_name="plantilla_siniestros.csv")
 
     # ---- investigaciones -------------------------------------------------------------
-    from . import investigation as INV
+    from veritas.investigations import dossier as INV
     config_path = workdir / "config.json"
 
     def _public_base() -> str:
@@ -1601,7 +1604,7 @@ def create_app(workdir: Path) -> Flask:
     @app.get("/investigacion/<cid>")
     def inv_view(cid):
         _log("ver_expediente", cid)
-        from . import report_audit as RA
+        from veritas.investigations import audit as RA
         a = INV.analyze(_inv_case(cid, "investigacion"))
         review = INV.review(a)
         return render_template("inv_view.html", a=a, d=a["data"], cid=cid, review=review, states=INV.STATES,
@@ -1692,7 +1695,7 @@ def create_app(workdir: Path) -> Flask:
 
     @app.route("/foto", methods=["GET", "POST"])
     def photo_check():
-        from .claims import quick_check
+        from veritas.claims.analysis import quick_check
         results = []
         if request.method == "POST":
             fecha = (request.form.get("fecha") or "").strip() or None
@@ -1705,7 +1708,7 @@ def create_app(workdir: Path) -> Flask:
                     path = Path(tmp) / (secure_filename(up.filename) or "foto")
                     up.save(path)
                     meta, findings = quick_check(path, up.filename, fecha)
-                    from .image_content import overlay
+                    from veritas.forensics.image_content import overlay
                     import base64
                     ov = overlay(path, meta.get("content") or {})
                     marked = base64.b64encode(ov).decode() if ov else None
@@ -1740,7 +1743,7 @@ def create_app(workdir: Path) -> Flask:
     # ---- captura segura ----------------------------------------------------------------
     @app.post("/caso/<cid>/captura")
     def capture_link(cid):
-        from . import capture
+        from veritas.portal import links as capture
         sent = request.form.get("docs_sent")
         docs = request.form.getlist("docs") if sent else None
         custom = request.form.get("docs_custom", "").split(";") if sent else None
@@ -1749,7 +1752,7 @@ def create_app(workdir: Path) -> Flask:
         return redirect(url_for("case_view", cid=cid))
 
     def _portal(token):
-        from . import capture
+        from veritas.portal import links as capture
         case, data = capture.find(workdir, token)
         if not case:
             abort(404)
@@ -1757,7 +1760,7 @@ def create_app(workdir: Path) -> Flask:
 
     @app.get("/c/<token>")
     def capture_page(token):
-        from . import capture
+        from veritas.portal import links as capture
         case, data = capture.find(workdir, token)
         empresa = _config().get("empresa", "")
         if not case:
@@ -1784,7 +1787,7 @@ def create_app(workdir: Path) -> Flask:
 
     @app.post("/c/<token>/archivo")
     def portal_file(token):
-        from . import capture
+        from veritas.portal import links as capture
         case, data = _portal(token)
         f = request.files.get("archivo")
         if not f or not f.filename:
@@ -1798,7 +1801,7 @@ def create_app(workdir: Path) -> Flask:
 
     @app.post("/c/<token>/quitar")
     def portal_remove(token):
-        from . import capture
+        from veritas.portal import links as capture
         case, data = _portal(token)
         try:
             capture.remove_file(case, data, request.form.get("id", ""))
@@ -1808,7 +1811,7 @@ def create_app(workdir: Path) -> Flask:
 
     @app.post("/c/<token>/relato")
     def portal_story(token):
-        from . import capture
+        from veritas.portal import links as capture
         case, data = _portal(token)
         try:
             capture.save_story(case, data, request.form.get("texto", ""))
@@ -1818,7 +1821,7 @@ def create_app(workdir: Path) -> Flask:
 
     @app.post("/c/<token>/terminar")
     def portal_finish(token):
-        from . import capture
+        from veritas.portal import links as capture
         case, data = _portal(token)
         try:
             capture.finish(case, data)
@@ -1832,7 +1835,7 @@ def create_app(workdir: Path) -> Flask:
 
     @app.post("/c/<token>/foto")
     def capture_upload(token):
-        from . import capture
+        from veritas.portal import links as capture
         case, data = capture.find(workdir, token)
         if not case:
             return {"error": "El enlace no existe."}, 404
@@ -1865,7 +1868,7 @@ def create_app(workdir: Path) -> Flask:
 
     @app.route("/configuracion", methods=["GET", "POST"])
     def settings():
-        from . import external
+        from veritas.forensics import external
         cfg = _config()
         if request.method == "POST":
             for k in ("empresa", "direccion_publica", "sightengine_user", "sightengine_secret", "google_vision_key"):
@@ -1927,7 +1930,7 @@ def create_app(workdir: Path) -> Flask:
 
     @app.get("/caso/<cid>/documento/<digest>/version/<int:n>")
     def doc_version(cid, digest, n):
-        from .pdf_versions import version_bytes
+        from veritas.forensics.pdf_versions import version_bytes
         case = _case(cid)
         if not re.fullmatch(r"[0-9a-f]{64}", digest) or not service.has_evidence(case, digest):
             abort(404)
@@ -1942,7 +1945,7 @@ def create_app(workdir: Path) -> Flask:
 
     @app.get("/exportar/<what>.xlsx")
     def export_xlsx(what):
-        from . import excel
+        from veritas.claims import excel
         from datetime import date
         _log("exporta_excel", what)
         if what == "cola":
@@ -1950,7 +1953,7 @@ def create_app(workdir: Path) -> Flask:
         elif what == "redes":
             data = excel.networks(_comps(), LEVEL_TEXT)
         elif what == "metricas":
-            from .report import RULE_NAMES
+            from veritas.claims.report import RULE_NAMES
             data = excel.metrics(service.metrics(workdir), RULE_NAMES)
         else:
             abort(404)
@@ -2040,13 +2043,13 @@ def main(argv=None):
     app = create_app(Path(a.dir))
     url = f"http://127.0.0.1:{a.puerto}"
     if a.red:
-        from .capture import lan_ip
+        from veritas.portal.links import lan_ip
         url = f"https://127.0.0.1:{a.puerto}"
         app.config.update(LAN=True, PUBLIC_BASE=f"https://{lan_ip()}:{a.puerto}")
         print(f"Enlaces de captura disponibles en la red local: {app.config['PUBLIC_BASE']}")
         print("El navegador mostrará un aviso de certificado: es normal en la demo (Configuración avanzada > Continuar).")
     if a.publico and not a.red:
-        from . import tunnel
+        from veritas.portal import tunnel
         print("Abriendo dirección pública para el portal del asegurado...")
         pub, msg = tunnel.start(a.puerto, Path.cwd())
         if pub:

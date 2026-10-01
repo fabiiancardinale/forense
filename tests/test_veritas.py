@@ -12,11 +12,12 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 UTF8_ENV = {**os.environ, "PYTHONIOENCODING": "utf-8"}
 
-from veritas import assistant, detections  # noqa: E402
-from veritas.case import Case  # noqa: E402
+from veritas.core import assistant
+from veritas.core import detections
+from veritas.core.case import Case  # noqa: E402
 from veritas.cli import main  # noqa: E402
-from veritas.ledger import verify_chain  # noqa: E402
-from veritas.timeline import Timeline  # noqa: E402
+from veritas.core.ledger import verify_chain  # noqa: E402
+from veritas.core.timeline import Timeline  # noqa: E402
 
 
 @pytest.fixture
@@ -85,7 +86,12 @@ def test_offline_summary_keeps_claims(built):
 
 
 # ---- siniestros -------------------------------------------------------------
-from veritas import claims, documents, narrative, network, policy, service  # noqa: E402
+from veritas.claims import analysis as claims
+from veritas.forensics import documents
+from veritas.forensics import narrative
+from veritas.forensics import network
+from veritas.forensics import policy
+from veritas.claims import service
 
 ACTUAL = "SIN-2026-0987"
 LIMPIO = "SIN-2026-0990"
@@ -309,7 +315,7 @@ def test_web_validation_and_demo(tmp_path):
 
 
 # ---- historial, redes globales, decisiones y métricas --------------------------------
-from veritas import importer  # noqa: E402
+from veritas.claims import importer
 
 
 @pytest.fixture(scope="module")
@@ -324,7 +330,7 @@ def history(tmp_path_factory):
 def test_import_history_detects_rings_and_measures(history):
     work, csv_path, rep = history
     assert len(rep["imported"]) == 147 and not rep["skipped"] and not rep["ignored"]
-    assert (work / "importaciones").exists() and rep["sha256"] == __import__("veritas.case", fromlist=["x"]).sha256_file(csv_path)
+    assert (work / "importaciones").exists() and rep["sha256"] == __import__("veritas.core.case", fromlist=["x"]).sha256_file(csv_path)
     comps = network.components(claims.load_registry(work / "registro.jsonl"))
     assert sorted(len(c["members"]) for c in comps) == [2, 4, 6]
     m = service.metrics(work)
@@ -397,7 +403,9 @@ def test_web_import_networks_metrics_decision(tmp_path):
 
 
 # ---- investigaciones: entrevistas, expediente y auditoría ------------------------------------
-from veritas import interviews as IV, investigation as INV, report_audit as RA  # noqa: E402
+from veritas.investigations import interviews as IV
+from veritas.investigations import dossier as INV
+from veritas.investigations import audit as RA
 
 INV_DEMO = ROOT / "demo" / "investigacion_demo"
 
@@ -490,7 +498,7 @@ def test_photo_metadata_tampering(tmp_path):
     import io
     piexif = pytest.importorskip("piexif")
     from PIL import Image, ImageDraw
-    from veritas.claims import quick_check
+    from veritas.claims.analysis import quick_check
 
     def make(seed, dto, dt=None, thumb_from=None):
         img = Image.new("RGB", (800, 600), (90, 110, 130))
@@ -538,7 +546,7 @@ def _textured(seed, w=960, h=720):
 def test_pasted_region_and_clone_detected(tmp_path):
     import io
     from PIL import Image
-    from veritas.image_content import analyze_image
+    from veritas.forensics.image_content import analyze_image
 
     a = _textured(1)
     buf = io.BytesIO(); a.save(buf, "JPEG", quality=70); buf.seek(0)
@@ -560,7 +568,7 @@ def test_pasted_region_and_clone_detected(tmp_path):
 
 def test_solar_elevation_santiago():
     from datetime import datetime
-    from veritas.image_content import solar_elevation
+    from veritas.forensics.image_content import solar_elevation
     # 20-09-2026 en Santiago: mediodía solar cerca de las 16:45 UTC, noche a las 02:00 UTC
     assert solar_elevation(-33.45, -70.66, datetime(2026, 9, 20, 16, 45)) > 50
     assert solar_elevation(-33.45, -70.66, datetime(2026, 9, 21, 2, 0)) < -20
@@ -568,7 +576,7 @@ def test_solar_elevation_santiago():
 
 def test_secure_capture_flow(tmp_path):
     import io
-    from veritas import capture
+    from veritas.portal import links as capture
     from veritas.web import create_app
 
     service.load_demo(tmp_path)
@@ -603,7 +611,7 @@ def test_secure_capture_flow(tmp_path):
 
 # ---- diferenciadores forenses -------------------------------------------------------------
 def test_chilean_validation():
-    from veritas.chile import plate_format, plates_in, rut_dv, rut_valid, ruts_in
+    from veritas.forensics.chile import plate_format, plates_in, rut_dv, rut_valid, ruts_in
     assert rut_dv(12345678) == "5" and rut_valid("12.345.678-5") and rut_valid("12.345.678-9") is False
     assert rut_valid("sin rut") is None
     assert ruts_in("Taller RUT 76.543.210-3, cliente 12345678-9") == [("76.543.210-3", True), ("12.345.678-9", False)]
@@ -613,7 +621,7 @@ def test_chilean_validation():
 
 def test_whatsapp_parsing_android_and_iphone(tmp_path):
     import zipfile as zf
-    from veritas.whatsapp import read
+    from veritas.forensics.whatsapp import read
     text = ("19/09/26, 21:14 - Ana: mañana chocamos y\nle decimos al seguro\n"
             "[20/09/2026, 6:41:12 p. m.] Pedro: Se eliminó este mensaje\n"
             "20/09/26, 19:05 - Pedro: <Multimedia omitido>\n")
@@ -632,7 +640,7 @@ def test_whatsapp_parsing_android_and_iphone(tmp_path):
 
 
 def test_pdf_hidden_version_recovered(demo_src):
-    from veritas.pdf_versions import extract, version_bytes
+    from veritas.forensics.pdf_versions import extract, version_bytes
     raw = (demo_src / "actual" / "documentos" / "presupuesto_taller.pdf").read_bytes()
     r = extract(raw)
     assert [v["readable"] for v in r["versions"]] == [True, True]
@@ -662,8 +670,8 @@ def test_forensic_timeline_in_report_and_web(loaded):
 
 
 def test_external_services_with_mocked_provider(tmp_path, monkeypatch):
-    from veritas import external
-    from veritas.claims import Photo
+    from veritas.forensics import external
+    from veritas.claims.analysis import Photo
     img = tmp_path / "evidence"; img.mkdir()
     (img / ("a" * 64)).write_bytes(b"\xff\xd8 imagen")
 
@@ -706,7 +714,7 @@ def test_chat_upload_accepted_only_if_real_chat(tmp_path):
 
 # ---- lugares en chats, Excel, OCR y usuarios ----------------------------------------------
 def test_places_in_chat_text():
-    from veritas.places import mention
+    from veritas.forensics.places import mention
     assert mention("voy saliendo de Viña, llego tipo 8")[:1] == ("Viña del Mar",)
     assert mention("estoy en Rancagua con el auto")[0] == "Rancagua"
     assert mention("llegando a Temuco")[3] == "rumbo a"
@@ -731,7 +739,7 @@ def test_excel_exports(loaded):
 
 
 def test_ocr_reads_plate_and_scanned_document(loaded):
-    from veritas import ocr
+    from veritas.forensics import ocr
     if not ocr.available():
         pytest.skip("OCR no instalado (pip install rapidocr_onnxruntime)")
     work, _ = loaded
@@ -787,7 +795,7 @@ def test_users_login_roles_and_access_log(tmp_path):
 def test_heic_from_iphone_keeps_date(tmp_path):
     pytest.importorskip("pillow_heif")
     from PIL import Image
-    from veritas.claims import photo_metadata
+    from veritas.claims.analysis import photo_metadata
     exif = Image.Exif(); exif[0x010F] = "Apple"; exif[0x8769] = {0x9003: "2026:09:28 08:15:00"}
     p = tmp_path / "IMG_2001.HEIC"
     Image.new("RGB", (640, 480), (100, 110, 120)).save(p, format="HEIF", exif=exif.tobytes())
@@ -799,7 +807,7 @@ def test_register_case_and_portal_for_insured(tmp_path):
     """El analista registra el caso sin evidencia, se genera el enlace y el asegurado sube fotos y documentos con título."""
     import io as _io
     from PIL import Image
-    from veritas import capture
+    from veritas.portal import links as capture
     c = _web(tmp_path)
     work = tmp_path / "casos"
     form = {"numero": "SIN-2026-2001", "fecha_siniestro": "2026-09-30T19:10", "asegurado": "Ana Pérez",
@@ -854,7 +862,8 @@ def test_portal_paper_document_photo_is_read_as_document(tmp_path):
     """Una foto subida como documento (un papel) se lee como documento: RUT y fechas."""
     import io as _io
     from PIL import Image, ImageDraw, ImageFont
-    from veritas import capture, ocr
+    from veritas.portal import links as capture
+    from veritas.forensics import ocr
     c = _web(tmp_path)
     form = {"numero": "SIN-2026-3001", "fecha_siniestro": "2026-09-30T19:10", "patente": "KXTR-45", "enviar_enlace": "1",
             "docs": ["presupuesto"], "docs_sent": "1", "docs_custom": "Carta del empleador; "}
@@ -885,7 +894,7 @@ def test_portal_paper_document_photo_is_read_as_document(tmp_path):
 
 
 def test_ocr_ignores_dates_that_look_like_plates():
-    from veritas.ocr import plates
+    from veritas.forensics.ocr import plates
     assert plates([("DE 2026", 0.95), ("30 de septiembre de 2026", 0.9), ("AL1990", 0.9)]) == []
     assert plates([("KX·TR45", 0.95), ("HJ 1234", 0.9)]) == ["KXTR45", "HJ1234"]
 
@@ -898,7 +907,8 @@ def test_report_findings_show_thumbnail_and_guidance(loaded):
 
 
 def test_public_link_warning_and_guard(tmp_path):
-    from veritas import tunnel, capture
+    from veritas.portal import tunnel
+    from veritas.portal import links as capture
     assert tunnel.is_local("http://127.0.0.1:8765/c/x") and tunnel.is_local("https://192.168.1.5:8765/c/x")
     assert not tunnel.is_local("https://abc-def.trycloudflare.com/c/x")
     msg = capture.share_message("SIN-1", "Ana Pérez", "https://abc.trycloudflare.com/c/tok", "2026-10-08T10:00:00")
@@ -938,7 +948,7 @@ def test_remove_wrong_file_keeps_custody(tmp_path):
     import io, json, re
     from PIL import Image
     from veritas.web import create_app
-    from veritas.case import Case
+    from veritas.core.case import Case
     app = create_app(tmp_path / "casos"); app.config["TESTING"] = True
     cl = app.test_client(); B = "http://127.0.0.1:8765"; H = {"Origin": B}
     cl.post("/demo", base_url=B, headers=H)

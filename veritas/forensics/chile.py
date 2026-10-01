@@ -89,7 +89,7 @@ def plates_in(text: str) -> list[str]:
 
 # ---- hallazgos -------------------------------------------------------------------------------
 def analyze(decl: dict, decl_ev: str, docs) -> list:
-    from .detections import Finding
+    from veritas.core.detections import Finding
     out = []
     ts = decl.get("fecha_siniestro", "")
 

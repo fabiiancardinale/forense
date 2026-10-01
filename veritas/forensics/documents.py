@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from .detections import Finding
+from veritas.core.detections import Finding
 
 DOC_EXT = {".pdf"}
 IMAGE_DOC_EXT = {".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif", ".tif", ".tiff"}
@@ -101,7 +101,7 @@ class Document:
 
 def load(case, timeline) -> list[Document]:
     import json
-    from . import ocr
+    from veritas.forensics import ocr
     docs = []
     cache_path = case.root / "ocr_documentos.json"     # leer un escaneado toma segundos: se guarda por hash
     try:
@@ -133,7 +133,7 @@ def load(case, timeline) -> list[Document]:
                 raise _Done
             meta = pdf_metadata(path)
             if meta.get("is_pdf"):
-                from . import pdf_versions
+                from veritas.forensics import pdf_versions
                 raw = path.read_bytes()
                 text, _ = pdf_versions._text(raw)
                 meta["text"] = (text or "")[:20000]
@@ -203,7 +203,7 @@ def analyze(decl: dict, decl_ev: str, docs: list[Document], registry: list[dict]
             add("doc_modified", "media", f"Documento modificado después de creado ({d.name})",
                 f"El PDF {d.name} {' y '.join(detail)}.", cite, d)
         if m.get("versions"):
-            from .pdf_versions import findings as version_findings
+            from veritas.forensics.pdf_versions import findings as version_findings
             out += version_findings(d, cite)
         if COST_DOC.search(d.name) and created and created < t0 - timedelta(hours=1):
             add("doc_before_claim", "alta", f"Presupuesto o factura anterior al siniestro ({d.name})",

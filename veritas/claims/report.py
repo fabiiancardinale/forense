@@ -4,10 +4,10 @@ from __future__ import annotations
 import html
 import re
 
-from .assistant import CITE
-from .guide import for_rule
-from .compliance import deadlines
-from .ledger import verify_chain, verify_seal
+from veritas.core.assistant import CITE
+from veritas.claims.guide import for_rule
+from veritas.core.compliance import deadlines
+from veritas.core.ledger import verify_chain, verify_seal
 
 CSS = """
 :root{--ink:#0f1b2d;--muted:#667588;--line:#e3e8ef;--bg:#f3f5f8;--card:#fff;--accent:#14508c;
@@ -348,7 +348,7 @@ def _version_cell(d) -> str:
 
 
 def build_claim(case, decl, decl_ev, photos, findings, verified, rec, docs=(), net=None, score=0) -> str:
-    from .claims import km_between
+    from veritas.claims.analysis import km_between
 
     net = net or {"center": decl["numero"], "neighbors": {}, "group": [], "group_edges": [], "group_info": {}}
     entries, chain_ok, chain_msg, ev_ok, ev_problems, seal_txt = _integrity(case)

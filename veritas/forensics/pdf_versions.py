@@ -102,7 +102,7 @@ def version_bytes(raw: bytes, n: int) -> bytes | None:
 
 def findings(doc, cite) -> list:
     """Hallazgos para un documento con versiones recuperadas."""
-    from .detections import Finding
+    from veritas.core.detections import Finding
     pv = doc.meta.get("versions") or {}
     out = []
     for ch in pv.get("changes", []):

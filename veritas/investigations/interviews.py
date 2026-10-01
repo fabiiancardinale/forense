@@ -19,7 +19,7 @@ import unicodedata
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from .detections import Finding
+from veritas.core.detections import Finding
 
 CATEGORY = "Entrevistas"
 

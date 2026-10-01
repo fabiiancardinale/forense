@@ -8,14 +8,24 @@ import sys
 import tempfile
 from pathlib import Path
 
-from . import assistant, chile, claims, documents, forensic_timeline, narrative, network, policy, report, whatsapp
-from .case import Case
-from .timeline import Timeline
+from veritas.paths import DEMO_DIR
+from veritas.core import assistant
+from veritas.forensics import chile
+from veritas.claims import analysis as claims
+from veritas.forensics import documents
+from veritas.forensics import forensic_timeline
+from veritas.forensics import narrative
+from veritas.forensics import network
+from veritas.forensics import policy
+from veritas.claims import report
+from veritas.forensics import whatsapp
+from veritas.core.case import Case
+from veritas.core.timeline import Timeline
 
 SEV_ORDER = {"alta": 0, "media": 1, "baja": 2}
 CATEGORIES = ["Red de siniestros", "Línea de tiempo", "Póliza y siniestro", "Documentos", "Fotos", "Comunicaciones",
               "Relato", "Datos del asegurado"]
-DEMO_SCRIPT = Path(__file__).resolve().parent.parent / "demo" / "make_claim_demo.py"
+DEMO_SCRIPT = DEMO_DIR / "make_claim_demo.py"
 
 
 DECISIONS = {"en_revision": "En revisión", "fraude": "Fraude confirmado", "legitimo": "Legítimo (pagado)",
@@ -120,7 +130,7 @@ def run_analysis(case: Case, registry_path: Path | None = None, use_llm: bool = 
         findings += chile.analyze(decl, decl_ev, docs)
         events = forensic_timeline.build(decl, decl_ev, photos, docs, chats)
         findings += forensic_timeline.impossibilities(decl, decl_ev, events, docs)
-        from . import external
+        from veritas.forensics import external
         findings += external.findings(photos, external.run(case, photos, load_config(case.root.parent))
                                       or _cached_external(case))
         net["timeline"] = events          # la línea de tiempo forense viaja con el resto del análisis
@@ -228,7 +238,7 @@ def metrics(workdir: Path) -> dict:
     con decisión final de fraude confirmado o legítimo; los demás quedan como pendientes."""
     from collections import Counter
 
-    from .policy import parse_amount
+    from veritas.forensics.policy import parse_amount
     rows = []
     for c in claim_cases(workdir):
         last = last_analysis(c) or {}

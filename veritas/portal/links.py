@@ -109,7 +109,7 @@ def create_link(case, actor: str = "liquidador", docs: list[str] | None = None, 
 
 
 def find(workdir: Path, token: str):
-    from .case import Case
+    from veritas.core.case import Case
     if not token or len(token) < 20:
         return None, None
     for d in Path(workdir).iterdir() if Path(workdir).is_dir() else []:
@@ -369,7 +369,7 @@ def qr_png(url: str) -> bytes | None:
 
 # ---- hallazgos propios de una foto de captura segura ---------------------------------------
 def findings_for(photo, decl: dict, cite: list[str]):
-    from .detections import Finding
+    from veritas.core.detections import Finding
     c = photo.meta.get("secure_capture") or {}
     out = []
     if c.get("lat") is None:

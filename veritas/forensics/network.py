@@ -19,9 +19,9 @@ import unicodedata
 from collections import Counter, defaultdict, deque
 from datetime import datetime, timedelta
 
-from .claims import DUP_MAX_DISTANCE, hamming
-from .detections import Finding
-from .narrative import COPY_ALERT, similarity
+from veritas.claims.analysis import DUP_MAX_DISTANCE, hamming
+from veritas.core.detections import Finding
+from veritas.forensics.narrative import COPY_ALERT, similarity
 
 LABELS = {"rut": "RUT", "telefono": "teléfono", "email": "correo", "cuenta_bancaria": "cuenta bancaria",
           "direccion": "dirección", "taller": "taller", "patente": "patente"}
@@ -62,7 +62,7 @@ def entities(decl: dict) -> dict[str, str]:
 
 def claim_record(decl: dict, level: str | None) -> dict:
     """Ficha del siniestro que se guarda en el registro compartido."""
-    from .policy import parse_amount
+    from veritas.forensics.policy import parse_amount
     return {"type": "claim", "claim": decl["numero"], "fecha": decl.get("fecha_siniestro"),
             "asegurado": decl.get("asegurado", ""), "level": level, "relato": decl.get("descripcion", ""),
             "monto": parse_amount(decl.get("monto_reclamado")),
@@ -139,7 +139,7 @@ class Graph:
 
 
 def _registry_parts(registry: list[dict]):
-    from .claims import registry_claims
+    from veritas.claims.analysis import registry_claims
     nodes = registry_claims(registry)
     photos = [r for r in registry if r.get("type", "photo") == "photo" and "dhash" in r]
     docs = [r for r in registry if r.get("type") == "doc"]

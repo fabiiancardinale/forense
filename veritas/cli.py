@@ -21,10 +21,15 @@ import json
 import sys
 from pathlib import Path
 
-from . import assistant, claims, detections, export, report, service
-from .case import Case
-from .ledger import verify_chain
-from .timeline import Timeline
+from veritas.core import assistant
+from veritas.claims import analysis as claims
+from veritas.core import detections
+from veritas.core import export
+from veritas.claims import report
+from veritas.claims import service
+from veritas.core.case import Case
+from veritas.core.ledger import verify_chain
+from veritas.core.timeline import Timeline
 
 
 def _timeline(case: Case, rebuild=False) -> Timeline:

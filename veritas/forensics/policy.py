@@ -8,7 +8,7 @@ from __future__ import annotations
 import re
 from datetime import date, datetime
 
-from .detections import Finding
+from veritas.core.detections import Finding
 
 EARLY_ALERT_DAYS, EARLY_WARN_DAYS = 10, 30      # siniestro cerca del inicio de la póliza
 NEAR_END_DAYS = 15                              # siniestro cerca del vencimiento

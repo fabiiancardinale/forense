@@ -34,8 +34,8 @@ try:                                    # fotos HEIC de iPhone (opcional: pip in
 except ImportError:
     pass
 
-from .detections import Finding
-from .chile import norm_plate, plate_format
+from veritas.core.detections import Finding
+from veritas.forensics.chile import norm_plate, plate_format
 
 
 def chile_plate_ok(p) -> bool:
@@ -44,7 +44,9 @@ def chile_plate_ok(p) -> bool:
 
 def _fmt_plate(p: str) -> str:
     return f"{p[:4]}·{p[4:]}" if plate_format(p) == "nueva" else f"{p[:2]}·{p[2:]}"
-from . import image_content, ocr, photo_forensics
+from veritas.forensics import image_content
+from veritas.forensics import ocr
+from veritas.forensics import photo_metadata as photo_forensics
 
 IMAGE_EXT = {".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".heic"}
 EDITORS = ["photoshop", "lightroom", "gimp", "snapseed", "picsart", "facetune", "pixlr",
@@ -165,7 +167,7 @@ def analyze(decl: dict, decl_ev: str, photos: list[Photo], registry: list[dict])
                                cite, p.ts))
 
         if m.get("secure_capture"):
-            from .capture import findings_for
+            from veritas.portal.links import findings_for
             out += findings_for(p, decl, cite)
         elif not m["has_exif"] and not ai:
             if m.get("portal"):
@@ -354,7 +356,7 @@ def update_registry(path: Path, claim: str, photos: list[Photo], docs=(), decl: 
         if ("doc", claim, d.digest) not in known:
             lines.append({"type": "doc", "claim": claim, "name": d.name, "sha256": d.digest})
     if decl is not None:
-        from .network import claim_record
+        from veritas.forensics.network import claim_record
         rec = claim_record(decl, level)
         last = next((r for r in reversed(reg) if r.get("type") == "claim" and r["claim"] == claim), None)
         if last is None or {k: v for k, v in last.items()} != rec:

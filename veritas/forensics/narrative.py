@@ -10,8 +10,8 @@ import unicodedata
 from datetime import datetime
 from functools import lru_cache
 
-from .detections import Finding
-from .policy import parse_int
+from veritas.core.detections import Finding
+from veritas.forensics.policy import parse_int
 
 COPY_ALERT, COPY_WARN = 0.5, 0.3
 MIN_WORDS = 10

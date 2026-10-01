@@ -7,7 +7,7 @@ import json
 import shutil
 from pathlib import Path
 
-from .ledger import Ledger
+from veritas.core.ledger import Ledger
 
 
 def sha256_file(path: Path) -> str:

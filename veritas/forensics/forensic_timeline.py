@@ -19,7 +19,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
-from .claims import km_between
+from veritas.claims.analysis import km_between
 
 MAX_KMH = 130
 MIN_KM = 5
@@ -101,7 +101,7 @@ def build(decl: dict, decl_ev: str, photos, docs, chats=()) -> list[Event]:
                                               f"fecha {', '.join(do)} → {', '.join(dn)}" if do or dn else ""]))
                 ev.append(Event(t, "version", f"Versión {ch['to']} de {d.name}",
                                 det or "cambia el texto", d.ev, None, ch.get("producer") or "versión recuperada"))
-    from .places import mention
+    from veritas.forensics.places import mention
     insured = _tokens(decl.get("asegurado"))
     for prefix, chat, msgs in chats:
         for msg in msgs:
@@ -124,7 +124,7 @@ def build(decl: dict, decl_ev: str, photos, docs, chats=()) -> list[Event]:
 
 
 def impossibilities(decl: dict, decl_ev: str, events: list[Event], docs) -> list:
-    from .detections import Finding
+    from veritas.core.detections import Finding
     out = []
 
     def add(rule, sev, title, summary, cite, ts):

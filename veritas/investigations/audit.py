@@ -20,8 +20,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from . import interviews as I
-from .detections import Finding
+from veritas.investigations import interviews as I
+from veritas.core.detections import Finding
 
 PAGE_BASE = 900000
 SKIP = re.compile(r"^(Informe de investigaci[oó]n de siniestro|P[aá]gina \d+( de \d+)?$)")

@@ -18,7 +18,7 @@ import re
 
 from PIL import Image
 
-from .chile import plate_format, plates_in
+from veritas.forensics.chile import plate_format, plates_in
 
 _engine = None
 MAX_SIDE = 1800
