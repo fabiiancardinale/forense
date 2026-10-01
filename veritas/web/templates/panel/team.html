@@ -29,10 +29,10 @@
 {% else %}<div class="pb"><p class="hint" style="margin:0">No hay casos atrasados.</p></div>{% endif %}</section>
 
 <section class="panel"><div class="ph"><h2>Empresas de peritaje</h2></div>
-{% if firms %}<table class="mini"><tr><th>Empresa</th><th class="num">Derivados</th><th class="num">Entregados</th><th class="num">Atrasados</th><th class="num">Días promedio</th><th class="num">Fraudes</th></tr>
+{% if firms %}<div class="scroll"><table class="mini"><tr><th>Empresa</th><th class="num">Derivados</th><th class="num">Entregados</th><th class="num">Atrasados</th><th class="num">Días promedio</th><th class="num">Fraudes</th></tr>
 {% for f in firms %}<tr><td><b>{{ f.empresa }}</b></td><td class="num">{{ f.derived }}</td><td class="num">{{ f.delivered }}</td>
 <td class="num">{% if f.late %}<span class="late">{{ f.late }}</span>{% else %}—{% endif %}</td><td class="num">{{ f.avg_days if f.avg_days is not none else '—' }}</td>
-<td class="num">{{ f.fraud or '—' }}{% if f.fraud_amount %}<div class="hint">${{ money(f.fraud_amount) }}</div>{% endif %}</td></tr>{% endfor %}</table>
+<td class="num">{{ f.fraud or '—' }}{% if f.fraud_amount %}<div class="hint">${{ money(f.fraud_amount) }}</div>{% endif %}</td></tr>{% endfor %}</table></div>
 {% else %}<div class="pb"><p class="hint" style="margin:0">Aún no se ha derivado ningún caso a peritaje.</p></div>{% endif %}</section>
 </div>
 

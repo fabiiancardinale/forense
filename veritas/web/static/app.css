@@ -240,3 +240,4 @@ table.custody td{vertical-align:top}
 .teamtbl td.num b{font-size:15px}.teamtbl .bar{height:6px;border-radius:99px;background:#eef1f5;overflow:hidden;min-width:90px}
 .teamtbl .bar i{display:block;height:100%;background:var(--accent)}
 .late{color:var(--red);font-weight:600}
+form.cols2 select,form.cols2 input,form.cols2 textarea{width:100%}

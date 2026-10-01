@@ -1,6 +1,6 @@
 <div class="layout-side"><section class="panel"><div class="ph"><h2>Cadena de custodia</h2><span class="r hint">Cada acción queda encadenada con la anterior y firmada: no se puede borrar ni alterar sin que se note.</span></div>
 <div class="scroll"><table class="mini custody"><tr><th>Fecha (UTC)</th><th>Quién</th><th>Qué</th><th>Detalle</th><th>Huella</th></tr>
-{% for r in rows %}<tr><td class="nowrap hint">{{ r.ts[:16]|replace('T',' ') }}</td><td>{{ r.actor }}</td><td>{{ r.what }}</td><td class="hint">{{ r.detail }}</td><td class="mono hint">{{ r.hash[:10] }}…</td></tr>{% endfor %}
+{% for r in rows %}<tr><td class="nowrap hint">{{ r.ts[:16]|replace('T',' ') }}</td><td>{{ r.actor }}</td><td class="nowrap">{{ r.what }}</td><td class="hint">{{ r.detail }}</td><td class="mono hint">{{ r.hash[:10] }}…</td></tr>{% endfor %}
 </table></div></section>
 <aside><section class="panel"><div class="ph"><h2>Quién abrió el caso</h2></div><div class="pb">
 {% if accesos %}<table class="mini">{% for e in accesos %}<tr><td class="nowrap hint">{{ e.ts[5:16]|replace('T',' ') }}</td><td>{{ e.user }}</td><td class="hint">{{ {'ver_caso': 'abrió', 'decision': 'decidió', 'descarga': 'descargó', 'derivar': 'derivó', 'ver_archivo': 'vio un archivo', 'quitar_archivo': 'quitó un archivo'}.get(e.action, e.action) }}</td></tr>{% endfor %}</table>

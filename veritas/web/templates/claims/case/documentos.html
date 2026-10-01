@@ -9,7 +9,7 @@
 <td class="nowrap">{{ i.kind_label }}{% if i.info.scanned %}<div class="hint">leído con OCR</div>{% endif %}</td>
 <td class="nowrap">{{ i.who }}<div class="hint">{{ i.received[:16]|replace('T',' ') }}</div></td>
 <td>{{ i.info.producer or '—' }}</td>
-<td>{% if i.findings %}<ul class="flinks">{% for f in i.findings %}<li class="{{ f.severity }}">{{ f.title }}</li>{% endfor %}</ul>{% else %}<span class="muted">—</span>{% endif %}</td>
+<td>{% if i.findings %}<ul class="flinks">{% for f in i.findings %}<li class="{{ f.severity }}">{{ f.title|replace(' (' ~ i.name ~ ')', '') }}</li>{% endfor %}</ul>{% else %}<span class="muted">—</span>{% endif %}</td>
 <td class="nowrap">{% include "claims/case/_remove.html" %}</td></tr>{% endfor %}
 </table></div></section>
 {% else %}<div class="card empty"><h2>Aún no hay documentos</h2><p>Agregue presupuestos, facturas, partes o chats arriba, o pídaselos al asegurado en la pestaña Asegurado.</p></div>{% endif %}

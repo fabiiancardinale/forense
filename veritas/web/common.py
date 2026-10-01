@@ -141,7 +141,7 @@ def _work_state(case: Case) -> dict:
         portal = ("recibido" if cap.get("finished") else "vencido" if links.status(cap) else
                   "abierto" if cap.get("opened") else "enviado")
     return {"owner": o["user"] if o else None,
-            "owner_name": cx.store.display_name(o["user"]) or o["name"] if o else "Sin asignar",
+            "owner_name": ((cx.store.get(o["user"]) or {}).get("name") or o["name"]) if o else "Sin asignar",
             "derivation": d, "portal": portal, "idle": assignment.idle_days(case)}
 
 

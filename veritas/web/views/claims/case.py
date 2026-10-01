@@ -126,6 +126,8 @@ def _todo(case, items) -> list[tuple[str, str, str]]:
         out.append(("bad", "Riesgo alto: derive las entrevistas a una empresa de peritaje.", "peritaje"))
     if d and d["state"] == "atrasado":
         out.append(("bad", f"El peritaje de {d['empresa']} está atrasado (plazo {d['plazo']}).", "peritaje"))
+    if d and d["state"] in ("derivado", "en_curso"):
+        out.append(("info", f"Esperando el informe de {d['empresa']} (plazo {d.get('plazo') or 'sin plazo'}).", "peritaje"))
     if d and d["state"] == "entregado" and c["decision"] in (None, "en_revision"):
         out.append(("info", "El perito entregó su informe final: revíselo y registre la decisión.", "peritaje"))
     if not d and c["level"] != "bad" and c["decision"] in (None, "en_revision") and items:
