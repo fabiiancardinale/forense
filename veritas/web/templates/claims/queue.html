@@ -1,0 +1,41 @@
+{% extends "base.html" %}{% block title %}Cola de trabajo{% endblock %}
+{% block heading %}<h1>Cola de trabajo</h1><p class="sub">Siniestros ordenados por riesgo. Haga clic en una fila para abrir el caso.</p>{% endblock %}
+{% block actions %}<a class="btn" href="{{ url_for('portfolio.export_xlsx', what='cola') }}">{{ icon('download', 15) }}Excel</a>
+<a class="btn" href="{{ url_for('portfolio.import_view') }}">{{ icon('upload', 15) }}Importar historial</a>
+<a class="btn pri" href="{{ url_for('claims.new_claim') }}">{{ icon('plus', 15, '#fff') }}Nuevo siniestro</a>{% endblock %}
+{% block body %}
+{% if cases %}
+<section class="panel">
+<div class="ph"><label class="search" style="margin:0">{{ icon('search', 15) }}<input id="q" placeholder="Buscar por número, patente o asegurado" aria-label="Buscar"></label>
+<div class="chips" id="chips"><button class="chip on" data-f="">Todos<span class="c">{{ cases|length }}</span></button>
+<button class="chip" data-f="bad">Derivar<span class="c">{{ counts.bad }}</span></button>
+<button class="chip" data-f="warn">Revisión<span class="c">{{ counts.warn }}</span></button>
+<button class="chip" data-f="ok">Sin alertas<span class="c">{{ counts.ok }}</span></button>
+<button class="chip" data-f="pend">Alerta sin decisión<span class="c">{{ counts.pend }}</span></button></div>
+<span class="r hint" id="shown"></span></div>
+<div class="scroll"><table id="t"><tr><th>N° siniestro</th><th>Asegurado</th><th>Fecha</th><th>Riesgo</th><th class="num">Hallazgos</th><th class="num">Vinculados</th><th class="num">Monto</th><th>Recomendación</th><th>Decisión</th></tr>
+{% for c in cases %}<tr class="row" data-level="{{ c.level }}" data-pend="{{ 1 if c.level == 'bad' and c.decision in (None, 'en_revision') else 0 }}" onclick="location.href='{{ url_for('claims.case_view', cid=c.id) }}'">
+<td class="nowrap"><a href="{{ url_for('claims.case_view', cid=c.id) }}"><b>{{ c.numero }}</b></a><div class="hint">{{ c.patente }}</div></td><td>{{ c.asegurado }}</td>
+<td class="nowrap">{{ c.fecha[:10] }}<div class="hint">{{ c.fecha[11:] }}</div></td>
+<td><span class="risk {{ c.level }}" style="--w:{{ c.score if c.score is number else 0 }}%"><i></i>{{ c.score }}</span></td>
+<td class="num">{{ c.findings }}</td><td class="num">{{ c.linked }}</td><td class="num nowrap">{{ '$' ~ money(c.monto) if c.monto else '—' }}</td>
+<td><span class="badge {{ c.level }}" title="{{ c.rec }}">{{ level_text.get(c.level, c.rec) }}</span></td>
+<td><span class="dec {{ c.decision or '' }}">{{ c.decision_label or '—' }}</span></td></tr>{% endfor %}
+</table></div></section>
+<script>
+const q=document.getElementById('q');let lf='';
+function apply(){const v=q.value.toLowerCase();let n=0;document.querySelectorAll('#t tr.row').forEach(r=>{
+ const okf=!lf||(lf==='pend'?r.dataset.pend==='1':r.dataset.level===lf);const s=okf&&r.textContent.toLowerCase().includes(v);r.style.display=s?'':'none';n+=s});
+ document.getElementById('shown').textContent=n+' caso(s)'}
+q.addEventListener('input',apply);
+document.querySelectorAll('#chips .chip').forEach(c=>c.onclick=()=>{document.querySelectorAll('#chips .chip').forEach(x=>x.classList.remove('on'));
+ c.classList.add('on');lf=c.dataset.f;apply()});apply();
+</script>
+{% else %}
+<div class="card empty"><h2>Aún no hay siniestros</h2>
+<p>Cree uno con la declaración, las fotos y los documentos del asegurado, o cargue un ejemplo para ver cómo funciona.</p>
+<div class="toolbar" style="justify-content:center"><a class="btn pri" href="{{ url_for('claims.new_claim') }}">Nuevo siniestro</a>
+<form method="post" action="{{ url_for('claims.load_demo') }}" data-busy="Cargando…"><button class="btn" type="submit">Cargar ejemplo</button></form>
+<a class="btn" href="{{ url_for('portfolio.import_view') }}">Importar historial</a></div></div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}{% block title %}Redes{% endblock %}
+{% block heading %}<h1>Redes de fraude</h1><p class="sub">Grupos de siniestros de distintos asegurados conectados por teléfono, correo, cuenta bancaria,
+fotos, documentos o relatos compartidos. Ordenados por tamaño y monto reclamado.</p>{% endblock %}
+{% block actions %}<a class="btn" href="{{ url_for('portfolio.export_xlsx', what='redes') }}">{{ icon('download', 15) }}Excel</a>
+<a class="btn" href="{{ url_for('portfolio.import_view') }}">{{ icon('upload', 15) }}Importar historial</a>{% endblock %}
+{% block body %}
+<div class="tiles">
+<div class="tile accent-red"><div class="lbl">Redes</div><b>{{ rings|length }}</b><span>de 3 o más siniestros</span></div>
+<div class="tile"><div class="lbl">Pares vinculados</div><b>{{ pairs|length }}</b><span>2 siniestros conectados</span></div>
+<div class="tile"><div class="lbl">Siniestros involucrados</div><b>{{ involved }}</b><span>en redes y pares</span></div>
+<div class="tile accent-blue"><div class="lbl">Monto reclamado</div><b>${{ money(total) }}</b><span>en redes y pares</span></div>
+</div>
+{% for c in comps %}
+<section class="panel netcard"><div class="ph"><h2>{{ 'Red' if c.members|length >= 3 else 'Par vinculado' }} de {{ c.members|length }} siniestros
+· {{ c.people }} asegurados</h2><span class="r"><b>${{ money(c.monto) }}</b> <span class="hint">reclamados · {{ c.first[:10] }} a {{ c.last[:10] }}</span></span></div><div class="pb">
+<div class="reasons">{% for r, n in c.reasons %}<span>{{ r }} ×{{ n }}</span>{% endfor %}</div>
+{{ c.svg|safe }}<p class="hint" style="margin:0 0 6px">Punto rojo: derivado a investigación · ámbar: revisión · verde: sin alertas. Cada línea es un dato o evidencia compartida.</p>
+</div><div class="scroll"><table><tr><th>Siniestro</th><th>Asegurado</th><th>Fecha</th><th class="num">Monto</th><th>Recomendación</th><th>Decisión</th></tr>
+{% for m in c.members %}{% set i = c.info[m] %}<tr class="row" onclick="location.href='{{ url_for('claims.case_view', cid=i.id) }}'">
+<td style="white-space:nowrap"><a href="{{ url_for('claims.case_view', cid=i.id) }}"><b>{{ m }}</b></a></td><td>{{ i.asegurado }}</td>
+<td class="nowrap">{{ (i.fecha or '')[:10] }}</td><td class="num nowrap">{{ '$' ~ money(i.monto) if i.monto else '—' }}</td>
+<td><span class="badge {{ i.level or 'none' }}">{{ level_text[i.level] }}</span></td><td><span class="dec {{ i.decision or '' }}">{{ i.decision_label or '—' }}</span></td></tr>{% endfor %}
+</table></div></section>
+{% else %}
+<div class="card empty"><h2>No se encontraron redes</h2><p>Las redes aparecen cuando hay siniestros de distintos asegurados que comparten datos o evidencia.
+Importe el historial para buscarlas en toda la cartera.</p><a class="btn pri" href="{{ url_for('portfolio.import_view') }}">Importar historial</a></div>
+{% endfor %}
+{% endblock %}

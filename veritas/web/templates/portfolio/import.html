@@ -1,0 +1,36 @@
+{% extends "base.html" %}{% block title %}Importar historial{% endblock %}
+{% block heading %}<h1>Importar historial</h1><p class="sub">Cargue siniestros pasados desde Excel o CSV. Veritas crea un caso por fila, los analiza en orden
+cronológico y busca redes en toda la cartera. El archivo original queda guardado con su hash.</p>{% endblock %}
+{% block actions %}<a class="btn" href="{{ url_for('portfolio.template_download') }}">{{ icon('download', 15) }}Descargar plantilla</a>{% endblock %}
+{% block body %}
+{% if report %}
+<div class="card" style="margin-bottom:16px">
+{% if report.error %}<div class="flash bad" style="margin:0">{{ report.error }}</div>{% else %}
+<h2 style="margin:0 0 14px">Resultado de la importación · {{ report.file }}</h2>
+<div class="tiles" style="margin-bottom:8px">
+<div class="tile accent-blue"><b>{{ report.imported|length }}</b><span>siniestros importados de {{ report.rows }} filas</span></div>
+<div class="tile accent-red"><b>{{ report.levels.bad }}</b><span>derivar a investigación</span></div>
+<div class="tile accent-amb"><b>{{ report.levels.warn }}</b><span>revisión manual</span></div>
+<div class="tile"><b>{{ nets }}</b><span>redes y pares vinculados en la cartera</span></div>
+</div>
+<p class="hint">Columnas reconocidas: {{ report.recognized|join(', ') }}{% if report.ignored %} · ignoradas: {{ report.ignored|join(', ') }}{% endif %}<br>
+Huella del archivo (SHA-256): <code>{{ report.sha256 }}</code></p>
+{% if report.skipped %}<details><summary>{{ report.skipped|length }} fila(s) omitida(s)</summary><ul class="hint">{% for r, why in report.skipped[:50] %}<li>Fila {{ r }}: {{ why }}</li>{% endfor %}</ul></details>{% endif %}
+<div class="toolbar" style="margin-top:10px"><a class="btn pri" href="{{ url_for('portfolio.networks') }}">Ver redes</a><a class="btn" href="{{ url_for('portfolio.metrics_view') }}">Ver métricas</a>
+<a class="btn" href="{{ url_for('claims.index') }}">Ver siniestros</a></div>{% endif %}
+</div>{% endif %}
+<div class="cols2">
+<form class="card" method="post" enctype="multipart/form-data" data-busy="Importando y analizando…">
+<h2 style="margin:0 0 14px">Subir archivo</h2>
+<input type="file" name="archivo" accept=".csv,.xlsx,.xlsm,text/csv" required style="margin-bottom:10px">
+{% if not current_user %}<label>Responsable de la importación</label>{% endif %}{% if current_user %}<input type="hidden" name="actor" value="{{ current_user.name }}">{% else %}<input name="actor" placeholder="Su nombre" required style="margin-bottom:12px">{% endif %}
+<button class="btn pri" type="submit">Importar y analizar</button>
+<p class="hint">Obligatorias: número de siniestro y fecha. Opcionales: todos los campos de la plantilla. La columna <b>resultado</b>
+(fraude, pagado, rechazado) se registra como decisión y permite medir la detección.</p></form>
+<div class="card"><h2 style="margin:0 0 10px">¿Primera vez?</h2>
+<p>Descargue la plantilla con las columnas esperadas, o pruebe con un historial ficticio de 147 siniestros que esconde dos redes.</p>
+<div class="toolbar"><a class="btn" href="{{ url_for('portfolio.template_download') }}">Descargar plantilla CSV</a>
+<form method="post" action="{{ url_for('portfolio.import_demo') }}" data-busy="Importando…"><button class="btn" type="submit">Importar historial de ejemplo</button></form></div>
+<p class="hint">Encabezados flexibles ("N° Siniestro", "Relato", "Monto", "Cuenta pago"...), fechas chilenas (20-09-2026) y separador coma o punto y coma.</p></div>
+</div>
+{% endblock %}

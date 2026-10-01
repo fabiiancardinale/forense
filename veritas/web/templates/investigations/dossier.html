@@ -1,0 +1,41 @@
+{% extends "base.html" %}{% block title %}{{ d.numero }}{% endblock %}
+{% block crumbs %}<a href="{{ url_for('investigations.investigations') }}">Investigaciones</a> / {{ d.numero }}{% endblock %}
+{% block heading %}<h1>Expediente {{ d.numero }}</h1>
+<p class="sub">{{ d.aseguradora }} · {{ d.tipo }} · {{ (d.fecha_ocurrencia or '')|replace('T',' ') }} · {{ d.vehiculo }}</p>{% endblock %}
+{% block actions %}<a class="btn" href="{{ url_for('investigations.inv_report', cid=cid) }}" target="_blank">{{ icon('external', 15) }}Ver informe</a>
+<a class="btn pri" href="{{ url_for('investigations.inv_export', cid=cid) }}">{{ icon('download', 15, '#fff') }}Paquete verificable</a>{% endblock %}
+{% block body %}
+<div class="verdict {{ 'ok' if not review else 'warn' }}"><b>{{ 'Revisión previa: listo para enviar' if not review else 'Revisión previa: ' ~ review|length ~ ' punto(s) pendiente(s)' }}</b>
+<span>{{ answered }} de {{ d.alertas|length }} alertas respondidas · {{ a.findings|length }} contradicciones detectadas</span></div>
+{% if review %}<div class="card" style="margin-bottom:20px"><ul style="margin:0;padding-left:18px;display:grid;gap:4px">{% for r in review %}<li><b>{{ r.title }}</b> — <span class="hint" style="font-size:13px">{{ r.summary }}</span></li>{% endfor %}</ul></div>{% endif %}
+<div class="cols2">
+<div><h3 class="cat" style="margin-top:0">Contradicciones detectadas</h3>
+{% for f in a.findings %}<div class="finding {{ f.severity }}"><span class="sev {{ f.severity }}">{{ f.severity|upper }}</span><b>{{ f.title }}</b><p>{{ f.summary }}</p>
+{% for ev in f.evidence %}{% set v = a.index.get(ev) %}{% if v and v.kind == 'qa' %}<div class="quote"><span class="cite">{{ v.label }}</span> <b>{{ v.who }}</b> — <i>{{ v.q[:120] }}</i><br>“{{ v.text[:260] }}”</div>
+{% elif v %}<div class="quote"><span class="cite">{{ v.label }}</span> documento del expediente</div>{% endif %}{% endfor %}</div>
+{% else %}<p class="hint">No se detectaron contradicciones.</p>{% endfor %}</div>
+<div><h3 class="cat" style="margin-top:0">Qué dice cada declarante</h3>
+{% if matrix %}<div class="panel scroll"><table><tr><th>Tema</th>{% for iv in a.interviews %}<th>{{ iv.declarante }}<br><span class="hint">{{ iv.rol }}</span></th>{% endfor %}</tr>
+{% for t, cells in matrix %}<tr><td><b>{{ t }}</b></td>{% for c in cells %}<td>{{ c }}</td>{% endfor %}</tr>{% endfor %}</table></div>{% endif %}
+<h3 class="cat">Conclusión</h3>
+<form class="alert-card" method="post" action="{{ url_for('investigations.inv_conclusion', cid=cid) }}">
+<select name="recomendacion">{% for r in recommendations %}<option {{ 'selected' if a.conclusion and a.conclusion.recomendacion == r }}>{{ r }}</option>{% endfor %}</select>
+<textarea name="texto" rows="4" style="margin:8px 0" placeholder="Fundamento de la recomendación">{{ a.conclusion.texto if a.conclusion else '' }}</textarea>
+<div class="toolbar">{% if current_user %}<input type="hidden" name="actor" value="{{ current_user.name }}">{% else %}<input name="actor" placeholder="Su nombre" required style="width:auto;flex:1">{% endif %}<button class="btn pri" type="submit">Guardar conclusión</button></div>
+{% if a.conclusion %}<p class="hint">Última versión: {{ a.conclusion.actor }} · {{ a.conclusion.ts[:16]|replace('T',' ') }} UTC</p>{% endif %}</form></div></div>
+<h3 class="cat">Respuesta a las alertas</h3>
+{% for al in d.alertas %}{% set i = loop.index %}{% set r = a.responses.get(i, {}) %}
+<form class="alert-card" method="post" action="{{ url_for('investigations.inv_response', cid=cid, idx=i) }}"><h4>{{ i }}. {{ al }} {% if r.estado %}<span class="badge {{ 'warn' if r.estado in ('No descartado','Indeterminado') else 'ok' }}">{{ r.estado }}</span>{% endif %}</h4>
+<div class="toolbar"><select name="estado" required><option value="" {{ 'selected' if not r.estado }}>Elija un estado…</option>{% for s in states %}<option {{ 'selected' if r.estado == s }}>{{ s }}</option>{% endfor %}</select>
+{% if current_user %}<input type="hidden" name="actor" value="{{ current_user.name }}">{% else %}<input name="actor" placeholder="Su nombre" required style="width:auto;flex:0 1 200px">{% endif %}</div>
+<textarea name="hallazgo" rows="2" style="margin:8px 0" placeholder="Hallazgo">{{ r.hallazgo }}</textarea>
+<div class="hint">Evidencia sugerida (marque la que respalda el hallazgo):</div><div class="evlist">
+{% for ev in (a.suggestions.get(i, []) + (r.evidencia or []))|unique %}{% set v = a.index.get(ev) %}{% if v %}<label><input type="checkbox" name="evidencia" value="{{ ev }}" {{ 'checked' if ev in (r.evidencia or []) }}>
+<span><span class="cite">{{ v.label }}</span> {% if v.kind == 'qa' %}<b>{{ v.who.split()[0] }}:</b> {{ v.text[:170] }}{% else %}documento{% endif %}</span></label>{% endif %}{% endfor %}</div>
+<details><summary class="hint">Toda la evidencia del expediente</summary><div class="evlist">{% for ev, v in a.index.items() %}<label><input type="checkbox" name="evidencia" value="{{ ev }}"><span><span class="cite">{{ v.label }}</span> {{ (v.q ~ ' ' ~ v.text)[:150] }}</span></label>{% endfor %}</div></details>
+<button class="btn" type="submit" style="margin-top:8px">Guardar respuesta</button>{% if r.actor %}<span class="hint"> · {{ r.actor }} · {{ r.ts[:16]|replace('T',' ') }} UTC</span>{% endif %}</form>{% endfor %}
+<h3 class="cat">Entrevistas y documentos</h3>
+{% for iv in a.interviews %}<details class="card" style="margin-bottom:8px"><summary>E{{ iv.index }} · {{ iv.declarante }} — {{ iv.rol }} ({{ iv.items|length }} preguntas, {{ iv.fecha }})</summary>
+{% for qa in iv.items %}<p style="margin:8px 0 0"><span class="cite">P{{ qa.n }}</span> <b>{{ qa.q }}</b><br>{{ qa.a }}</p>{% endfor %}</details>{% endfor %}
+<div class="card"><b>Documentos</b><ul>{% for doc in a.docs %}<li>{{ doc.name }} <span class="hint">· {{ doc.digest[:16] }}…{% if doc.facts.km %} · km: {{ doc.facts.km|join(', ') }}{% endif %}{% if doc.facts.ruts %} · RUT: {{ doc.facts.ruts|length }}{% endif %}</span></li>{% endfor %}</ul></div>
+{% endblock %}

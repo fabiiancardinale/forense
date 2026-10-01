@@ -1,0 +1,109 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Siniestro {{ numero }} · entrega de antecedentes</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='portal.css') }}"></head><body>
+<header><b>{{ empresa or 'Entrega de antecedentes' }}</b><div>Siniestro {{ numero }}{% if nombre %} · {{ nombre }}{% endif %}</div>
+{% if not error %}<div class="bar"><i id="bar"></i></div><div class="bartxt" id="bartxt"></div>{% endif %}</header>
+<main>
+{% if error %}<div class="card"><div class="msg {{ 'ok' if finished else 'err' }}">{{ error }}</div></div>{% else %}
+<div class="card"><p style="margin:0">Aquí puede entregar las fotos y documentos de su siniestro. <b>No los envíe por WhatsApp:</b>
+WhatsApp borra la fecha y el lugar de cada foto. Puede avanzar por partes y volver a este enlace hasta el {{ vence }}.</p></div>
+
+{% for sec in sections %}
+<section class="card" id="sec-{{ sec.kind }}"><h2><span class="n" id="n-{{ sec.kind }}">{{ loop.index }}</span>{{ sec.title }}</h2>
+<p class="lead">{{ sec.lead }}</p>
+{% if sec.kind == 'doc' and requested %}<div class="need">Le pedimos:<ul>{% for r in requested %}<li>{{ r }}</li>{% endfor %}</ul></div>{% endif %}
+<label class="pick">{{ sec.button }}<small>{{ sec.hint }}</small><input type="file" data-kind="{{ sec.kind }}" accept="{{ sec.accept }}" multiple></label>
+<div class="pending" id="pend-{{ sec.kind }}"></div>
+<div class="msg err" id="msg-{{ sec.kind }}" hidden></div>
+<button class="btn" id="up-{{ sec.kind }}" data-kind="{{ sec.kind }}" style="margin-top:10px" hidden>Subir</button>
+<ul class="sent" id="sent-{{ sec.kind }}">{% for f in sec.files %}<li data-id="{{ f.sha256 }}" data-kind="{{ sec.kind }}">✓ {{ f.title or f.original_name }}<small>{{ f.server_time[11:16] }}</small><button type="button" class="rm" aria-label="Quitar {{ f.title }}">Quitar</button></li>{% endfor %}</ul>
+</section>
+{% endfor %}
+
+<section class="card"><h2><span class="n">3</span>¿Qué pasó? <span class="opt">opcional</span></h2>
+<p class="lead">Cuéntelo con sus palabras: dónde iba, a qué hora, qué ocurrió.</p>
+<textarea id="story" maxlength="8000" placeholder="Escriba aquí…">{{ story or '' }}</textarea>
+<button class="btn sec" id="savestory" style="margin-top:10px">Guardar relato</button></section>
+
+<div id="globalmsg" class="msg" hidden></div>
+<button class="btn" id="finish" style="margin-bottom:24px">Enviar todo</button>
+<p class="small" style="text-align:center;margin:-10px 0 30px">Al enviar, su ejecutivo recibe los antecedentes. Cada archivo queda registrado con la hora de recepción.</p>
+<div class="card done-card" id="done" hidden><div class="big">✓</div><h2 style="justify-content:center">Recibimos sus antecedentes</h2>
+<p class="lead">Gracias. Su ejecutivo revisará la información y lo contactará si necesita algo más. Ya puede cerrar esta página.</p></div>
+{% endif %}
+</main>
+{% if not error %}
+<script>
+const $ = id => document.getElementById(id);
+const base = location.pathname.replace(/\/$/, "");
+const count = {photo: {{ sections[0].files|length }}, doc: {{ sections[1].files|length }}};
+const queue = {photo: [], doc: []};
+function bar(){ const ok = (count.photo > 0) + (count.doc > 0);
+  $("bar").style.width = (50*ok) + "%"; $("bartxt").textContent = ok + " de 2 pasos completos";
+  for (const k of ["photo", "doc"]) { const n = $("n-" + k); n.className = "n" + (count[k] ? " ok" : ""); n.textContent = count[k] ? "✓" : (k === "photo" ? "1" : "2"); } }
+function say(t, bad){ const el = $("globalmsg"); el.hidden = false; el.className = "msg " + (bad ? "err" : "ok"); el.textContent = t; }
+bar();
+function rmButton(){ const b = Object.assign(document.createElement("button"), {type: "button", className: "rm", textContent: "Quitar"}); return b; }
+document.querySelectorAll(".sent").forEach(ul => ul.addEventListener("click", async ev => {
+  const b = ev.target.closest(".rm"); if (!b) return;
+  const li = b.closest("li");
+  if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "¿Quitar? Toque de nuevo"; setTimeout(() => { b.dataset.sure = ""; b.textContent = "Quitar"; }, 4000); return; }
+  b.disabled = true; const fd = new FormData(); fd.append("id", li.dataset.id);
+  const r = await fetch(base + "/quitar", {method:"POST", body:fd}); const j = await r.json();
+  if (!r.ok) { say(j.error, true); b.disabled = false; return; }
+  count[li.dataset.kind]--; li.remove(); bar(); say("Archivo quitado. Si se equivocó, súbalo de nuevo.", false);
+}));
+document.querySelectorAll("input[type=file]").forEach(inp => inp.onchange = () => {
+  const kind = inp.dataset.kind, box = $("pend-" + kind);
+  for (const f of inp.files) {
+    const row = document.createElement("div"); row.className = "row";
+    const isImg = f.type.startsWith("image/") && !/heic|heif/i.test(f.type);
+    const th = isImg ? Object.assign(document.createElement("img"), {className: "th", src: URL.createObjectURL(f)})
+                     : Object.assign(document.createElement("div"), {className: "th", textContent: (f.name.split(".").pop() || "").toUpperCase()});
+    const right = document.createElement("div");
+    const t = Object.assign(document.createElement("input"), {placeholder: kind === "photo" ? "Título (ej: Parachoques trasero)" : "Título (ej: Licencia de conducir)", maxLength: 80});
+    t.oninput = () => t.classList.remove("bad");
+    right.append(t, Object.assign(document.createElement("div"), {className: "fn", textContent: f.name}));
+    row.append(th, right); box.appendChild(row);
+    queue[kind].push({file: f, input: t, row: row});
+  }
+  inp.value = ""; $("up-" + kind).hidden = queue[kind].length === 0;
+  if (queue[kind].length) queue[kind][queue[kind].length - 1].input.focus();
+});
+document.querySelectorAll("button[id^=up-]").forEach(btn => btn.onclick = async () => {
+  const kind = btn.dataset.kind;
+  const missing = queue[kind].filter(q => q.input.value.trim().length < 3);
+  missing.forEach(q => q.input.classList.add("bad"));
+  const m = $("msg-" + kind);
+  if (missing.length) { missing[0].input.focus(); m.hidden = false; m.textContent = "Escriba un título para cada " + (kind === "photo" ? "foto" : "documento") + " antes de subir."; return; }
+  m.hidden = true;
+  btn.disabled = true; btn.textContent = "Subiendo…";
+  for (const q of [...queue[kind]]) {
+    const fd = new FormData(); fd.append("archivo", q.file, q.file.name); fd.append("kind", kind); fd.append("titulo", q.input.value.trim());
+    try { const r = await fetch(base + "/archivo", {method:"POST", body:fd}); const j = await r.json(); if (!r.ok) throw new Error(j.error || "error");
+      const li = document.createElement("li"); li.innerHTML = "✓ "; li.append(j.titulo); const sm = document.createElement("small"); sm.textContent = j.hora; li.append(sm);
+      li.dataset.id = j.id; li.dataset.kind = j.tipo; li.append(rmButton());
+      $("sent-" + j.tipo).appendChild(li); count[j.tipo]++; q.row.remove(); queue[kind].splice(queue[kind].indexOf(q), 1);
+    } catch(e) { let er = q.row.querySelector(".er"); if (!er) { er = document.createElement("div"); er.className = "er"; q.row.lastChild.append(er); } er.textContent = e.message; }
+  }
+  btn.disabled = false; btn.textContent = "Subir"; btn.hidden = queue[kind].length === 0; bar();
+  if (!queue[kind].length) $("globalmsg").hidden = true;
+});
+$("savestory").onclick = async () => {
+  const fd = new FormData(); fd.append("texto", $("story").value);
+  const r = await fetch(base + "/relato", {method:"POST", body:fd}); const j = await r.json();
+  say(r.ok ? "Relato guardado." : j.error, !r.ok);
+};
+$("finish").onclick = async () => {
+  if (queue.photo.length || queue.doc.length) { say("Tiene archivos elegidos sin subir: escríbales un título y presione Subir.", true); return; }
+  const falta = [count.photo ? "" : "fotos", count.doc ? "" : "documentos"].filter(Boolean);
+  if (falta.length && !confirm("No ha subido " + falta.join(" ni ") + ". ¿Enviar de todas formas?")) return;
+  if ($("story").value.trim().length >= 10) { const fd = new FormData(); fd.append("texto", $("story").value); await fetch(base + "/relato", {method:"POST", body:fd}); }
+  const r = await fetch(base + "/terminar", {method:"POST"}); const j = await r.json();
+  if (!r.ok) { say(j.error, true); return; }
+  document.querySelectorAll("main > :not(#done)").forEach(e => e.hidden = true); $("done").hidden = false; $("bar").style.width = "100%"; $("bartxt").textContent = "Enviado";
+  window.scrollTo(0, 0);
+};
+</script>{% endif %}
+</body></html>

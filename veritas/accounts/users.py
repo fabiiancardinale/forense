@@ -35,18 +35,25 @@ PERMS = {
 }
 # endpoint -> permiso necesario (los que no están aquí son públicos: ingreso y enlace de captura)
 ENDPOINTS = {
-    "dashboard": "ver_siniestros", "index": "ver_siniestros", "case_view": "ver_siniestros", "report": "ver_siniestros",
-    "doc_version": "ver_siniestros", "evidence_file": "ver_siniestros", "export_zip": "ver_siniestros", "verify": "ver_siniestros", "photo_check": "ver_siniestros",
-    "new_claim": "editar_siniestros", "add_photos": "editar_siniestros", "reanalyze": "editar_siniestros",
-    "decide": "editar_siniestros", "evidence_exclude": "editar_siniestros", "evidence_restore": "editar_siniestros", "capture_link": "editar_siniestros", "load_demo": "editar_siniestros",
-    "investigations": "investigaciones", "inv_settings": "investigaciones", "inv_demo": "investigaciones",
-    "inv_new": "investigaciones", "inv_view": "investigaciones", "inv_response": "investigaciones",
-    "inv_conclusion": "investigaciones", "inv_report": "investigaciones", "inv_export": "investigaciones",
-    "audit_upload": "investigaciones", "audit_view": "investigaciones",
-    "networks": "redes", "metrics_view": "cartera", "import_view": "cartera", "import_demo": "cartera",
-    "template_download": "cartera", "export_xlsx": "cartera",
-    "settings": "admin", "users_view": "admin", "user_toggle": "admin",
+    "panel.dashboard": "ver_siniestros", "claims.index": "ver_siniestros", "claims.case_view": "ver_siniestros", "claims.report": "ver_siniestros",
+    "claims.doc_version": "ver_siniestros", "claims.evidence_file": "ver_siniestros", "claims.export_zip": "ver_siniestros", "claims.verify": "ver_siniestros", "tools.photo_check": "ver_siniestros",
+    "claims.new_claim": "editar_siniestros", "claims.add_photos": "editar_siniestros", "claims.reanalyze": "editar_siniestros",
+    "claims.decide": "editar_siniestros", "claims.evidence_exclude": "editar_siniestros", "claims.evidence_restore": "editar_siniestros", "claims.capture_link": "editar_siniestros", "claims.load_demo": "editar_siniestros",
+    "investigations.investigations": "investigaciones", "investigations.inv_settings": "investigaciones", "investigations.inv_demo": "investigaciones",
+    "investigations.inv_new": "investigaciones", "investigations.inv_view": "investigaciones", "investigations.inv_response": "investigaciones",
+    "investigations.inv_conclusion": "investigaciones", "investigations.inv_report": "investigaciones", "investigations.inv_export": "investigaciones",
+    "investigations.audit_upload": "investigaciones", "investigations.audit_view": "investigaciones",
+    "portfolio.networks": "redes", "portfolio.metrics_view": "cartera", "portfolio.import_view": "cartera", "portfolio.import_demo": "cartera",
+    "portfolio.template_download": "cartera", "portfolio.export_xlsx": "cartera",
+    "admin.settings": "admin", "admin.users_view": "admin", "admin.user_toggle": "admin",
 }
+ROLE_HELP = {"administrador": "Todo, más usuarios y configuración.",
+             "jefe": "Siniestros, investigaciones, redes, métricas e importación.",
+             "liquidador": "Siniestros: ver, crear, agregar evidencia, decidir y pedir captura segura; ver redes.",
+             "investigador": "Expedientes y auditorías; ver siniestros sin decidir."}
+ACTION_LABELS = {"ingreso": "Ingresó", "ingreso_fallido": "Ingreso fallido", "salida": "Salió", "ver_caso": "Abrió el caso",
+                 "decision": "Registró decisión", "descarga": "Descargó", "ver_expediente": "Abrió expediente",
+                 "usuario": "Cambió un usuario", "exporta_excel": "Exportó a Excel"}
 MAX_FAILS, LOCK_SECONDS = 5, 300
 USERNAME = re.compile(r"^[a-z0-9._-]{3,32}$")
 

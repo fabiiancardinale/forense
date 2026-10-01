@@ -1,0 +1,43 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}Veritas{% endblock %} · Veritas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}"></head><body>
+<aside class="side" id="side">
+<a class="brand" href="{{ url_for('panel.dashboard') }}"><span class="mark">{{ icon('shield', 18, '#fff') }}</span><span><b>VERITAS</b><small>Forense de siniestros</small></span></a>
+<nav class="navs">
+{% if can('ver_siniestros') %}<a href="{{ url_for('panel.dashboard') }}" class="{{ 'on' if active=='dash' }}">{{ icon('grid') }}Panel</a>
+<div class="grp">Siniestros</div>
+<a href="{{ url_for('claims.index') }}" class="{{ 'on' if active=='index' }}">{{ icon('list') }}Cola de trabajo{% if nav_pending %}<span class="n" title="Derivados sin decisión">{{ nav_pending }}</span>{% endif %}</a>
+{% if can('editar_siniestros') %}<a href="{{ url_for('claims.new_claim') }}" class="{{ 'on' if active=='new' }}">{{ icon('plus') }}Nuevo siniestro</a>{% endif %}
+<a href="{{ url_for('tools.photo_check') }}" class="{{ 'on' if active=='foto' }}">{{ icon('camera') }}Revisar foto</a>{% endif %}
+{% if can('investigaciones') %}<div class="grp">Investigaciones</div>
+<a href="{{ url_for('investigations.investigations') }}" class="{{ 'on' if active=='inv' }}">{{ icon('folder') }}Expedientes y auditorías</a>
+<a href="{{ url_for('investigations.inv_new') }}" class="{{ 'on' if active=='inv_new' }}">{{ icon('plus') }}Nuevo expediente</a>{% endif %}
+{% if can('redes') %}<div class="grp">Cartera</div>
+<a href="{{ url_for('portfolio.networks') }}" class="{{ 'on' if active=='redes' }}">{{ icon('network') }}Redes de fraude</a>{% endif %}
+{% if can('cartera') %}<a href="{{ url_for('portfolio.metrics_view') }}" class="{{ 'on' if active=='metricas' }}">{{ icon('chart') }}Métricas</a>
+<a href="{{ url_for('portfolio.import_view') }}" class="{{ 'on' if active=='importar' }}">{{ icon('upload') }}Importar historial</a>{% endif %}
+{% if can('admin') %}<div class="grp">Sistema</div>
+<a href="{{ url_for('admin.users_view') }}" class="{{ 'on' if active=='usuarios' }}">{{ icon('users') }}Usuarios y accesos</a>
+<a href="{{ url_for('admin.settings') }}" class="{{ 'on' if active=='config' }}">{{ icon('gear') }}Configuración</a>{% endif %}
+</nav>
+{% if current_user %}<div class="sidefoot userbox"><span class="av">{{ current_user.name[:1]|upper }}</span><span><b>{{ current_user.name }}</b><br>{{ roles[current_user.role] }}</span>
+<a href="{{ url_for('auth.logout') }}" title="Cerrar sesión">Salir</a></div>
+{% elif not auth_on %}<div class="sidefoot"><b style="color:#fdb022">Sin usuarios creados</b><br>Cualquiera en este equipo puede entrar. <a href="{{ url_for('admin.users_view') }}" style="color:#8ec5ff">Crear administrador</a></div>{% endif %}
+</aside>
+<div class="wrap">
+<div class="mtop"><button type="button" aria-label="Abrir menú" onclick="document.getElementById('side').classList.toggle('open')">{{ icon('menu', 22) }}</button><b>VERITAS</b></div>
+<header class="pagehead"><div class="tt"><div class="crumbs">{% block crumbs %}{% endblock %}</div>{% block heading %}{% endblock %}</div>
+<div class="actions">{% block actions %}{% endblock %}</div></header>
+<main>
+{% with msgs = get_flashed_messages(with_categories=true) %}{% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}{% endwith %}
+{% block body %}{% endblock %}
+</main></div>
+<script>
+document.querySelectorAll('form[data-busy]').forEach(f=>f.addEventListener('submit',()=>{
+  f.querySelectorAll('button[type=submit]').forEach(b=>{b.disabled=true;b.textContent=f.dataset.busy})}));
+document.addEventListener('click',e=>{const s=document.getElementById('side');if(s.classList.contains('open')&&!s.contains(e.target)&&!e.target.closest('.mtop'))s.classList.remove('open')});
+</script>
+</body></html>

@@ -1,0 +1,23 @@
+{% extends "base.html" %}{% block title %}Configuración{% endblock %}
+{% block heading %}<h1>Configuración</h1><p class="sub">Datos de su empresa y servicios externos opcionales para revisar fotos.</p>{% endblock %}
+{% block body %}
+<form method="post" class="cols2" style="align-items:start">
+<section class="panel"><div class="ph"><h2>Empresa</h2></div><div class="pb">
+<label for="empresa">Nombre en los informes de investigación</label><input id="empresa" name="empresa" value="{{ cfg.empresa or '' }}" placeholder="Nombre de la consultora o compañía">
+<label for="dp" style="margin-top:12px">Dirección pública del portal del asegurado</label><input id="dp" name="direccion_publica" value="{{ cfg.direccion_publica or '' }}" placeholder="https://siniestros.sucompania.cl" autocomplete="off">
+<p class="hint" style="margin:4px 0 0">Dominio con HTTPS por el que los asegurados abren el enlace. Déjelo vacío en la demo: <code>iniciar_publico.bat</code> crea una dirección temporal.</p>
+</div></section>
+<section class="panel"><div class="ph"><h2>Servicios externos para fotos</h2>
+<span class="r">{% if on.ai or on.web %}<span class="badge ok">Activos</span>{% else %}<span class="badge none">Desactivados</span>{% endif %}</span></div><div class="pb" style="display:grid;gap:14px">
+<div class="flash info" style="margin:0">Estos servicios reciben una copia de cada foto del siniestro. Úselos solo con autorización de la aseguradora
+y después de revisar la política de datos personales del proveedor. Son de pago por uso; cada foto se consulta una sola vez.</div>
+<div><b>Detector de imágenes generadas con IA</b> <span class="hint">· Sightengine, modelo genai</span>
+<div class="grid" style="margin-top:8px;gap:10px"><div><label for="su">API user</label><input id="su" name="sightengine_user" value="{{ cfg.sightengine_user or '' }}" autocomplete="off"></div>
+<div><label for="ss">API secret</label><input id="ss" name="sightengine_secret" type="password" value="{{ cfg.sightengine_secret or '' }}" autocomplete="off"></div></div></div>
+<div><b>Búsqueda inversa en internet</b> <span class="hint">· Google Cloud Vision, detección web</span>
+<div style="margin-top:8px"><label for="gv">Clave de API</label><input id="gv" name="google_vision_key" type="password" value="{{ cfg.google_vision_key or '' }}" autocomplete="off"></div></div>
+<p class="hint" style="margin:0">Las claves se guardan en config.json, en la carpeta de casos de este equipo. Después de configurarlas, use Reanalizar en cada siniestro.</p>
+</div></section>
+<div class="full"><button class="btn pri" type="submit">Guardar configuración</button></div>
+</form>
+{% endblock %}

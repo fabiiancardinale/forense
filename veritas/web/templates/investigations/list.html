@@ -1,0 +1,27 @@
+{% extends "base.html" %}{% block title %}Investigaciones{% endblock %}
+{% block heading %}<h1>Expedientes y auditorías</h1><p class="sub">Expedientes con entrevistas y documentos, e informes auditados antes de enviarlos a la compañía.</p>{% endblock %}
+{% block actions %}<a class="btn pri" href="{{ url_for('investigations.inv_new') }}">{{ icon('plus', 15, '#fff') }}Nuevo expediente</a>{% endblock %}
+{% block body %}
+<div class="cols2" style="margin-bottom:20px">
+<form class="card" method="post" action="{{ url_for('investigations.audit_upload') }}" enctype="multipart/form-data" data-busy="Auditando…">
+<h2 style="margin:0 0 6px">Auditar un informe terminado</h2><p class="hint" style="margin:0 0 10px">Suba el PDF antes de enviarlo a la compañía:
+Veritas revisa contradicciones entre entrevistados, secciones que se contradicen, errores de transcripción, alertas sin respuesta y la solidez de la conclusión.</p>
+<input type="file" name="pdf" accept=".pdf,application/pdf" required style="margin-bottom:8px">
+{% if current_user %}<input type="hidden" name="actor" value="{{ current_user.name }}">{% else %}<input name="actor" placeholder="Su nombre" required style="margin-bottom:10px">{% endif %}<button class="btn pri" type="submit">Auditar informe</button></form>
+<div class="card"><h2 style="margin:0 0 10px">Configuración y ejemplo</h2>
+<form class="toolbar" method="post" action="{{ url_for('investigations.inv_settings') }}" style="margin-bottom:12px"><label style="margin:0">Nombre de su empresa en los informes</label>
+<input name="empresa" value="{{ empresa }}" placeholder="Nombre de la consultora" style="flex:1"><button class="btn" type="submit">Guardar</button></form>
+<form method="post" action="{{ url_for('investigations.inv_demo') }}" data-busy="Cargando…"><button class="btn" type="submit">Cargar ejemplo ficticio</button></form>
+<p class="hint">Crea un expediente inventado a medio trabajar y la auditoría de un informe inventado con errores sembrados.</p></div></div>
+<section class="panel" style="margin-bottom:20px"><div class="ph"><h2>Expedientes</h2><span class="hint">{{ expedientes|length }}</span></div>
+{% if expedientes %}<div class="scroll"><table><tr><th>Siniestro</th><th>Aseguradora</th><th>Ocurrencia</th><th>Entrevistas</th><th>Contradicciones</th><th>Alertas respondidas</th><th>Revisión previa</th></tr>
+{% for x in expedientes %}<tr class="row" onclick="location.href='{{ url_for('investigations.inv_view', cid=x.id) }}'"><td style="white-space:nowrap"><a href="{{ url_for('investigations.inv_view', cid=x.id) }}"><b>{{ x.numero }}</b></a></td>
+<td>{{ x.aseguradora }}</td><td style="white-space:nowrap">{{ x.fecha }}</td><td>{{ x.interviews }}</td><td>{{ x.findings }}</td><td>{{ x.answered }} de {{ x.alerts }}</td>
+<td>{% if x.pending %}<span class="badge warn">{{ x.pending }} pendiente(s)</span>{% else %}<span class="badge ok">Lista para enviar</span>{% endif %}</td></tr>{% endfor %}</table></div>
+{% else %}<div class="pb"><p class="hint" style="margin:0">Aún no hay expedientes.</p></div>{% endif %}</section>
+<section class="panel"><div class="ph"><h2>Informes auditados</h2><span class="hint">{{ audits|length }}</span></div>
+{% if audits %}<div class="scroll"><table><tr><th>Archivo</th><th>Auditado</th><th>Por</th><th>Resultado</th></tr>
+{% for x in audits %}<tr class="row" onclick="location.href='{{ url_for('investigations.audit_view', cid=x.id) }}'"><td><a href="{{ url_for('investigations.audit_view', cid=x.id) }}"><b>{{ x.name }}</b></a></td>
+<td style="white-space:nowrap">{{ x.ts }}</td><td>{{ x.actor }}</td><td><span class="badge {{ 'bad' if x.alta else ('warn' if x.media else 'ok') }}">{{ x.alta }} alta · {{ x.media }} media · {{ x.baja }} baja</span></td></tr>{% endfor %}</table></div>
+{% else %}<div class="pb"><p class="hint" style="margin:0">Aún no hay informes auditados.</p></div>{% endif %}</section>
+{% endblock %}
