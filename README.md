@@ -1,4 +1,4 @@
-# Veritas: forense de siniestros con conclusiones verificables
+# Evidex by Zelekpress: forense de siniestros con conclusiones verificables
 
 Prototipo funcional (v1.0). Analiza siniestros de seguros de autos cruzando cinco fuentes de evidencia
 (fotos, documentos, datos de la póliza, relato del asegurado y la red de siniestros anteriores) y entrega
@@ -7,14 +7,14 @@ Incluye además un módulo de respuesta a incidentes informáticos.
 
 ## Cómo usarlo
 
-En Windows: doble clic en `iniciar_veritas.bat`. Instala lo necesario y abre Veritas en el navegador
+En Windows: doble clic en `iniciar_evidex.bat`. Instala lo necesario y abre Evidex en el navegador
 (http://127.0.0.1:8765). Corre solo en este equipo; los casos se guardan en la carpeta `casos`.
 Con la lista vacía, el botón **Cargar ejemplo** crea cinco siniestros ficticios: tres históricos que
 forman una red, uno sospechoso conectado a ellos (SIN-2026-0987) y uno limpio (SIN-2026-0990).
 
-A mano: `pip install flask cryptography pillow openpyxl pdfplumber numpy qrcode` (opcionales `c2pa-python` y `rapidocr_onnxruntime` para OCR) y luego `python -m veritas.web`.
+A mano: `pip install flask cryptography pillow openpyxl pdfplumber numpy qrcode` (opcionales `c2pa-python` y `rapidocr_onnxruntime` para OCR) y luego `python -m evidex.web`.
 
-**Usuarios:** mientras no exista ningún usuario, Veritas queda abierto en este equipo (modo demo). En *Usuarios y empresas*
+**Usuarios:** mientras no exista ningún usuario, Evidex queda abierto en este equipo (modo demo). En *Usuarios y empresas*
 se crea el primer usuario, que debe ser administrador; desde ese momento se pide usuario y contraseña para todo. Las
 contraseñas se guardan solo como hash; tras 5 intentos fallidos el usuario se bloquea 5 minutos. Cada ingreso, salida, caso
 abierto, decisión, derivación, reasignación y descarga queda en `accesos.jsonl`.
@@ -30,9 +30,9 @@ abierto, decisión, derivación, reasignación y descarga queda en `accesos.json
 | **Administrador** | Todo | Usuarios, empresas de peritaje y configuración |
 
 1. El analista registra el siniestro (queda a su nombre) y envía el enlace al asegurado.
-2. Lo que sube el asegurado entra solo al caso y Veritas lo reanaliza.
+2. Lo que sube el asegurado entra solo al caso y Evidex lo reanaliza.
 3. Si el riesgo lo amerita, el analista **deriva las entrevistas** a una empresa de peritaje (y, si quiere, a un perito en
-   particular) con un plazo, instrucciones y las alertas que debe aclarar. Veritas crea el expediente del perito.
+   particular) con un plazo, instrucciones y las alertas que debe aclarar. Evidex crea el expediente del perito.
 4. El perito entra con su usuario, ve solo sus encargos, carga las entrevistas, responde cada alerta y **entrega el informe final**.
 5. El analista ve el avance en la pestaña *Peritaje* del caso, abre el informe final y registra la decisión.
 6. El jefe ve en *Equipo* la carga de cada analista, los casos atrasados (sin movimiento por 7 días, enlace vencido o
@@ -52,7 +52,7 @@ Cada caso tiene las mismas pestañas, siempre en el mismo orden:
 | Documentos | PDF, documentos fotografiados y chats, con el programa que los generó, versiones ocultas recuperadas y alertas |
 | Peritaje | Derivar a un perito, o el avance de la derivación: entrevistas, alertas respondidas, conclusión e informe final |
 | Asegurado | Enlace del portal, botones de envío, avance y lo que subió |
-| Informe | El informe completo de Veritas, verificación de integridad y línea de tiempo |
+| Informe | El informe completo de Evidex, verificación de integridad y línea de tiempo |
 | Historial | Cadena de custodia en palabras simples y quién abrió el caso |
 
 **Excel:** la cola de trabajo, las redes y las métricas se descargan en Excel con el botón *Excel* de cada pantalla.
@@ -65,17 +65,17 @@ Secciones de la interfaz (menú lateral):
 - **Cola de trabajo:** los siniestros ordenados por riesgo, con búsqueda, filtros con conteo, monto, lo que está en curso (asegurado o peritaje) y la decisión. El jefe ve la columna Analista y puede filtrar por analista.
 - **Equipo** (jefe): carga por analista, casos atrasados, empresas de peritaje y reasignación.
 - **Redes:** todas las redes de la cartera, con su grafo, los datos compartidos, los asegurados involucrados y el monto reclamado.
-- **Métricas:** cuántos fraudes confirmados detecta Veritas, qué porcentaje de sus alertas resulta fraude, las falsas alarmas,
+- **Métricas:** cuántos fraudes confirmados detecta Evidex, qué porcentaje de sus alertas resulta fraude, las falsas alarmas,
   el monto detectado, las señales más frecuentes y los casos a revisar para ajustar umbrales.
 - **Importar:** carga masiva del historial desde Excel o CSV (encabezados flexibles, fechas chilenas). Cada fila queda como un caso
   con cadena de custodia, y el archivo original se guarda con su hash. La columna `resultado` (fraude, pagado, rechazado) se
   registra como decisión y alimenta las métricas. Incluye plantilla descargable e historial de ejemplo (`demo/historial_demo.csv`,
   147 siniestros ficticios con dos redes escondidas).
-- **Revisar foto:** se sube una foto suelta (sin crear caso) y Veritas muestra sus metadatos y las señales de manipulación:
+- **Revisar foto:** se sube una foto suelta (sin crear caso) y Evidex muestra sus metadatos y las señales de manipulación:
   fechas internas que no coinciden, hora del GPS que contradice la fecha, miniatura interna de otra imagen, cámara sin datos
   de exposición, rastros de herramientas que reescriben metadatos (ExifTool, editores de EXIF) y capturas de pantalla.
 - **Portal del asegurado (registro con enlace):** al registrar un siniestro, el analista marca *Pedirle al asegurado que suba
-  todo por un enlace* y elige qué documentos pedir (licencia, padrón, constancia, presupuesto, cédula, boletas). Veritas crea
+  todo por un enlace* y elige qué documentos pedir (licencia, padrón, constancia, presupuesto, cédula, boletas). Evidex crea
   el enlace y el caso muestra botones **Enviar por WhatsApp** (con el número del asegurado y el mensaje ya escrito),
   **Enviar por correo** y **Copiar mensaje**. Por WhatsApp viaja solo el enlace; las fotos y documentos llegan por el portal.
   En el portal, desde el celular, el asegurado tiene solo dos botones: **Fotos** (elige de la galería o toma
@@ -83,12 +83,12 @@ Secciones de la interfaz (menú lateral):
   "Parachoques trasero" o "Licencia de conducir"), que se ve en el caso y en el informe. Las fotos de la galería llegan byte a
   byte, con su fecha, cámara y GPS originales (sirve cuando avisa días después del choque); las fotos de papeles subidas como
   documento se leen con OCR para revisar RUT, fechas y patentes. Los documentos que pidió el analista aparecen como lista
-  ("Le pedimos: ..."). Además puede escribir su relato y presiona *Enviar todo*; Veritas reanaliza el caso. Puede avanzar por
+  ("Le pedimos: ..."). Además puede escribir su relato y presiona *Enviar todo*; Evidex reanaliza el caso. Puede avanzar por
   partes durante 7 días. Cada archivo entra a la cadena de custodia al llegar. El analista ve el avance en el caso (paso a paso) y en el Panel
   (*Esperando al asegurado*: sin abrir, abierto, vencido) y puede renovar el enlace o pedir más documentos; lo ya recibido se
-  conserva. Para que el asegurado abra el enlace desde su celular, inicie Veritas con `iniciar_publico.bat`: descarga
+  conserva. Para que el asegurado abra el enlace desde su celular, inicie Evidex con `iniciar_publico.bat`: descarga
   cloudflared y crea una dirección temporal https://…trycloudflare.com (WhatsApp la muestra como enlace). Por esa dirección solo
-  se abre el portal; el resto de Veritas sigue local. Si el enlace apunta a 127.0.0.1, el caso muestra un aviso, porque el
+  se abre el portal; el resto de Evidex sigue local. Si el enlace apunta a 127.0.0.1, el caso muestra un aviso, porque el
   asegurado no podrá abrirlo. En producción se configura el dominio de la compañía en Configuración > Dirección pública.
   `iniciar_captura.bat` sigue disponible para probar con un celular en la misma red wifi.
 - **Decisión del liquidador** en cada caso (en revisión, fraude confirmado, legítimo, rechazado), registrada en la cadena de custodia con su autor.
@@ -98,7 +98,7 @@ Secciones de la interfaz (menú lateral):
 Pensado para el trabajo de las consultoras que investigan siniestros por encargo de la aseguradora.
 
 - **Expediente:** se cargan los datos del siniestro, las alertas de la compañía (una por línea), las entrevistas
-  transcritas (preguntas numeradas o formato P:/R:) y los documentos. Veritas:
+  transcritas (preguntas numeradas o formato P:/R:) y los documentos. Evidex:
   - detecta contradicciones entre declarantes (quién usa el vehículo, qué hizo el otro vehículo, uso en aplicaciones,
     hora, motivo del viaje, espera de la grúa) y contra los documentos (kilometraje menor al de la nota de venta,
     documentos con RUT de un tercero), citando la pregunta exacta de cada entrevista;
@@ -108,7 +108,7 @@ Pensado para el trabajo de las consultoras que investigan siniestros por encargo
     respuesta aborda, y rechazos sin un hecho acreditado;
   - genera el informe (portada, datos, entrevistas, contradicciones, respuesta a alertas, conclusión, documentos,
     metodología) con el nombre de su empresa. Se guarda como PDF desde el navegador (Ctrl+P).
-- **Auditar un informe:** se sube un PDF terminado con la estructura habitual y Veritas revisa contradicciones entre
+- **Auditar un informe:** se sube un PDF terminado con la estructura habitual y Evidex revisa contradicciones entre
   entrevistados (indicando si el informe ya las aborda), secciones que se contradicen, respuestas del entrevistado
   marcadas como preguntas, preguntas sin respuesta, alertas sin respuesta, rechazos fundados solo en que una alerta
   "no pudo descartarse", filas vacías y nombres escritos de dos formas.
@@ -151,13 +151,13 @@ cantidad y gravedad de alertas: **no es una probabilidad de fraude**.
 ## Lo que lo distingue
 
 1. **Asistente que no puede inventar.** Toda afirmación del resumen cita evidencia real; lo que no cita, o cita algo inexistente, se descarta automáticamente. Funciona sin IA y, opcionalmente, con un modelo de lenguaje que pasa por el mismo verificador.
-2. **Evidencia verificable por terceros.** Cadena de custodia con hash encadenado y firma Ed25519. El paquete exportado incluye `verify.py`: un juez, auditor o perito contraparte comprueba la integridad sin instalar Veritas ni confiar en quien lo emitió.
+2. **Evidencia verificable por terceros.** Cadena de custodia con hash encadenado y firma Ed25519. El paquete exportado incluye `verify.py`: un juez, auditor o perito contraparte comprueba la integridad sin instalar Evidex ni confiar en quien lo emitió.
 3. **Análisis cruzado.** Las señales débiles por separado (una cuenta compartida, un relato parecido, un PDF editado) se vuelven evidentes al verse juntas y conectadas con otros casos.
 
 ## Estructura del código
 
 ```
-veritas/
+evidex/
   core/            cadena de custodia (ledger), casos y evidencia, línea de tiempo, verificador de citas, paquete verificable
   forensics/       motores de análisis, sin dependencia de la web: metadatos y píxeles de fotos, OCR, PDF y sus versiones,
                    chats de WhatsApp, lugares, validación chilena (RUT, patentes), póliza, relato, red de siniestros
@@ -180,11 +180,11 @@ una vista nueva sin permiso declarado queda cerrada.
 ## Línea de comandos
 
 ```bash
-python -m veritas.cli demo casos                                   # carga el ejemplo completo
-python -m veritas.web --dir casos                                  # interfaz (Importar > historial de ejemplo)
-python -m veritas.cli siniestro-init casos/SIN-1 declaracion.json foto1.jpg presupuesto.pdf
-python -m veritas.cli siniestro-analizar casos/SIN-1 --registro casos/registro.jsonl
-python -m veritas.cli export casos/SIN-1 SIN-1.zip
+python -m evidex.cli demo casos                                   # carga el ejemplo completo
+python -m evidex.web --dir casos                                  # interfaz (Importar > historial de ejemplo)
+python -m evidex.cli siniestro-init casos/SIN-1 declaracion.json foto1.jpg presupuesto.pdf
+python -m evidex.cli siniestro-analizar casos/SIN-1 --registro casos/registro.jsonl
+python -m evidex.cli export casos/SIN-1 SIN-1.zip
 python -m pytest
 ```
 
@@ -193,7 +193,7 @@ La declaración es un JSON con `numero` y `fecha_siniestro` obligatorios, y opci
 `parte_policial`, `fecha_denuncia`, `poliza`, `inicio_poliza`, `fin_poliza`, `cambio_cobertura`,
 `suma_asegurada`, `deducible`, `monto_reclamado`, `descripcion`. Ver `demo/make_claim_demo.py`.
 
-Respuesta a incidentes informáticos: `init`, `add`, `ingest`, `report`, `verify` (ver `python -m veritas.cli -h`).
+Respuesta a incidentes informáticos: `init`, `add`, `ingest`, `report`, `verify` (ver `python -m evidex.cli -h`).
 
 ## Calibración del análisis de imagen
 
@@ -218,7 +218,7 @@ rejillas); el enlace de captura segura y el código en papel cubren ese caso.
 - Ninguna señal prueba fraude por sí sola, y la ausencia de señales no prueba autenticidad. Las alertas priorizan la revisión humana.
 - Los umbrales (días, montos, similitud) son valores iniciales razonables y **deben calibrarse con datos reales** de la aseguradora.
 - Metadatos de fotos y PDF se pueden borrar o falsificar; una edición cuidadosa (o un retoque con IA generativa guardado a la misma calidad) puede no dejar huellas en los píxeles. Una imagen generada por IA sin marcas no se detecta (falta un detector por contenido). No se lee el texto de los PDF (montos, RUT del taller): requiere extracción de texto u OCR.
-- La red solo ve los siniestros cargados en Veritas; su valor crece con el historial (use Importar).
+- La red solo ve los siniestros cargados en Evidex; su valor crece con el historial (use Importar).
 - Las métricas del historial de ejemplo (detección 75%, precisión 69%) son de datos inventados para mostrar el funcionamiento;
   las cifras reales solo se conocen con un piloto sobre datos de la aseguradora.
 - Todos los datos, fotos y documentos del ejemplo son sintéticos e inventados.

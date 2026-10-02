@@ -2,14 +2,14 @@
 
 
 from helpers import LIMPIO, textured_image, web_client
-from veritas.claims import service
-from veritas.core.case import Case
+from evidex.claims import service
+from evidex.core.case import Case
 
 
 def test_secure_capture_flow(tmp_path):
     import io
-    from veritas.portal import links as capture
-    from veritas.web import create_app
+    from evidex.portal import links as capture
+    from evidex.web import create_app
 
     service.load_demo(tmp_path)
     case = service.find_case(tmp_path, LIMPIO)
@@ -45,7 +45,7 @@ def test_register_case_and_portal_for_insured(tmp_path):
     """El analista registra el caso sin evidencia, se genera el enlace y el asegurado sube fotos y documentos con título."""
     import io as _io
     from PIL import Image
-    from veritas.portal import links as capture
+    from evidex.portal import links as capture
     c = web_client(tmp_path)
     work = tmp_path / "casos"
     form = {"numero": "SIN-2026-2001", "fecha_siniestro": "2026-09-30T19:10", "asegurado": "Ana Pérez",
@@ -100,8 +100,8 @@ def test_portal_paper_document_photo_is_read_as_document(tmp_path):
     """Una foto subida como documento (un papel) se lee como documento: RUT y fechas."""
     import io as _io
     from PIL import Image, ImageDraw, ImageFont
-    from veritas.portal import links as capture
-    from veritas.forensics import ocr
+    from evidex.portal import links as capture
+    from evidex.forensics import ocr
     c = web_client(tmp_path)
     form = {"numero": "SIN-2026-3001", "fecha_siniestro": "2026-09-30T19:10", "patente": "KXTR-45", "enviar_enlace": "1",
             "docs": ["presupuesto"], "docs_sent": "1", "docs_custom": "Carta del empleador; "}
@@ -132,13 +132,13 @@ def test_portal_paper_document_photo_is_read_as_document(tmp_path):
 
 
 def test_public_link_warning_and_guard(tmp_path):
-    from veritas.portal import tunnel
-    from veritas.portal import links as capture
+    from evidex.portal import tunnel
+    from evidex.portal import links as capture
     assert tunnel.is_local("http://127.0.0.1:8765/c/x") and tunnel.is_local("https://192.168.1.5:8765/c/x")
     assert not tunnel.is_local("https://abc-def.trycloudflare.com/c/x")
     msg = capture.share_message("SIN-1", "Ana Pérez", "https://abc.trycloudflare.com/c/tok", "2026-10-08T10:00:00")
     assert "\nhttps://abc.trycloudflare.com/c/tok\n" in msg
-    from veritas.web import create_app
+    from evidex.web import create_app
     app = create_app(tmp_path / "casos")
     app.config.update(TESTING=True, PUBLIC=True, PUBLIC_BASE="https://abc.trycloudflare.com")
     cl = app.test_client()
@@ -150,7 +150,7 @@ def test_public_link_warning_and_guard(tmp_path):
 def test_portal_uploads_show_in_case_and_report(tmp_path):
     import io, json
     from PIL import Image
-    from veritas.web import create_app
+    from evidex.web import create_app
     app = create_app(tmp_path / "casos"); app.config["TESTING"] = True
     cl = app.test_client(); B = "http://127.0.0.1:8765"; H = {"Origin": B}
     cl.post("/demo", base_url=B, headers=H)
@@ -172,8 +172,8 @@ def test_portal_uploads_show_in_case_and_report(tmp_path):
 def test_remove_wrong_file_keeps_custody(tmp_path):
     import io, json, re
     from PIL import Image
-    from veritas.web import create_app
-    from veritas.core.case import Case
+    from evidex.web import create_app
+    from evidex.core.case import Case
     app = create_app(tmp_path / "casos"); app.config["TESTING"] = True
     cl = app.test_client(); B = "http://127.0.0.1:8765"; H = {"Origin": B}
     cl.post("/demo", base_url=B, headers=H)

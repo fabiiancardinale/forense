@@ -1,0 +1,57 @@
+{% if der %}
+<div class="layout-side"><div style="display:grid;gap:16px">
+<section class="panel"><div class="ph"><h2>{{ der.empresa }}</h2><span class="r"><span class="st {{ der.state }}">{{ der.state_label }}</span></span></div><div class="pb">
+<dl class="kv">
+<dt>Perito</dt><dd>{{ der.perito_name or 'Cualquier perito de la empresa' }}</dd>
+<dt>Derivado</dt><dd>{{ der.ts[:10] }} por {{ der.by }}</dd>
+<dt>Plazo</dt><dd>{{ der.plazo or 'sin plazo' }}</dd>
+{% if der.delivered %}<dt>Entregado</dt><dd>{{ der.delivered[:16]|replace('T',' ') }} UTC</dd>{% endif %}
+</dl>
+{% if der.instrucciones %}<p class="hint" style="margin:10px 0 0"><b>Instrucciones:</b> {{ der.instrucciones }}</p>{% endif %}
+{% if prog %}
+<div class="steps">
+<div class="{{ 'ok' if prog.interviews }}"><b>{{ prog.interviews }}</b><span>entrevista(s)</span></div>
+<div class="{{ 'ok' if prog.docs }}"><b>{{ prog.docs }}</b><span>documento(s) del perito</span></div>
+<div class="{{ 'ok' if prog.alerts and prog.answered == prog.alerts }}"><b>{{ prog.answered }}/{{ prog.alerts }}</b><span>alertas respondidas</span></div>
+<div class="{{ 'ok' if prog.conclusion }}"><b>{{ '✓' if prog.conclusion else '—' }}</b><span>conclusión</span></div>
+</div>
+{% if prog.interview_list %}<h3 class="sec">Entrevistas</h3><table class="mini">{% for iv in prog.interview_list %}<tr><td><b>{{ iv.declarante }}</b></td><td class="hint">{{ iv.rol }}</td><td class="hint">{{ iv.fecha }}</td><td class="hint">{{ iv.n }} preguntas</td></tr>{% endfor %}</table>{% endif %}
+{% if prog.conclusion %}<h3 class="sec">Conclusión del perito</h3><p style="margin:0"><b>{{ prog.conclusion.recomendacion }}</b></p><p class="hint">{{ prog.conclusion.texto }}</p>{% endif %}
+{% endif %}
+<div class="toolbar" style="margin-top:14px">
+{% if der.delivered %}<a class="btn pri" href="{{ url_for('claims.dossier_report', cid=c.id) }}" target="_blank">{{ icon('external', 15, '#fff') }}Informe final del perito</a>{% endif %}
+{% if can('peritaje') %}<a class="btn" href="{{ url_for('investigations.inv_view', cid=der.dossier) }}">Abrir expediente</a>{% endif %}
+</div>
+</div></section></div>
+<aside>
+{% if can('editar_siniestros') and not der.delivered %}<section class="panel"><div class="ph"><h2>Anular derivación</h2></div><div class="pb">
+<form method="post" action="{{ url_for('claims.derive_cancel', cid=c.id) }}" style="display:grid;gap:8px">
+<input name="motivo" placeholder="Motivo (por ejemplo: cambiar de empresa)" required aria-label="Motivo">
+<button class="btn sm" type="submit">Anular</button>
+<p class="hint" style="margin:0">El expediente del perito se conserva; después puede derivar a otra empresa.</p></form></div></section>{% endif %}
+{% if past|length > 1 %}<section class="panel"><div class="ph"><h2>Derivaciones anteriores</h2></div><div class="pb">
+{% for e in past %}<div class="hint" style="margin:3px 0">{{ e.ts[:10] }} · {{ {'case_derived': 'Derivado a', 'derivation_cancelled': 'Anulada', 'derivation_delivered': 'Entregado por'}[e.action] }} {{ e.subject }}{% if e.data.reason %} ({{ e.data.reason }}){% endif %}</div>{% endfor %}
+</div></section>{% endif %}
+</aside></div>
+{% else %}
+<section class="panel"><div class="ph"><h2>Derivar las entrevistas a un perito</h2></div><div class="pb">
+{% if not can('editar_siniestros') %}<p class="muted" style="margin:0">El caso no está derivado.</p>
+{% elif not firms %}<p style="margin:0">Aún no hay empresas de peritaje registradas. {% if can('admin') %}Agréguelas en <a href="{{ url_for('admin.users_view') }}#empresas">Usuarios y accesos</a>.{% else %}Pida al administrador que las registre.{% endif %}</p>
+{% else %}
+<p class="hint" style="margin:0 0 14px">El perito recibe un expediente con los datos del siniestro y las alertas que elija. Entra a Evidex con su usuario, ve solo los casos derivados a su empresa, carga las entrevistas y entrega su informe final. Usted verá el avance aquí.</p>
+<form method="post" action="{{ url_for('claims.derive', cid=c.id) }}" class="cols2">
+<div style="display:grid;gap:10px;align-content:start">
+<div><label for="emp">Empresa de peritaje</label><select id="emp" name="empresa" required><option value="">Elija…</option>{% for f in firms %}<option>{{ f.nombre }}</option>{% endfor %}</select></div>
+{% if peritos %}<div><label for="per">Perito (opcional)</label><select id="per" name="perito"><option value="">Cualquier perito de la empresa</option>{% for p in peritos %}<option value="{{ p.username }}" data-emp="{{ p.empresa }}">{{ p.name }} · {{ p.empresa }}</option>{% endfor %}</select></div>{% endif %}
+<div><label for="plazo">Plazo de entrega</label><input id="plazo" type="date" name="plazo" value="{{ default_due }}" required></div>
+<div><label for="ins">Instrucciones</label><textarea id="ins" name="instrucciones" rows="4" placeholder="A quién entrevistar, qué confirmar…"></textarea></div>
+</div>
+<div><label>Alertas que debe aclarar</label>
+{% if alerts %}<div class="checks-list">{% for f in alerts %}<label><input type="checkbox" name="alerta" value="{{ loop.index0 }}" {{ 'checked' if f.severity in ('alta', 'media') }}> <span class="sev {{ f.severity }}">{{ f.severity }}</span> {{ f.title }}</label>{% endfor %}</div>
+{% else %}<p class="hint">Evidex no encontró alertas; puede escribir las suyas.</p>{% endif %}
+<textarea name="alertas_extra" rows="3" placeholder="Otras alertas, una por línea" style="margin-top:8px" aria-label="Otras alertas"></textarea>
+</div>
+<div class="full"><button class="btn pri" type="submit">Derivar al perito</button></div>
+</form>{% endif %}
+</div></section>
+{% endif %}

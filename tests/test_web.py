@@ -4,7 +4,7 @@ import zipfile
 
 
 from helpers import ACTUAL, LIMPIO, web_client
-from veritas.claims import service
+from evidex.claims import service
 
 
 def test_web_create_claim_with_documents_verify_export(demo_src, tmp_path):
@@ -68,7 +68,7 @@ def test_chat_upload_accepted_only_if_real_chat(tmp_path):
 
 
 def test_users_login_roles_and_access_log(tmp_path):
-    from veritas.web import create_app
+    from evidex.web import create_app
     app = create_app(tmp_path / "casos")
     c = app.test_client()
     assert c.get("/").status_code == 200                                  # sin usuarios: modo demo abierto

@@ -3,17 +3,17 @@
 import pytest
 
 from helpers import web_client
-from veritas.claims import analysis as claims
-from veritas.claims import importer, service
-from veritas.core.case import Case
-from veritas.core.ledger import verify_chain
-from veritas.forensics import network
+from evidex.claims import analysis as claims
+from evidex.claims import importer, service
+from evidex.core.case import Case
+from evidex.core.ledger import verify_chain
+from evidex.forensics import network
 
 
 def test_import_history_detects_rings_and_measures(history):
     work, csv_path, rep = history
     assert len(rep["imported"]) == 147 and not rep["skipped"] and not rep["ignored"]
-    assert (work / "importaciones").exists() and rep["sha256"] == __import__("veritas.core.case", fromlist=["x"]).sha256_file(csv_path)
+    assert (work / "importaciones").exists() and rep["sha256"] == __import__("evidex.core.case", fromlist=["x"]).sha256_file(csv_path)
     comps = network.components(claims.load_registry(work / "registro.jsonl"))
     assert sorted(len(c["members"]) for c in comps) == [2, 4, 6]
     m = service.metrics(work)
@@ -74,7 +74,7 @@ def test_web_import_networks_metrics_decision(tmp_path):
 def test_excel_exports(loaded):
     import io as _io
     from openpyxl import load_workbook
-    from veritas.web import create_app
+    from evidex.web import create_app
     c = create_app(loaded[0]).test_client()
     for what, sheet in (("cola", "Cola de trabajo"), ("redes", "Redes"), ("metricas", "Resumen")):
         r = c.get(f"/exportar/{what}.xlsx")

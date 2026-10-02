@@ -6,11 +6,11 @@ import zipfile
 
 
 from helpers import UTF8_ENV
-from veritas.cli import main
-from veritas.core import assistant, detections
-from veritas.core.case import Case
-from veritas.core.ledger import verify_chain
-from veritas.core.timeline import Timeline
+from evidex.cli import main
+from evidex.core import assistant, detections
+from evidex.core.case import Case
+from evidex.core.ledger import verify_chain
+from evidex.core.timeline import Timeline
 
 
 def test_detects_full_attack_chain(built):

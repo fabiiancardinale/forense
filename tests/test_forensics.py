@@ -3,7 +3,7 @@
 import pytest
 
 from helpers import ACTUAL, LIMPIO, analysis_of, textured_image
-from veritas.forensics import documents
+from evidex.forensics import documents
 
 
 def test_pdf_metadata_detects_incremental_edit(demo_src, tmp_path):
@@ -22,7 +22,7 @@ def test_photo_metadata_tampering(tmp_path):
     import io
     piexif = pytest.importorskip("piexif")
     from PIL import Image, ImageDraw
-    from veritas.claims.analysis import quick_check
+    from evidex.claims.analysis import quick_check
 
     def make(seed, dto, dt=None, thumb_from=None):
         img = Image.new("RGB", (800, 600), (90, 110, 130))
@@ -58,7 +58,7 @@ def test_photo_metadata_tampering(tmp_path):
 def test_pasted_region_and_clone_detected(tmp_path):
     import io
     from PIL import Image
-    from veritas.forensics.image_content import analyze_image
+    from evidex.forensics.image_content import analyze_image
 
     a = textured_image(1)
     buf = io.BytesIO(); a.save(buf, "JPEG", quality=70); buf.seek(0)
@@ -80,14 +80,14 @@ def test_pasted_region_and_clone_detected(tmp_path):
 
 def test_solar_elevation_santiago():
     from datetime import datetime
-    from veritas.forensics.image_content import solar_elevation
+    from evidex.forensics.image_content import solar_elevation
     # 20-09-2026 en Santiago: mediodía solar cerca de las 16:45 UTC, noche a las 02:00 UTC
     assert solar_elevation(-33.45, -70.66, datetime(2026, 9, 20, 16, 45)) > 50
     assert solar_elevation(-33.45, -70.66, datetime(2026, 9, 21, 2, 0)) < -20
 
 
 def test_chilean_validation():
-    from veritas.forensics.chile import plate_format, plates_in, rut_dv, rut_valid, ruts_in
+    from evidex.forensics.chile import plate_format, plates_in, rut_dv, rut_valid, ruts_in
     assert rut_dv(12345678) == "5" and rut_valid("12.345.678-5") and rut_valid("12.345.678-9") is False
     assert rut_valid("sin rut") is None
     assert ruts_in("Taller RUT 76.543.210-3, cliente 12345678-9") == [("76.543.210-3", True), ("12.345.678-9", False)]
@@ -97,7 +97,7 @@ def test_chilean_validation():
 
 def test_whatsapp_parsing_android_and_iphone(tmp_path):
     import zipfile as zf
-    from veritas.forensics.whatsapp import read
+    from evidex.forensics.whatsapp import read
     text = ("19/09/26, 21:14 - Ana: mañana chocamos y\nle decimos al seguro\n"
             "[20/09/2026, 6:41:12 p. m.] Pedro: Se eliminó este mensaje\n"
             "20/09/26, 19:05 - Pedro: <Multimedia omitido>\n")
@@ -116,7 +116,7 @@ def test_whatsapp_parsing_android_and_iphone(tmp_path):
 
 
 def test_pdf_hidden_version_recovered(demo_src):
-    from veritas.forensics.pdf_versions import extract, version_bytes
+    from evidex.forensics.pdf_versions import extract, version_bytes
     raw = (demo_src / "actual" / "documentos" / "presupuesto_taller.pdf").read_bytes()
     r = extract(raw)
     assert [v["readable"] for v in r["versions"]] == [True, True]
@@ -130,8 +130,8 @@ def test_pdf_hidden_version_recovered(demo_src):
 
 
 def test_external_services_with_mocked_provider(tmp_path, monkeypatch):
-    from veritas.forensics import external
-    from veritas.claims.analysis import Photo
+    from evidex.forensics import external
+    from evidex.claims.analysis import Photo
     img = tmp_path / "evidence"; img.mkdir()
     (img / ("a" * 64)).write_bytes(b"\xff\xd8 imagen")
 
@@ -158,7 +158,7 @@ def test_external_services_with_mocked_provider(tmp_path, monkeypatch):
 
 
 def test_places_in_chat_text():
-    from veritas.forensics.places import mention
+    from evidex.forensics.places import mention
     assert mention("voy saliendo de Viña, llego tipo 8")[:1] == ("Viña del Mar",)
     assert mention("estoy en Rancagua con el auto")[0] == "Rancagua"
     assert mention("llegando a Temuco")[3] == "rumbo a"
@@ -172,7 +172,7 @@ def test_chat_place_contradicts_crash(loaded):
 
 
 def test_ocr_reads_plate_and_scanned_document(loaded):
-    from veritas.forensics import ocr
+    from evidex.forensics import ocr
     if not ocr.available():
         pytest.skip("OCR no instalado (pip install rapidocr_onnxruntime)")
     work, _ = loaded
@@ -188,7 +188,7 @@ def test_ocr_reads_plate_and_scanned_document(loaded):
 def test_heic_from_iphone_keeps_date(tmp_path):
     pytest.importorskip("pillow_heif")
     from PIL import Image
-    from veritas.claims.analysis import photo_metadata
+    from evidex.claims.analysis import photo_metadata
     exif = Image.Exif(); exif[0x010F] = "Apple"; exif[0x8769] = {0x9003: "2026:09:28 08:15:00"}
     p = tmp_path / "IMG_2001.HEIC"
     Image.new("RGB", (640, 480), (100, 110, 120)).save(p, format="HEIF", exif=exif.tobytes())
@@ -197,6 +197,6 @@ def test_heic_from_iphone_keeps_date(tmp_path):
 
 
 def test_ocr_ignores_dates_that_look_like_plates():
-    from veritas.forensics.ocr import plates
+    from evidex.forensics.ocr import plates
     assert plates([("DE 2026", 0.95), ("30 de septiembre de 2026", 0.9), ("AL1990", 0.9)]) == []
     assert plates([("KX·TR45", 0.95), ("HJ 1234", 0.9)]) == ["KXTR45", "HJ1234"]

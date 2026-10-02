@@ -7,12 +7,12 @@ import zipfile
 import pytest
 
 from helpers import ACTUAL, LIMPIO, UTF8_ENV, analysis_of
-from veritas.claims import analysis as claims
-from veritas.claims import service
-from veritas.cli import main
-from veritas.core.case import Case
-from veritas.core.ledger import verify_chain
-from veritas.forensics import narrative, network, policy
+from evidex.claims import analysis as claims
+from evidex.claims import service
+from evidex.cli import main
+from evidex.core.case import Case
+from evidex.core.ledger import verify_chain
+from evidex.forensics import narrative, network, policy
 
 
 def test_demo_loads_in_order_with_expected_outcome(loaded):
@@ -153,7 +153,7 @@ def test_forensic_timeline_in_report_and_web(loaded):
     html = (work / ACTUAL / "informe.html").read_text(encoding="utf-8")
     assert "Línea de tiempo forense" in html and "traslado imposible" in html and "chat·" in html
     assert "qué cambió de la versión 1" in html and "$1.850.000" in html
-    from veritas.web import create_app
+    from evidex.web import create_app
     c = create_app(work).test_client()
     case = service.find_case(work, ACTUAL)
     digest = next(e["subject"] for e in case.ledger.entries()
