@@ -135,9 +135,15 @@ rechazos es orientativa y debe validarse con el área legal.
 | **Servicios externos (opcional)** | Detector de imágenes generadas con IA (Sightengine) y búsqueda inversa en internet (Google Cloud Vision), configurables con sus claves en Configuración. Envían la foto al proveedor: requieren autorización. |
 | **Póliza y siniestro** | Siniestro a pocos días de contratar la póliza o cerca del vencimiento; fuera de vigencia; aumento de cobertura poco antes; aviso tardío o denuncia con fecha anterior; monto reclamado cercano a la suma asegurada; madrugada sin testigos ni parte policial. |
 | **Documentos (PDF)** | Paso por editores de PDF (iLovePDF, Smallpdf, Sejda...); modificaciones posteriores a la creación (versiones guardadas, fechas); presupuestos o facturas creados antes del siniestro; el mismo documento presentado en otro siniestro. |
-| **Contenido de la imagen** (funciona sin metadatos) | Doble compresión JPEG: la foto se abrió y volvió a guardar; **zona pegada** desde otra imagen (sin la huella de compresión del resto), marcada en rojo; **clonado** de una parte de la foto en otro lugar; cielo de día en una foto con hora de noche (altura del sol en ese lugar y hora); firma de autenticidad **C2PA** rota (Pixel 10/11 y otras cámaras firman sus fotos). |
-| **Fotos** | Marcas de generación por IA; edición con software; sin metadatos; metadatos manipulados (fechas internas distintas, hora GPS que no calza, miniatura de otra imagen, cámara sin datos de exposición, ExifTool); capturas de pantalla; fecha anterior o muy posterior al siniestro; GPS lejos del lugar declarado; foto idéntica o casi idéntica (recortada, recomprimida) a la de otro siniestro. |
+| **Contenido de la imagen** (funciona sin metadatos) | Doble compresión JPEG: la foto se abrió y volvió a guardar; **zona pegada** desde otra imagen (sin la huella de compresión del resto), marcada en rojo; **clonado** de una parte de la foto en otro lugar; cielo de día en una foto con hora de noche (altura del sol en ese lugar y hora); firma de autenticidad **C2PA** rota (Pixel 10/11 y otras cámaras firman sus fotos); **grano del sensor** distinto en una zona (pegada de otra foto o retocada), marcada en morado. En *Revisar foto* se ven además el mapa **ELA** y el **mapa de ruido**. |
+| **Fotos** | Marcas de generación por IA; edición con software; sin metadatos; metadatos manipulados (fechas internas distintas, hora GPS que no calza, miniatura de otra imagen, cámara sin datos de exposición, ExifTool); capturas de pantalla; fecha anterior o muy posterior al siniestro; GPS lejos del lugar declarado; foto **recortada o achicada** después de tomarla (la cámara anota el tamaño original); iPhone sin la nota del fabricante (metadatos copiados o escritos a mano); tamaño exacto de generadores de IA; nombre de archivo de edición; en el portal, fecha del archivo anterior a la fecha de la foto. |
+| **Fotos entre siniestros** | Foto idéntica, casi idéntica (recortada, recomprimida) o **espejada** a la de otro siniestro; la misma toma reconocida por el **identificador único** que graban algunas cámaras, aunque la imagen se haya editado; el **mismo teléfono** (número de serie de la cámara) en siniestros de distintos asegurados. |
+| **Fotos del mismo siniestro** | La misma foto presentada dos veces o **espejada** para simular el otro costado; fotos tomadas con varios teléfonos distintos. |
 | **Relato** | Relato copiado o muy similar al de otro siniestro; contradicciones con la hora declarada, los testigos o el parte policial; relato ausente o muy breve. |
+
+Cada foto muestra la lista de **las 26 pruebas** que se le aplicaron, agrupadas (origen, metadatos, píxeles, contexto,
+otros siniestros, este siniestro), con su resultado: alerta, sin hallazgos o no aplica (y por qué). Así el liquidador y la
+compañía ven todo lo que se revisó, no solo lo que salió mal.
 
 Cada alerta tiene severidad (alta, media, baja). El puntaje de 0 a 100 ordena la cola de trabajo según
 cantidad y gravedad de alertas: **no es una probabilidad de fraude**.
@@ -199,6 +205,9 @@ Con 26 fotos reales de muestra (cámaras y fotos de dominio público) y falsific
 | Fotos guardadas dos veces detectadas | 25 de 26 |
 | Zonas pegadas detectadas | 21 de 26 |
 | Clonados detectados (zonas de textura suave, como carrocería) | 20 de 26 |
+| Falsas alarmas de grano distinto (49 fotos reales y 26 recomprimidas, más la demo) | 1 de 84 (una macro con fondo desenfocado) |
+| Zonas pegadas desde otra foto real detectadas solo por el grano | 11 de 78 (prueba complementaria) |
+| Fotos recortadas o achicadas detectadas por el tamaño anotado por la cámara | 8 de 8 en la muestra pública |
 
 No es una medición con fotos reales de siniestros: los umbrales deben validarse en el piloto. No se incluyó detección de
 fotos tomadas a una pantalla por análisis de frecuencia, porque en la calibración confundía texturas reales (ladrillos,

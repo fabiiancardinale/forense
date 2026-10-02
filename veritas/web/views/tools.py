@@ -30,6 +30,14 @@ def photo_check():
                 import base64
                 ov = overlay(path, meta.get("content") or {})
                 marked = base64.b64encode(ov).decode() if ov else None
+                ela = noise = None
+                if "error" not in meta:
+                    from veritas.forensics.image_content import ela_map, noise_map
+                    try:
+                        ela = base64.b64encode(ela_map(path)).decode()
+                        noise = base64.b64encode(noise_map(path)).decode()
+                    except Exception:
+                        pass
             level = "bad" if any(f.severity == "alta" for f in findings) else \
                 "warn" if any(f.severity == "media" for f in findings) else "ok"
             fx = meta.get("forensics") or {}
@@ -48,12 +56,23 @@ def photo_check():
             gh = ct.get("ghost") or {}
             rows += [("Calidad JPEG estimada", gh.get("q_final") or "—"),
                      ("Compresión anterior", f"sí, calidad ~{gh['q_first']}" if gh.get("q_first") else "no detectada"),
-                     ("Zonas clonadas", "sí" if (ct.get("clone") or {}).get("src") else "no detectadas")]
+                     ("Zonas clonadas", "sí" if (ct.get("clone") or {}).get("src") else "no detectadas"),
+                     ("Grano del sensor", "zona distinta" if (ct.get("noise") or {}).get("region") else "parejo"),
+                     ("Tamaño anotado por la cámara", "×".join(map(str, fx["pixel_dims"])) if fx.get("pixel_dims") else "—"),
+                     ("Identificador único de la foto", fx.get("image_uid") or "—"),
+                     ("N° de serie de la cámara", fx.get("serial") or "—")]
             cp = ct.get("c2pa")
             rows.append(("Firma de autenticidad (C2PA)", "no tiene" if not cp else
                          cp.get("note") or ("válida" if cp.get("valid") else f"inválida ({cp.get('state')})")
                          + (f" · {cp['generator']}" if cp.get("generator") else "")))
             if "error" in meta:
                 rows = [("Error", meta["error"])]
-            results.append({"name": up.filename, "findings": findings, "level": level, "rows": rows, "marked": marked})
+            from veritas.claims import photo_checks
+            checks = photo_checks.run(meta, findings, case_level=False)
+            if not fecha:
+                for ck in checks:
+                    if ck["name"].startswith("Fecha de la foto contra") and ck["status"] == "ok":
+                        ck.update(status="no aplica", why="no se indicó la fecha del siniestro")
+            results.append({"name": up.filename, "findings": findings, "level": level, "rows": rows, "marked": marked,
+                            "ela": ela, "noise": noise, "checks": checks})
     return render_template("tools/photo_check.html", results=results, active="foto")

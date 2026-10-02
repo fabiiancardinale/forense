@@ -237,7 +237,17 @@ def write_snapshot(case: Case, photos, docs, findings) -> None:
         return {"digest": d.digest, "name": d.name, "title": m.get("title") or d.name, "producer": m.get("producer") or
                 m.get("creator"), "versions": len(m.get("versions") or []), "scanned": bool(m.get("ocr"))}
 
-    data = {"photos": [photo(p) for p in photos], "docs": [doc(d) for d in docs],
+    from veritas.claims import photo_checks
+    cited: dict[str, list] = {}
+    for f in findings:
+        for e in ev_of(f):
+            cited.setdefault(e, []).append(f)
+    shots = []
+    for p in photos:
+        row = photo(p)
+        row["checks"] = photo_checks.run(p.meta, cited.get(p.digest[:8], []))
+        shots.append(row)
+    data = {"photos": shots, "docs": [doc(d) for d in docs],
             "findings": [{"rule": f.rule, "severity": f.severity, "title": f.title, "summary": f.summary,
                           "category": f.category, "evidence": ev_of(f)} for f in findings]}
     (case.root / SNAPSHOT).write_text(json.dumps(data, ensure_ascii=False, indent=1, default=str), encoding="utf-8")

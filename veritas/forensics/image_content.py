@@ -8,6 +8,11 @@
   3. Luz contra hora: cielo de día en una foto que dice haberse tomado de noche.
   4. Credenciales de contenido C2PA (Pixel 10/11 y otras cámaras firman sus fotos): si la firma
      existe y es válida, la foto no se modificó desde la cámara; si es inválida, sí.
+  5. Ruido inconsistente: cada cámara deja un "grano" (ruido del sensor) parejo en toda la foto,
+     que depende del brillo. Una zona pegada desde otra foto, suavizada o retocada tiene otro
+     grano. Se mide el ruido en zonas sin bordes y se compara con lo esperado para su brillo.
+  6. Mapas para el liquidador: ELA (cuánto cambia cada zona al volver a comprimir) y mapa de
+     ruido. No generan alertas solos: ayudan a mirar la foto.
 
 Calibrado con fotos reales de muestra: con fotos limpias no aparecieron zonas ni clonados;
 con falsificaciones de prueba se detectó la mayoría, no todas. Una edición cuidadosa (por
@@ -30,6 +35,12 @@ GHOST_DEPTH = 0.055        # profundidad mínima del "fantasma" de la primera co
 REGION_FRAC, REGION_Z = 0.04, 15.0
 CLONE_MIN = 40             # coincidencias mínimas con el mismo desplazamiento
 BLOCK = 16
+# ruido: calibrado con 84 fotos reales y recomprimidas (1 falsa alarma: macro con fondo desenfocado) y 78 falsificaciones
+# de prueba con zonas pegadas desde otra foto (~1 de cada 7 detectadas: es una prueba complementaria)
+NOISE_BLOCK, NOISE_MAXSIDE = 32, 1536
+NOISE_Z, NOISE_RATIO, NOISE_FILL = 4.0, 2.0, 0.65
+NOISE_FRAC = (0.02, 0.35)
+NOISE_TEXTURE = 0.3        # la zona debe tener textura (un daño la tiene; un cielo liso no)
 
 
 # ---- utilidades -------------------------------------------------------------------------
@@ -289,12 +300,120 @@ def c2pa_status(path) -> dict | None:
         return {"valid": False, "state": type(ex).__name__, "generator": ""}
 
 
+# ---- 5. ruido inconsistente -------------------------------------------------------------------------------
+def _noise_blocks(img: Image.Image, maxside: int = NOISE_MAXSIDE):
+    """Nivel de ruido por bloque (método de Immerkaer sobre zonas sin bordes) y brillo medio."""
+    g = img.convert("L")
+    f = max(1, int(np.ceil(max(g.size) / maxside)))
+    if f > 1:
+        g = g.resize((g.width // f, g.height // f), Image.Resampling.BOX)
+    a = np.asarray(g, dtype=np.float32)
+    lap = (a[:-2, :-2] - 2 * a[:-2, 1:-1] + a[:-2, 2:] - 2 * a[1:-1, :-2] + 4 * a[1:-1, 1:-1] - 2 * a[1:-1, 2:]
+           + a[2:, :-2] - 2 * a[2:, 1:-1] + a[2:, 2:])
+    grad = np.hypot(a[1:-1, 2:] - a[1:-1, :-2], a[2:, 1:-1] - a[:-2, 1:-1])
+    lum = a[1:-1, 1:-1]
+    b = NOISE_BLOCK
+    h, w = lap.shape[0] // b * b, lap.shape[1] // b * b
+
+    def blk(x):
+        return x[:h, :w].reshape(h // b, b, w // b, b)
+    # en cada bloque se usa su mitad más lisa (sin bordes) y sin zonas quemadas ni negras
+    gb = blk(grad)
+    ok = (gb <= np.median(gb, axis=(1, 3), keepdims=True)) & (blk(lum) > 15) & (blk(lum) < 240)
+    cnt = ok.sum(axis=(1, 3))
+    sig = (blk(np.abs(lap)) * ok).sum(axis=(1, 3)) / np.maximum(cnt, 1) * math.sqrt(math.pi / 2) / 6
+    lm = blk(lum).mean(axis=(1, 3))
+    tex = blk(grad).mean(axis=(1, 3))
+    valid = (cnt >= b * b * 0.25) & (sig > 0.05)
+    return sig, lm, valid, f, tex
+
+
+def _noise_ratio(sig, lm, valid) -> np.ndarray:
+    """log(ruido del bloque / ruido esperado para su brillo)."""
+    bins = np.clip((lm / 32).astype(int), 0, 7)
+    exp = np.full(sig.shape, float(np.median(sig[valid])))
+    for k in range(8):
+        sel = valid & (bins == k)
+        if sel.sum() >= 8:
+            exp[bins == k] = np.median(sig[sel])
+    with np.errstate(all="ignore"):
+        lr = np.log(np.maximum(sig, 1e-3) / np.maximum(exp, 0.05))
+    return np.where(valid, lr, 0.0)
+
+
+def noise_inconsistency(img: Image.Image) -> dict:
+    """Zona compacta con un grano de sensor claramente distinto al resto de la foto."""
+    sig, lm, valid, f, tex = _noise_blocks(img)
+    if valid.sum() < 40:
+        return {}
+    lr = _noise_ratio(sig, lm, valid)
+    v = lr[valid]
+    med = np.median(v)
+    z = (lr - med) / (np.median(np.abs(v - med)) * 1.4826 + 1e-6)
+    for sign in (1, -1):
+        blob = _largest_blob(valid & (sign * z > NOISE_Z) & (sign * lr > math.log(NOISE_RATIO)))
+        frac = blob.sum() / valid.sum()
+        if blob.sum() < 6 or not NOISE_FRAC[0] <= frac <= NOISE_FRAC[1]:
+            continue
+        ys, xs = np.nonzero(blob)
+        fill = blob.sum() / ((np.ptp(ys) + 1) * (np.ptp(xs) + 1))
+        # cielos, paredes y esquinas oscuras: el teléfono suaviza el grano distinto en zonas lisas
+        if fill < NOISE_FILL or np.median(tex[blob]) < NOISE_TEXTURE * np.median(tex[valid]):
+            continue
+        s = NOISE_BLOCK * f
+        return {"region": {"bbox": [int(xs.min() * s + f), int(ys.min() * s + f), int((xs.max() + 1) * s + f),
+                                    int((ys.max() + 1) * s + f)],
+                           "frac": round(float(frac), 3), "ratio": round(float(math.exp(abs(lr[blob].mean()))), 1),
+                           "kind": "más" if sign > 0 else "menos"}}
+    return {}
+
+
+# ---- 6. mapas para mirar la foto -------------------------------------------------------------------------
+def _png(im: Image.Image) -> bytes:
+    b = io.BytesIO()
+    im.save(b, "PNG")
+    return b.getvalue()
+
+
+def ela_map(path, quality: int = 90, maxside: int = 900) -> bytes:
+    """Error Level Analysis: diferencia al volver a guardar. Zonas editadas suelen brillar distinto."""
+    with Image.open(path) as img:
+        rgb = img.convert("RGB")
+    b = io.BytesIO()
+    rgb.save(b, "JPEG", quality=quality)
+    b.seek(0)
+    diff = np.abs(np.asarray(rgb, np.float32) - np.asarray(Image.open(b).convert("RGB"), np.float32)).max(axis=2)
+    scale = 255.0 / max(float(np.percentile(diff, 99.5)), 1.0)
+    im = Image.fromarray(np.clip(diff * scale, 0, 255).astype(np.uint8))
+    im.thumbnail((maxside, maxside))
+    return _png(im)
+
+
+def noise_map(path, maxside: int = 900) -> bytes:
+    """Mapa del grano del sensor respecto de lo esperado: rojo = más ruido, azul = menos, gris = sin dato."""
+    with Image.open(path) as img:
+        img.load()
+        sig, lm, valid, _, _ = _noise_blocks(img)
+        size = img.size
+    lr = _noise_ratio(sig, lm, valid) if valid.sum() else np.zeros(sig.shape)
+    t = np.clip(lr / math.log(3), -1, 1)
+    rgb = np.zeros(sig.shape + (3,), np.float32)
+    rgb[..., 0] = 235 * np.clip(t, 0, 1) + 245 * (1 - np.abs(t))
+    rgb[..., 1] = 245 * (1 - np.abs(t))
+    rgb[..., 2] = 235 * np.clip(-t, 0, 1) + 245 * (1 - np.abs(t))
+    rgb[~valid] = (200, 205, 212)
+    im = Image.fromarray(rgb.astype(np.uint8)).resize(size, Image.Resampling.NEAREST)
+    im.thumbnail((maxside, maxside))
+    return _png(im)
+
+
 # ---- conjunto ------------------------------------------------------------------------------------------
 def analyze_image(path) -> dict:
     with Image.open(path) as img:
         img.load()
         q = estimate_quality(img) if img.format == "JPEG" else None
-        out = {"ghost": ghost(img, q) if q else {}, "clone": copy_move(img), "sky_day": daylight_sky(img)}
+        out = {"ghost": ghost(img, q) if q else {}, "clone": copy_move(img), "sky_day": daylight_sky(img),
+               "noise": noise_inconsistency(img)}
     c = c2pa_status(path)
     if c is not None:
         out["c2pa"] = c
@@ -306,6 +425,8 @@ def overlay(path, content: dict, maxside: int = 900) -> bytes | None:
     boxes = []
     if (content.get("ghost") or {}).get("region"):
         boxes.append((content["ghost"]["region"]["bbox"], (220, 38, 38), "zona agregada"))
+    if (content.get("noise") or {}).get("region"):
+        boxes.append((content["noise"]["region"]["bbox"], (124, 58, 237), "grano distinto"))
     cl = content.get("clone") or {}
     if cl.get("src"):
         boxes += [(cl["src"], (234, 140, 0), "original"), (cl["dst"], (234, 140, 0), "copia")]

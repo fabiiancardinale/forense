@@ -98,12 +98,34 @@ def inspect(img: Image.Image, raw: bytes, name: str, dhash_fn) -> dict:
         "user_comment": str(sub.get(0x9286) or "")[:60],
         "tools": sorted({label for marker, label in METADATA_TOOLS.items() if marker in raw}),
         "name": name,
+        # tamaño que la cámara dice haber guardado: si no coincide con la imagen, se recortó o redimensionó
+        "pixel_dims": _dims(sub.get(0xA002), sub.get(0xA003)),
+        # el iPhone siempre guarda una "nota del fabricante"; si falta, los metadatos se reescribieron
+        "makernote": 0x927C in sub,
+        # identificadores de la foto y del equipo: sirven para reconocer la misma foto o el mismo teléfono
+        # aunque la imagen se haya editado
+        "image_uid": _clean(sub.get(0xA420)),
+        "serial": _clean(sub.get(0xA431)) or _clean(exif.get(0xC62F)),
+        "lens_serial": _clean(sub.get(0xA435)),
     }
     thumb = _thumbnail(raw)
     if thumb is not None:
         out["thumb_dhash"] = dhash_fn(thumb)
         out["thumb_ratio"] = round(thumb.width / thumb.height, 2)
     return out
+
+
+def _clean(v) -> str | None:
+    s = str(v or "").strip("\x00 ").strip()
+    return s if len(s) >= 4 and set(s) - {"0", " "} else None
+
+
+def _dims(w, h) -> list[int] | None:
+    try:
+        w, h = (int(x[0] if isinstance(x, tuple) else x) for x in (w, h))
+        return [w, h] if w > 0 and h > 0 else None
+    except (TypeError, ValueError, IndexError):
+        return None
 
 
 def _fmt(dt: datetime) -> str:
@@ -196,7 +218,25 @@ def signals(meta: dict, received: datetime | None, hamming_fn) -> list[tuple[str
                     f"La foto dice haberse tomado el {_fmt(orig)}, después de recibirse ({_fmt(received)}). "
                     "La fecha se cambió o el reloj del equipo estaba mal."))
 
-    # 7. captura de pantalla
+    # 7. recortada o redimensionada después de tomarla: la cámara anota el tamaño que guardó
+    pd = f.get("pixel_dims")
+    w0, h0 = meta.get("width") or 0, meta.get("height") or 0
+    if pd and w0 and sorted(pd) != sorted([w0, h0]) and min(pd) > 64:
+        smaller = pd[0] * pd[1] > w0 * h0
+        same_ratio = abs(max(pd) / min(pd) - max(w0, h0) / max(min(w0, h0), 1)) < 0.02
+        what = ("se redujo de tamaño" if same_ratio else "se recortó") if smaller else "se agrandó o se reemplazó la imagen"
+        out.append(("resized_after_capture", "media", "La foto se modificó después de tomarla",
+                    f"La cámara anotó que guardó una imagen de {pd[0]}×{pd[1]}, pero el archivo mide {w0}×{h0}: "
+                    f"la foto {what} después de tomarla. Al recortar se puede sacar del cuadro algo que contradice "
+                    "el relato; conviene pedir el original."))
+
+    # 8. iPhone sin la nota del fabricante (Apple la escribe siempre)
+    if (meta.get("make") or "").strip().lower() == "apple" and orig and not f.get("makernote") and "makernote" in f:
+        out.append(("makernote_missing", "media", "Metadatos de iPhone incompletos",
+                    "La foto dice venir de un iPhone, pero le falta la nota del fabricante que todo iPhone guarda. "
+                    "Suele pasar cuando los metadatos se copiaron desde otra foto o se escribieron a mano."))
+
+    # 9. captura de pantalla
     why = []
     if "screenshot" in (f.get("user_comment") or "").lower():
         why.append("el sistema la marcó como captura de pantalla")

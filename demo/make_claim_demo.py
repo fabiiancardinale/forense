@@ -248,6 +248,9 @@ claim("actual", {
     ("05_patente.jpg", with_plate(scene(55), "HJKL·21"), {"quality": 90, "exif": exif("Apple", "iPhone 15", "2026:08:11 10:02:47", (-33.0245, -71.5518))}),
     # 9 minutos después de la foto 02 en Providencia, pero con GPS en Rancagua (85 km): traslado imposible
     ("06_lateral_izquierdo.jpg", scene(68), {"quality": 90, "exif": exif("samsung", "SM-S921B", "2026:09:20 18:52:30", (-34.1701, -70.7406))}),
+    # la foto 01 invertida de izquierda a derecha, presentada como otro costado del auto
+    ("07_costado_trasero_izq.jpg", scene(11).transpose(Image.Transpose.FLIP_LEFT_RIGHT),
+     {"quality": 88, "exif": exif("samsung", "SM-S921B", "2026:09:20 18:44:40", None)}),
 ], docs=[("presupuesto_taller.pdf", presupuesto), ("factura_repuestos.pdf", factura),
          ("chat_whatsapp_asegurado.txt", CHAT.encode("utf-8")),
          # boleta en papel escaneada: sin texto digital, solo se puede leer con OCR; fechada antes del choque

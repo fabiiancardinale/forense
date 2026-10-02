@@ -80,7 +80,7 @@ document.querySelectorAll("button[id^=up-]").forEach(btn => btn.onclick = async 
   m.hidden = true;
   btn.disabled = true; btn.textContent = "Subiendo…";
   for (const q of [...queue[kind]]) {
-    const fd = new FormData(); fd.append("archivo", q.file, q.file.name); fd.append("kind", kind); fd.append("titulo", q.input.value.trim());
+    const fd = new FormData(); fd.append("archivo", q.file, q.file.name); fd.append("kind", kind); fd.append("titulo", q.input.value.trim()); fd.append("modificado", String(q.file.lastModified || ""));
     try { const r = await fetch(base + "/archivo", {method:"POST", body:fd}); const j = await r.json(); if (!r.ok) throw new Error(j.error || "error");
       const li = document.createElement("li"); li.innerHTML = "✓ "; li.append(j.titulo); const sm = document.createElement("small"); sm.textContent = j.hora; li.append(sm);
       li.dataset.id = j.id; li.dataset.kind = j.tipo; li.append(rmButton());

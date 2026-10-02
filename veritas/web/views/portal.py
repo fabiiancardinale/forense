@@ -47,7 +47,8 @@ def portal_file(token):
         return {"error": "No llegó el archivo."}, 400
     try:
         rec = capture.receive_file(case, data, f.filename, f.read(capture.MAX_FILE_BYTES + 1), request.form.get("kind", ""),
-                                   request.form.get("titulo", ""), request.headers.get("User-Agent", ""))
+                                   request.form.get("titulo", ""), request.headers.get("User-Agent", ""),
+                                 request.form.get("modificado", ""))
     except ValueError as ex:
         return {"error": str(ex)}, 400
     return {"ok": True, "tipo": rec["kind"], "titulo": rec["title"], "hora": rec["server_time"][11:16], "id": rec["sha256"]}

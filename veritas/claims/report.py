@@ -244,7 +244,13 @@ RULE_NAMES = {
     "reused_doc": "Documento repetido", "not_pdf": "PDF inválido", "doc_no_metadata": "PDF sin metadatos",
     "edited": "Foto editada", "reused_photo": "Foto repetida", "no_metadata": "Foto sin metadatos", "ai_generated": "Posible imagen IA",
     "taken_before": "Foto anterior al siniestro", "taken_late": "Foto muy posterior", "gps_mismatch": "Ubicación no coincide",
-    "unreadable": "Foto ilegible",
+    "unreadable": "Foto ilegible", "pasted_region": "Zona pegada", "cloned_region": "Zona clonada",
+    "recompressed": "Foto guardada de nuevo", "noise_inconsistent": "Grano distinto en una zona",
+    "resized_after_capture": "Foto recortada o achicada", "makernote_missing": "Metadatos de iPhone incompletos",
+    "ai_dimensions": "Tamaño típico de IA", "edit_filename": "Nombre de archivo de edición",
+    "saved_before_taken": "Fecha de la foto cambiada", "same_device_other_claim": "Mismo teléfono en otro siniestro",
+    "mirrored_in_claim": "Foto espejada", "duplicate_in_claim": "Foto repetida en el caso",
+    "multiple_devices": "Fotos de varios teléfonos",
 }
 
 CATEGORY_ORDER = ["Red de siniestros", "Línea de tiempo", "Póliza y siniestro", "Documentos", "Fotos", "Comunicaciones",

@@ -93,6 +93,47 @@ GUIDE: dict[str, tuple[str, str]] = {
         "se lee otra patente.",
         "Mire la foto: si es el otro auto del choque o uno que pasaba, no hay problema. Si es la foto que debía mostrar "
         "el vehículo asegurado, es una foto de otro auto y corresponde investigar."),
+    "noise_inconsistent": (
+        "Toda la foto sale del mismo sensor, así que el \"grano\" de la imagen debería ser parejo (según la luz). "
+        "Una zona con un grano claramente distinto puede haberse pegado desde otra foto o retocado. Es una señal de "
+        "apoyo: por sí sola no prueba edición.",
+        "Mire la zona marcada en morado en Revisar foto (y el mapa de ruido). Si coincide con el daño, pida una "
+        "inspección presencial."),
+    "resized_after_capture": (
+        "La cámara anota dentro del archivo el tamaño exacto de la foto que guardó. Si el archivo mide otra cosa, la foto "
+        "se recortó o se achicó después. Recortar permite sacar del cuadro algo que contradice el relato (la patente, "
+        "otro auto, el lugar).",
+        "Pida al asegurado la foto original, completa, desde la galería de su teléfono por el portal."),
+    "makernote_missing": (
+        "Todo iPhone guarda en la foto una \"nota del fabricante\" con datos técnicos. Si la foto dice ser de iPhone "
+        "y no la tiene, los metadatos se copiaron de otra foto o se escribieron con un programa.",
+        "Considere la fecha y el lugar de la foto como no confiables y pida el original."),
+    "ai_dimensions": (
+        "Los generadores de imágenes con IA producen tamaños fijos (1024×1024, 1344×768…) que ninguna cámara de teléfono "
+        "usa, y no agregan datos de cámara.",
+        "Pida fotos nuevas tomadas con la cámara del portal, o una inspección presencial."),
+    "edit_filename": (
+        "El nombre del archivo es el que dejan las apps de edición o las copias (\"editado\", \"copia\", \"(1)\").",
+        "Pida la foto original desde la galería."),
+    "saved_before_taken": (
+        "El teléfono informa cuándo se guardó el archivo. Si ese momento es anterior a la fecha que dice la foto, la "
+        "fecha de la foto se cambió a mano.",
+        "No use la fecha de esta foto como prueba y pregunte al asegurado cuándo la tomó."),
+    "same_device_other_claim": (
+        "Algunas cámaras graban su número de serie en cada foto. La misma cámara aparece en el siniestro de otro "
+        "asegurado: la misma persona fotografió ambos choques.",
+        "Revise el otro siniestro y quién tomó las fotos (taller, tramitador). Derive a investigación."),
+    "mirrored_in_claim": (
+        "Una foto es la otra invertida de izquierda a derecha. Se usa para presentar un mismo daño como si fueran dos "
+        "(por ejemplo, ambos costados del auto).",
+        "Trátela como fraude probable: derive a investigación y pida inspección presencial."),
+    "duplicate_in_claim": (
+        "Dos fotos del siniestro son prácticamente la misma imagen.",
+        "Si se presentaron como daños distintos, pregunte al asegurado; si es una ráfaga, no hay problema."),
+    "multiple_devices": (
+        "Las fotos se tomaron con cámaras distintas. Es normal si una la tomó el otro conductor o la grúa, pero no si "
+        "el asegurado dice haberlas tomado todas él.",
+        "Pregunte quién tomó cada foto. Si alguna no tiene explicación, puede ser de otro evento."),
     "ai_detected": (
         "Un servicio externo de detección estima que la imagen fue creada o modificada con inteligencia artificial.",
         "Pida fotos nuevas por el portal o una inspección presencial."),

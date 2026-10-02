@@ -183,7 +183,8 @@ def remove_file(case, data: dict, sha256: str) -> dict:
     return rec
 
 
-def receive_file(case, data: dict, filename: str, blob: bytes, kind: str, title: str = "", user_agent: str = "") -> dict:
+def receive_file(case, data: dict, filename: str, blob: bytes, kind: str, title: str = "", user_agent: str = "",
+                 last_modified: str = "") -> dict:
     """Foto o documento que sube el asegurado, con el título que él le da.
     Se guarda el archivo original tal cual, con sus metadatos (fecha, cámara, GPS)."""
     if why := status(data):
@@ -222,6 +223,10 @@ def receive_file(case, data: dict, filename: str, blob: bytes, kind: str, title:
     local, utc = _now_pair()
     rec = {"kind": kind, "title": title, "original_name": (filename or "")[:120], "server_time": local, "server_utc": utc,
            "device": user_agent[:160]}
+    # fecha del archivo en el teléfono (la informa el navegador): si es muy posterior a la de la foto,
+    # el archivo se editó o se volvió a guardar
+    if last_modified.isdigit() and 10 <= len(last_modified) <= 14:
+        rec["last_modified"] = int(last_modified)
     n = len(data.get("files", [])) + 1
     prefix = "doc" if kind == "doc" else "foto"
     with tempfile.TemporaryDirectory() as td:

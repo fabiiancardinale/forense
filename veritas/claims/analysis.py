@@ -7,8 +7,14 @@ Qué revisa en cada foto:
   3. Ausencia de metadatos (típico de fotos reenviadas por WhatsApp o capturas).
   4. Fecha de la foto contra la fecha declarada del siniestro.
   5. Ubicación GPS de la foto contra el lugar declarado.
-  6. Reutilización: la misma foto (o una casi idéntica, recortada o recomprimida)
-     ya presentada en otro siniestro, usando hash perceptual y un registro compartido.
+  6. Reutilización: la misma foto (o una casi idéntica, recortada, recomprimida o espejada)
+     ya presentada en otro siniestro, usando hash perceptual, el identificador único que
+     algunas cámaras graban en cada foto y un registro compartido.
+  7. El mismo teléfono (número de serie de la cámara) en siniestros de distintos asegurados.
+  8. Dentro del mismo siniestro: la misma foto presentada dos veces (o espejada, para
+     simular el otro lado del auto) y fotos de varios teléfonos distintos.
+  9. Pistas del archivo: tamaño típico de imágenes generadas por IA, nombre de archivo de
+     edición y, en el portal, fecha del archivo posterior a la fecha de la foto.
 
 Cada hallazgo cita el evento de la foto (y de la declaración cuando corresponde),
 de modo que el asistente verificable y el informe funcionan igual que en incidentes.
@@ -56,6 +62,14 @@ AI_MARKERS = [b"trainedAlgorithmicMedia", b"Midjourney", b"DALL-E", b"DALL\xc2\x
 AI_TEXT_KEYS = ("parameters", "prompt", "workflow")
 
 WHATSAPP_NAME = re.compile(r"(whatsapp[ _]image|IMG-\d{8}-WA\d+)", re.I)
+EDIT_NAME = re.compile(r"(edit|retoc|photoshop|snapseed|picsart|lightroom|facetune|remini|[-_ ]copia|[-_ ]copy\b|\(\d\)\.)", re.I)
+# tamaños exactos que entregan los generadores de imágenes (SDXL, DALL·E, GPT-image, Midjourney, Flux);
+# no se incluyen tamaños 4:3 como 1024×768, que también usan cámaras antiguas
+_AI = [(512, 512), (768, 768), (1024, 1024), (2048, 2048), (1152, 896), (1216, 832), (1344, 768), (1536, 640),
+       (1792, 1024), (1536, 1024), (1456, 816), (1232, 928), (1312, 736), (1440, 816), (1344, 896), (1248, 832)]
+AI_SIZES = {s for w, h in _AI for s in ((w, h), (h, w))}
+SAME_CLAIM_DUP = 6          # bits: dos fotos del mismo siniestro casi idénticas
+SAVED_AFTER = timedelta(days=1)
 DUP_MAX_DISTANCE = 10       # bits de diferencia en el hash perceptual (de 64); valor usual 8-12
 GPS_WARN_KM, GPS_ALERT_KM = 5, 50
 BEFORE_TOLERANCE = timedelta(hours=2)
@@ -63,6 +77,12 @@ LATE_AFTER = timedelta(days=7)
 
 
 # ---- metadatos ------------------------------------------------------------
+def dhash_variants(img: Image.Image) -> dict:
+    """Hash de la foto espejada: quien reutiliza una foto a veces la invierte para que parezca otra."""
+    from PIL import ImageOps
+    return {"dhash_flip": dhash(ImageOps.mirror(img))}
+
+
 def dhash(img: Image.Image, size: int = 8) -> str:
     """Hash perceptual por diferencias: resiste recorte leve, cambio de tamaño y recompresión."""
     g = img.convert("L").resize((size + 1, size), Image.Resampling.LANCZOS)
@@ -113,7 +133,7 @@ def photo_metadata(path: Path, name: str | None = None, content: bool = True) ->
             "format": img.format, "width": img.width, "height": img.height,
             "make": exif.get(0x010F), "model": exif.get(0x0110), "software": exif.get(0x0131),
             "taken": taken.isoformat() if taken else None, "gps": _gps(gps),
-            "has_exif": len(exif) > 0, "text_keys": sorted(text), "dhash": dhash(img),
+            "has_exif": len(exif) > 0, "text_keys": sorted(text), "dhash": dhash(img), **dhash_variants(img),
             "forensics": photo_forensics.inspect(img, raw[:4_000_000], name or Path(path).name, dhash),
         }
     meta["ai_markers"] = sorted({m.decode("utf-8", "ignore") for m in AI_MARKERS if m in raw[:4_000_000]})
@@ -160,8 +180,29 @@ def analyze(decl: dict, decl_ev: str, photos: list[Photo], registry: list[dict])
                                f"La imagen {p.name} contiene marcas de herramientas de generación por IA ({', '.join(ai)}).",
                                cite, p.ts))
 
+        w, h = m.get("width") or 0, m.get("height") or 0
+        if not ai and not m.get("make") and (w, h) in AI_SIZES:
+            out.append(Finding("ai_dimensions", "media", f"Tamaño típico de imagen generada por IA ({p.name})",
+                               f"La imagen {p.name} mide {w}×{h} y no trae datos de cámara. Ese tamaño es el que usan los "
+                               "generadores de imágenes con IA; ninguna cámara de teléfono guarda fotos así.", cite, p.ts))
+        if EDIT_NAME.search(p.name) and not WHATSAPP_NAME.search(p.name):
+            out.append(Finding("edit_filename", "baja", f"El nombre del archivo sugiere edición ({p.name})",
+                               f"El nombre {p.name} es el que dejan las apps de edición o una copia del archivo. "
+                               "Conviene pedir la foto original.", cite, p.ts))
+        lm = (m.get("portal") or {}).get("last_modified")
+        if lm and m.get("taken"):
+            saved = datetime.fromtimestamp(lm / 1000)
+            gap = saved - datetime.fromisoformat(m["taken"])
+            # solo se usa en este sentido: iPhone y algunos Android informan como fecha del archivo el momento
+            # en que se elige en la galería, así que un archivo "más nuevo" que la foto es normal
+            if gap < -SAVED_AFTER:
+                out.append(Finding("saved_before_taken", "alta", f"La fecha de la foto es posterior a su archivo ({p.name})",
+                                   f"El archivo {p.name} existía en el teléfono el {_fmt(saved)}, pero la foto dice haberse "
+                                   f"tomado después, el {_fmt(datetime.fromisoformat(m['taken']))}. Es imposible: la fecha "
+                                   "interna de la foto se cambió.", cite, p.ts))
+
         sw = (m.get("software") or "").lower()
-        if editor := next((e for e in EDITORS if e in sw), None):
+        if any(e in sw for e in EDITORS):
             out.append(Finding("edited", "alta", f"Foto editada ({p.name})",
                                f"Los metadatos de {p.name} indican que pasó por un editor de imágenes ({m['software']}).",
                                cite, p.ts))
@@ -219,22 +260,98 @@ def analyze(decl: dict, decl_ev: str, photos: list[Photo], registry: list[dict])
                                    f"La foto {p.name} se tomó a {km:.0f} km del lugar declarado ({decl.get('lugar', '')}).",
                                    cite + [decl_ev], p.ts))
 
-        for r in registry:
-            if r.get("type", "photo") != "photo" or r["claim"] == decl["numero"]:
-                continue
-            if r["sha256"] == p.digest:
-                how = "idéntica"
-            elif hamming(r["dhash"], m["dhash"]) <= DUP_MAX_DISTANCE:
-                how = "casi idéntica (recortada, redimensionada o recomprimida)"
-            else:
-                continue
-            out.append(Finding("reused_photo", "alta", f"Foto ya usada en otro siniestro ({p.name})",
-                               f"La foto {p.name} es {how} a la foto {r['photo']} del siniestro {r['claim']}.", cite, p.ts))
-            break
+        out += registry_findings(p, decl, registry, cite)
 
+    out += photo_set_findings(photos)
     for f in out:
         f.category = "Fotos"
     out.sort(key=lambda f: ({"alta": 0, "media": 1, "baja": 2}[f.severity], f.first_ts))
+    return out
+
+
+def _ruts_by_claim(registry: list[dict]) -> dict[str, str]:
+    return {r["claim"]: re.sub(r"[^0-9kK]", "", r.get("rut") or "").upper() for r in registry if r.get("type") == "claim"}
+
+
+def registry_findings(p: "Photo", decl: dict, registry: list[dict], cite) -> list[Finding]:
+    """La misma foto (aunque esté espejada o editada) o el mismo teléfono en otro siniestro."""
+    m, out = p.meta, []
+    fx = m.get("forensics") or {}
+    uid, serial = fx.get("image_uid"), fx.get("serial")
+    rut = re.sub(r"[^0-9kK]", "", decl.get("rut") or "").upper()
+    ruts = None
+    reused = device = False
+    for r in registry:
+        if r.get("type", "photo") != "photo" or r["claim"] == decl["numero"]:
+            continue
+        if not reused:
+            how = None
+            if r["sha256"] == p.digest:
+                how = "idéntica"
+            elif r.get("dhash") and hamming(r["dhash"], m["dhash"]) <= DUP_MAX_DISTANCE:
+                how = "casi idéntica (recortada, redimensionada o recomprimida)"
+            elif r.get("dhash") and m.get("dhash_flip") and hamming(r["dhash"], m["dhash_flip"]) <= DUP_MAX_DISTANCE:
+                how = "la misma foto, pero espejada (invertida de izquierda a derecha) para que parezca otra"
+            elif uid and r.get("uid") == uid:
+                how = ("la misma toma: ambas llevan el mismo identificador único que la cámara graba en cada foto, "
+                       "aunque la imagen se haya editado")
+            if how:
+                out.append(Finding("reused_photo", "alta", f"Foto ya usada en otro siniestro ({p.name})",
+                                   f"La foto {p.name} es {how}, igual a la foto {r['photo']} del siniestro {r['claim']}.",
+                                   cite, p.ts))
+                reused = True
+        if not device and serial and r.get("serial") == serial:
+            ruts = ruts if ruts is not None else _ruts_by_claim(registry)
+            other = ruts.get(r["claim"], "")
+            if rut and other and other != rut:
+                out.append(Finding("same_device_other_claim", "alta", f"Mismo teléfono en el siniestro de otro asegurado ({p.name})",
+                                   f"La foto {p.name} se tomó con la cámara número de serie {serial}, la misma que tomó la "
+                                   f"foto {r['photo']} del siniestro {r['claim']}, de otro asegurado. Una misma persona "
+                                   "fotografiando siniestros de distintos asegurados es una señal típica de redes de fraude "
+                                   "(talleres, tramitadores).", cite, p.ts))
+                device = True
+    return out
+
+
+def photo_set_findings(photos: list["Photo"]) -> list[Finding]:
+    """Revisa las fotos del siniestro en conjunto."""
+    out: list[Finding] = []
+    ok = [p for p in photos if "error" not in p.meta and p.meta.get("dhash")]
+    # la misma foto presentada dos veces (con otro nombre) o espejada para simular el otro lado
+    seen = set()
+    for i, a in enumerate(ok):
+        for b in ok[i + 1:]:
+            if a.digest == b.digest or (a.digest, b.digest) in seen:
+                continue
+            flip = b.meta.get("dhash_flip") and hamming(a.meta["dhash"], b.meta["dhash_flip"]) <= SAME_CLAIM_DUP \
+                and hamming(a.meta["dhash"], b.meta["dhash"]) > SAME_CLAIM_DUP
+            same = hamming(a.meta["dhash"], b.meta["dhash"]) <= SAME_CLAIM_DUP
+            if not (flip or same):
+                continue
+            seen.add((a.digest, b.digest))
+            if flip:
+                out.append(Finding("mirrored_in_claim", "alta", f"Foto espejada presentada como otra ({b.name})",
+                                   f"La foto {b.name} es la foto {a.name} invertida de izquierda a derecha. Se usa para "
+                                   "mostrar el mismo daño como si fuera del otro costado del vehículo.",
+                                   [a.ev, b.ev], b.ts))
+            else:
+                out.append(Finding("duplicate_in_claim", "media", f"La misma foto dos veces ({b.name})",
+                                   f"Las fotos {a.name} y {b.name} son prácticamente la misma imagen. Puede ser una ráfaga, "
+                                   "pero si se presentaron como fotos de daños distintos, hay que preguntar.",
+                                   [a.ev, b.ev], b.ts))
+    # fotos de varios teléfonos: el asegurado dice haber fotografiado su propio choque
+    devices: dict[str, list] = {}
+    for p in ok:
+        if p.meta.get("make") and not p.meta.get("secure_capture"):
+            key = " ".join(filter(None, [str(p.meta["make"]).strip(), str(p.meta.get("model") or "").strip()]))
+            devices.setdefault(key, []).append(p)
+    if len(devices) >= 2:
+        detail = "; ".join(f"{k}: {', '.join(x.name for x in v)}" for k, v in devices.items())
+        out.append(Finding("multiple_devices", "media", f"Fotos tomadas con {len(devices)} teléfonos distintos",
+                           f"Las fotos del siniestro vienen de cámaras distintas ({detail}). Puede ser normal (el otro "
+                           "conductor, la grúa), pero si el asegurado dice haberlas tomado él, alguna puede ser de otro "
+                           "evento.", [x.ev for v in devices.values() for x in v],
+                           min(x.ts for v in devices.values() for x in v)))
     return out
 
 
@@ -256,6 +373,13 @@ def content_findings(p: "Photo", decl: dict, place, cite) -> list[Finding]:
                            f"La foto {p.name} dice venir directo de la cámara, pero tiene huella de una compresión anterior "
                            f"(calidad ~{g['q_first']}, luego ~{g['q_final']}). Se abrió y volvió a guardar, por ejemplo "
                            "en un editor.", cite, p.ts))
+    nz = (c.get("noise") or {}).get("region")
+    if nz and not g.get("region"):
+        out.append(Finding("noise_inconsistent", "media", f"Zona con grano distinto al resto ({p.name})",
+                           f"Una zona de {p.name} (marcada en morado en la revisión de la foto) tiene {nz['kind']} grano "
+                           f"de sensor que el resto de la imagen (unas {nz['ratio']} veces). Toda la foto sale del mismo "
+                           "sensor, así que una zona con otro grano puede venir de otra imagen o estar retocada.",
+                           cite, p.ts))
     cl = c.get("clone") or {}
     if cl.get("src"):
         out.append(Finding("cloned_region", "alta", f"Parte de la imagen duplicada ({p.name})",
@@ -351,7 +475,10 @@ def update_registry(path: Path, claim: str, photos: list[Photo], docs=(), decl: 
     lines = []
     for p in photos:
         if "dhash" in p.meta and ("photo", claim, p.digest) not in known:
-            lines.append({"type": "photo", "claim": claim, "photo": p.name, "sha256": p.digest, "dhash": p.meta["dhash"]})
+            fx = p.meta.get("forensics") or {}
+            row = {"type": "photo", "claim": claim, "photo": p.name, "sha256": p.digest, "dhash": p.meta["dhash"]}
+            row.update({k: v for k, v in (("uid", fx.get("image_uid")), ("serial", fx.get("serial"))) if v})
+            lines.append(row)
     for d in docs:
         if ("doc", claim, d.digest) not in known:
             lines.append({"type": "doc", "claim": claim, "name": d.name, "sha256": d.digest})
