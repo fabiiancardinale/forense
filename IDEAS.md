@@ -9,9 +9,6 @@ Lista de mejoras conversadas, para retomarlas después. Esfuerzo: **rápida** (h
 - [ ] **Informe ejecutivo en PDF** (rápida): una página por caso, con el logo de la compañía.
 - [ ] **Ajuste de umbrales desde la pantalla** (media): el jefe sube o baja la sensibilidad de cada prueba y ve cuántas alertas más o menos daría.
 
-## Marca
-- [ ] **Cambiar el nombre a "Evidex by Zelekpress"** (rápida): menú, títulos, informes, portal del asegurado, lanzador `iniciar_evidex.bat`. Ya está hecho y probado en la rama `evidex-renombre`; basta con fusionarla cuando se decida.
-
 ## Ranking de talleres (en Cartera, junto a Redes y Métricas)
 No es "taller externo = sospechoso": se mira cada taller, en convenio o no, sobre todos sus casos.
 - Porcentaje de sus siniestros con alertas, comparado con el promedio de los talleres.
