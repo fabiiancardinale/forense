@@ -130,3 +130,28 @@ def test_photo_check_page_shows_tests_and_maps(tmp_path):
     page = c.post("/foto", data={"fotos": (io.BytesIO(buf.getvalue()), "x.jpg")},
                   content_type="multipart/form-data").get_data(as_text=True)
     assert "Pruebas aplicadas" in page and "Grano del sensor parejo" in page and "Mapa ELA" in page
+
+
+def test_visible_ai_label_and_crop_that_hides_it(tmp_path):
+    from evidex.forensics.derived import ai_label, crop_relation, odd_ratio
+    assert ai_label("CTRL | ALT | Contenido generado por IA") == "Contenido generado por IA"
+    assert ai_label("AI-generated content") and not ai_label("KXTR45 | Taller Central")
+    full = textured_image(11, 1200, 1600)
+    a = _jpeg(full, tmp_path / "WhatsApp Image 1.jpeg")
+    cut = full.crop((0, 0, 1200, 1420)).resize((1352, 1600))          # se quita la franja de abajo con la marca
+    b = _jpeg(cut, tmp_path / "WhatsApp Image 2.jpeg", quality=80)
+    rel = crop_relation(a, b)
+    assert rel and rel["base"] == "a" and set(rel["cut"]) == {"abajo"}
+    assert crop_relation(a, _jpeg(textured_image(12, 1200, 1600), tmp_path / "otra.jpg")) is None
+    assert odd_ratio(1352, 1600) and odd_ratio(1200, 1600) is None and odd_ratio(1080, 1920) is None
+
+    pa, pb = _photo(a, digest="a" * 64), _photo(b, digest="b" * 64)
+    pa.path, pb.path = a, b
+    pa.meta["content"] = {"ocr": {"text": "CTRL | Contenido generado por IA", "plates": []}}
+    pb.meta["content"] = {"ocr": {"text": "CTRL", "plates": []}}
+    rules = [f.rule for f in analyze(DECL, "d:1", [pa, pb], [])]
+    assert "ai_label_visible" in rules and "ai_mark_cropped" in rules and "odd_ratio" in rules
+    assert "duplicate_in_claim" not in rules
+    pa.meta["content"]["ocr"]["text"] = "CTRL"                          # sin marca: solo un recorte
+    rules = [f.rule for f in photo_set_findings([pa, pb])]
+    assert rules == ["cropped_in_claim"]

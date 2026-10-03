@@ -51,7 +51,7 @@ def chile_plate_ok(p) -> bool:
 def _fmt_plate(p: str) -> str:
     return f"{p[:4]}·{p[4:]}" if plate_format(p) == "nueva" else f"{p[:2]}·{p[2:]}"
 from evidex.forensics import image_content
-from evidex.forensics import ocr
+from evidex.forensics import derived, ocr
 from evidex.forensics import photo_metadata as photo_forensics
 
 IMAGE_EXT = {".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".heic"}
@@ -152,6 +152,7 @@ class Photo:
     name: str
     meta: dict
     ts: str  # fecha de la foto o, si no tiene, hora de recepción
+    path: Path | None = None  # archivo, para comparar fotos entre sí (recortes)
 
     @property
     def ev(self) -> str:
@@ -185,6 +186,19 @@ def analyze(decl: dict, decl_ev: str, photos: list[Photo], registry: list[dict])
             out.append(Finding("ai_dimensions", "media", f"Tamaño típico de imagen generada por IA ({p.name})",
                                f"La imagen {p.name} mide {w}×{h} y no trae datos de cámara. Ese tamaño es el que usan los "
                                "generadores de imágenes con IA; ninguna cámara de teléfono guarda fotos así.", cite, p.ts))
+        label = derived.ai_label(((m.get("content") or {}).get("ocr") or {}).get("text") or "")
+        if label:
+            out.append(Finding("ai_label_visible", "alta", f"La imagen dice que fue hecha con IA ({p.name})",
+                               f"En la foto {p.name} se lee el texto «{label}». Esa marca la estampan las apps "
+                               "(Samsung, Google, Meta y otras) cuando la imagen se generó o se editó con inteligencia "
+                               "artificial: lo que muestra no es una foto sin modificar.", cite, p.ts))
+        ratio = derived.odd_ratio(w, h)
+        if ratio and not ai and not m.get("make") and (w, h) not in AI_SIZES:
+            out.append(Finding("odd_ratio", "baja", f"Proporción que no es de cámara ({p.name})",
+                               f"La foto {p.name} mide {w}×{h} (proporción {str(ratio).replace('.', ',')} a 1). Los teléfonos guardan las fotos en "
+                               "proporciones fijas (4:3, 16:9, 1:1...) y WhatsApp las mantiene, así que esta imagen se "
+                               "recortó a mano o se generó. Recortar puede ser inocente, pero también sirve para sacar "
+                               "marcas, fechas o partes que delatan otra cosa: pida la foto completa.", cite, p.ts))
         if EDIT_NAME.search(p.name) and not WHATSAPP_NAME.search(p.name):
             out.append(Finding("edit_filename", "baja", f"El nombre del archivo sugiere edición ({p.name})",
                                f"El nombre {p.name} es el que dejan las apps de edición o una copia del archivo. "
@@ -319,6 +333,22 @@ def photo_set_findings(photos: list["Photo"]) -> list[Finding]:
     ok = [p for p in photos if "error" not in p.meta and p.meta.get("dhash")]
     # la misma foto presentada dos veces (con otro nombre) o espejada para simular el otro lado
     seen = set()
+    crops = _crop_pairs(ok)
+    for a, b, rel in crops:
+        base, part = (a, b) if rel["base"] == "a" else (b, a)
+        seen.add((a.digest, b.digest))
+        sides = ", ".join(f"{round(v * 100)}% por {s}" for s, v in rel["cut"].items())
+        mark = _ai_evidence(base)
+        if mark and not _ai_evidence(part):
+            out.append(Finding("ai_mark_cropped", "alta", f"Foto recortada para sacar la marca de IA ({part.name})",
+                               f"La foto {part.name} es la foto {base.name} recortada (se quitó {sides}). La foto completa "
+                               f"tiene {mark}, y la recortada ya no la muestra: se recortó para que no se note que la "
+                               "imagen fue generada o editada con IA.", [base.ev, part.ev], part.ts))
+        else:
+            out.append(Finding("cropped_in_claim", "media", f"Una foto es recorte de otra ({part.name})",
+                               f"La foto {part.name} es la foto {base.name} recortada (se quitó {sides}). Si se presentaron "
+                               "como fotos distintas, o si la parte quitada mostraba algo (una marca, una fecha, otro "
+                               "vehículo), hay que preguntar por qué.", [base.ev, part.ev], part.ts))
     for i, a in enumerate(ok):
         for b in ok[i + 1:]:
             if a.digest == b.digest or (a.digest, b.digest) in seen:
@@ -353,6 +383,36 @@ def photo_set_findings(photos: list["Photo"]) -> list[Finding]:
                            "evento.", [x.ev for v in devices.values() for x in v],
                            min(x.ts for v in devices.values() for x in v)))
     return out
+
+
+CROP_MAX_PHOTOS = 20   # con más fotos solo se comparan los pares parecidos (cada par toma ~0,1 s)
+
+
+def _crop_pairs(photos: list["Photo"]) -> list[tuple]:
+    """Pares de fotos (a, b, relación) donde una es recorte de la otra."""
+    files = [p for p in photos if p.path and Path(p.path).exists()]
+    out = []
+    for i, a in enumerate(files):
+        for b in files[i + 1:]:
+            if a.digest == b.digest:
+                continue
+            if len(files) > CROP_MAX_PHOTOS and hamming(a.meta["dhash"], b.meta["dhash"]) > 20:
+                continue
+            rel = derived.crop_relation(a.path, b.path)
+            if rel:
+                out.append((a, b, rel))
+    return out
+
+
+def _ai_evidence(p: "Photo") -> str | None:
+    """Qué muestra que la foto se hizo o editó con IA (para saber si un recorte la escondió)."""
+    m = p.meta
+    label = derived.ai_label(((m.get("content") or {}).get("ocr") or {}).get("text") or "")
+    if label:
+        return f"el texto «{label}»"
+    if m.get("ai_markers"):
+        return f"marcas de IA en el archivo ({', '.join(m['ai_markers'])})"
+    return None
 
 
 def content_findings(p: "Photo", decl: dict, place, cite) -> list[Finding]:
@@ -562,7 +622,7 @@ def load_case(case, timeline) -> tuple[dict, str, list[Photo]]:
             except Exception as ex:  # formato no soportado, archivo dañado, etc.
                 meta = {"error": type(ex).__name__}
             ts = meta.get("taken") or e["ts"].rstrip("Z")
-            photos.append(Photo(e["subject"], name, meta, ts))
+            photos.append(Photo(e["subject"], name, meta, ts, path))
             cam = " ".join(filter(None, [meta.get("make"), meta.get("model")])) or None
             timeline.add_event(ev, ts, name, "foto", None, cam,
                                f"Foto {name}: {json.dumps(meta, ensure_ascii=False, default=str)[:400]}")
@@ -577,6 +637,11 @@ def quick_check(path: Path, name: str, fecha_siniestro: str | None = None) -> tu
     """Revisa una foto suelta, sin crear un caso (no se registra en la cadena de custodia)."""
     try:
         meta = photo_metadata(path, name)
+        if ocr.available() and isinstance(meta.get("content"), dict):
+            try:
+                meta["content"]["ocr"] = ocr.analyze_photo(path)
+            except Exception as ex:
+                meta["content"]["ocr"] = {"error": type(ex).__name__, "plates": []}
     except Exception as ex:
         meta = {"error": type(ex).__name__}
     meta["received"] = datetime.now().isoformat(timespec="seconds")

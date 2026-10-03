@@ -250,7 +250,9 @@ RULE_NAMES = {
     "ai_dimensions": "Tamaño típico de IA", "edit_filename": "Nombre de archivo de edición",
     "saved_before_taken": "Fecha de la foto cambiada", "same_device_other_claim": "Mismo teléfono en otro siniestro",
     "mirrored_in_claim": "Foto espejada", "duplicate_in_claim": "Foto repetida en el caso",
-    "multiple_devices": "Fotos de varios teléfonos",
+    "multiple_devices": "Fotos de varios teléfonos", "ai_label_visible": "Marca visible de IA",
+    "ai_mark_cropped": "Recortada para ocultar la marca de IA", "cropped_in_claim": "Foto recortada de otra del caso",
+    "odd_ratio": "Proporción que no es de cámara",
 }
 
 CATEGORY_ORDER = ["Red de siniestros", "Línea de tiempo", "Póliza y siniestro", "Documentos", "Fotos", "Comunicaciones",

@@ -61,6 +61,7 @@ def photo_check():
                      ("Tamaño anotado por la cámara", "×".join(map(str, fx["pixel_dims"])) if fx.get("pixel_dims") else "—"),
                      ("Identificador único de la foto", fx.get("image_uid") or "—"),
                      ("N° de serie de la cámara", fx.get("serial") or "—")]
+            rows.append(("Texto leído en la imagen", (ct.get("ocr") or {}).get("text") or "—"))
             cp = ct.get("c2pa")
             rows.append(("Firma de autenticidad (C2PA)", "no tiene" if not cp else
                          cp.get("note") or ("válida" if cp.get("valid") else f"inválida ({cp.get('state')})")

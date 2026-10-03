@@ -138,7 +138,8 @@ rechazos es orientativa y debe validarse con el área legal.
 | **Contenido de la imagen** (funciona sin metadatos) | Doble compresión JPEG: la foto se abrió y volvió a guardar; **zona pegada** desde otra imagen (sin la huella de compresión del resto), marcada en rojo; **clonado** de una parte de la foto en otro lugar; cielo de día en una foto con hora de noche (altura del sol en ese lugar y hora); firma de autenticidad **C2PA** rota (Pixel 10/11 y otras cámaras firman sus fotos); **grano del sensor** distinto en una zona (pegada de otra foto o retocada), marcada en morado. En *Revisar foto* se ven además el mapa **ELA** y el **mapa de ruido**. |
 | **Fotos** | Marcas de generación por IA; edición con software; sin metadatos; metadatos manipulados (fechas internas distintas, hora GPS que no calza, miniatura de otra imagen, cámara sin datos de exposición, ExifTool); capturas de pantalla; fecha anterior o muy posterior al siniestro; GPS lejos del lugar declarado; foto **recortada o achicada** después de tomarla (la cámara anota el tamaño original); iPhone sin la nota del fabricante (metadatos copiados o escritos a mano); tamaño exacto de generadores de IA; nombre de archivo de edición; en el portal, fecha del archivo anterior a la fecha de la foto. |
 | **Fotos entre siniestros** | Foto idéntica, casi idéntica (recortada, recomprimida) o **espejada** a la de otro siniestro; la misma toma reconocida por el **identificador único** que graban algunas cámaras, aunque la imagen se haya editado; el **mismo teléfono** (número de serie de la cámara) en siniestros de distintos asegurados. |
-| **Fotos del mismo siniestro** | La misma foto presentada dos veces o **espejada** para simular el otro costado; fotos tomadas con varios teléfonos distintos. |
+| **Fotos del mismo siniestro** | La misma foto presentada dos veces o **espejada** para simular el otro costado; una foto que es **recorte de otra** del caso (y qué bordes se quitaron), con alerta alta si el recorte **sacó la marca «Contenido generado por IA»**; fotos tomadas con varios teléfonos distintos. |
+| **Marcas visibles de IA** | El lector de texto busca en la imagen marcas como «Contenido generado por IA» o «AI-generated» (Samsung, Google, Meta). Una foto sin datos de cámara con proporción que ningún teléfono usa se marca como recortada a mano. |
 | **Relato** | Relato copiado o muy similar al de otro siniestro; contradicciones con la hora declarada, los testigos o el parte policial; relato ausente o muy breve. |
 
 Cada foto muestra la lista de **las 26 pruebas** que se le aplicaron, agrupadas (origen, metadatos, píxeles, contexto,
@@ -207,6 +208,8 @@ Con 26 fotos reales de muestra (cámaras y fotos de dominio público) y falsific
 | Clonados detectados (zonas de textura suave, como carrocería) | 20 de 26 |
 | Falsas alarmas de grano distinto (49 fotos reales y 26 recomprimidas, más la demo) | 1 de 84 (una macro con fondo desenfocado) |
 | Zonas pegadas desde otra foto real detectadas solo por el grano | 11 de 78 (prueba complementaria) |
+| Recortes reconocidos (40 fotos reales recortadas de 5% a 30% por uno o más bordes y recomprimidas) | 39 de 40 |
+| Falsos recortes entre fotos distintas (1.176 pares de fotos reales) | 0 |
 | Fotos recortadas o achicadas detectadas por el tamaño anotado por la cámara | 8 de 8 en la muestra pública |
 
 No es una medición con fotos reales de siniestros: los umbrales deben validarse en el piloto. No se incluyó detección de

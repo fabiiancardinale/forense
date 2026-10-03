@@ -9,6 +9,10 @@ from __future__ import annotations
 CHECKS = [
     ("Origen", "Marcas de imágenes generadas con IA", ("ai_generated",), None),
     ("Origen", "Tamaño típico de generadores de IA", ("ai_dimensions",), None),
+    ("Origen", "Texto «generado por IA» en la imagen", ("ai_label_visible",),
+     lambda m: None if "text" in ((m.get("content") or {}).get("ocr") or {}) else "el lector de texto no está instalado"),
+    ("Origen", "Proporción de cámara (recortes a mano)", ("odd_ratio",),
+     lambda m: None if not m.get("make") else "trae datos de cámara (se revisa el tamaño anotado)"),
     ("Origen", "Captura de pantalla en vez de foto", ("screenshot",), None),
     ("Origen", "Firma de autenticidad de la cámara (C2PA)", ("c2pa_invalid",),
      lambda m: None if (m.get("content") or {}).get("c2pa") else "la foto no trae firma C2PA"),
@@ -46,6 +50,8 @@ CHECKS = [
     ("Otros siniestros", "Mismo teléfono en siniestros de otros asegurados", ("same_device_other_claim",),
      lambda m: None if (m.get("forensics") or {}).get("serial") else "la cámara no graba número de serie"),
     ("Este siniestro", "Misma foto repetida o espejada", ("duplicate_in_claim", "mirrored_in_claim"), None),
+    ("Este siniestro", "Recorte de otra foto del caso (y marca de IA quitada)", ("cropped_in_claim", "ai_mark_cropped"),
+     None),
     ("Este siniestro", "Fotos de varios teléfonos", ("multiple_devices",), None),
 ]
 

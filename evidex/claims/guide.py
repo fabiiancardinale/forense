@@ -130,6 +130,22 @@ GUIDE: dict[str, tuple[str, str]] = {
     "duplicate_in_claim": (
         "Dos fotos del siniestro son prácticamente la misma imagen.",
         "Si se presentaron como daños distintos, pregunte al asegurado; si es una ráfaga, no hay problema."),
+    "ai_label_visible": (
+        "En la imagen se lee una marca como «Contenido generado por IA». Samsung, Google, Meta y otras apps la estampan "
+        "cuando la foto se creó o se editó con inteligencia artificial.",
+        "No acepte la foto como prueba del daño. Pida la foto original sin editar o una inspección presencial."),
+    "ai_mark_cropped": (
+        "Una foto es otra del mismo caso recortada, y el recorte quitó justo la marca que decía que la imagen se hizo "
+        "o editó con IA. Es un intento de ocultar la edición.",
+        "Trátela como fraude probable: derive a investigación y pida inspección presencial del vehículo."),
+    "cropped_in_claim": (
+        "Una foto del siniestro es otra foto del mismo caso recortada. Recortar puede ser para encuadrar, pero también "
+        "para sacar algo que no convenía mostrar.",
+        "Mire en la foto completa qué quedó fuera del recorte. Si se presentaron como fotos distintas, pregunte."),
+    "odd_ratio": (
+        "La foto no tiene ninguna de las proporciones en que guardan las fotos los teléfonos (4:3, 16:9, 1:1...): "
+        "se recortó a mano o se generó.",
+        "Pida la foto completa, tal como salió de la cámara (enviada como Documento por WhatsApp o por correo)."),
     "multiple_devices": (
         "Las fotos se tomaron con cámaras distintas. Es normal si una la tomó el otro conductor o la grúa, pero no si "
         "el asegurado dice haberlas tomado todas él.",
