@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block body %}
+<h1>Analizar imagen o documento</h1>
+<p>JPG, PNG, WebP, HEIC o PDF. Hasta 25 MB, 40 megapíxeles y 20 páginas. No se certifica originalidad por ausencia de señales.</p>
+<form method="post" enctype="multipart/form-data">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="request_key" value="{{ request_key }}">
+<input type="file" name="archivo" accept=".jpg,.jpeg,.png,.webp,.heic,.heif,.pdf" required>
+<p><label><input type="checkbox" name="external_consent" value="yes"> Autorizo enviar este archivo a Sightengine para evaluar generación por IA, si el administrador configuró el servicio.</label></p>
+<button type="submit">Subir y analizar</button>
+</form>
+<h2>Mis análisis</h2>
+{% for job in jobs %}<p><a href="{{ url_for('inspection.result',job_id=job.id) }}">{{ job.name }}</a> · {{ job.status }}</p>{% else %}<p>No hay archivos todavía.</p>{% endfor %}
+{% endblock %}

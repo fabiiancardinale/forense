@@ -3,7 +3,7 @@
 {% block heading %}<h1>Nuevo expediente de investigación</h1><p class="sub">Todo lo que cargue queda en la cadena de custodia con su autor y hora.</p>{% endblock %}
 {% block body %}
 {% if error %}<div class="flash bad">{{ error }}</div>{% endif %}
-<form class="card" method="post" enctype="multipart/form-data" data-busy="Creando y analizando…" style="max-width:1100px"><div class="grid">
+<form class="card" method="post" enctype="multipart/form-data" data-busy="Creando y analizando…" style="max-width:1100px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><div class="grid">
 <h3 class="sec">Siniestro</h3>
 <div><label>N° de siniestro *</label><input name="numero" required value="{{ f.numero }}"></div>
 <div><label>Aseguradora</label><input name="aseguradora" value="{{ f.aseguradora }}"></div>
@@ -28,5 +28,5 @@
 <div class="full"><input type="file" name="docs" multiple accept=".pdf,image/*"><p class="hint">Nota de venta, permiso de circulación, SOAP, bonos, TAG… Evidex lee el texto de los PDF para cruzar kilometraje y RUT.</p></div>
 <div>{% if not current_user %}<label>Su nombre *</label>{% endif %}{% if current_user %}<input type="hidden" name="actor" value="{{ current_user.name }}">{% else %}<input name="actor" required value="{{ f.actor }}">{% endif %}</div>
 </div><div class="toolbar" style="margin-top:16px"><button class="btn pri" type="submit">Crear y analizar</button><a class="btn" href="{{ url_for('investigations.investigations') }}">Cancelar</a></div></form>
-<script>document.getElementById('addiv').onclick=()=>{const b=document.querySelector('.ivblock').cloneNode(true);b.querySelectorAll('input,textarea').forEach(x=>x.value='');document.getElementById('ivs').appendChild(b)}</script>
+<script nonce="{{ csp_nonce }}">document.getElementById('addiv').onclick=()=>{const b=document.querySelector('.ivblock').cloneNode(true);b.querySelectorAll('input,textarea').forEach(x=>x.value='');document.getElementById('ivs').appendChild(b)}</script>
 {% endblock %}

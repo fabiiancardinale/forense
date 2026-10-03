@@ -274,30 +274,40 @@ def daylight_sky(img: Image.Image) -> bool:
 
 
 # ---- 4. C2PA ---------------------------------------------------------------------------------------
-def c2pa_status(path) -> dict | None:
-    """None si no hay credenciales o falta la librería; si no, {'valid': bool, 'generator': str}."""
-    raw = open(path, "rb").read(6_000_000)
-    if b"c2pa" not in raw and b"jumb" not in raw:
-        return None
+def c2pa_status(path) -> dict:
+    """A missing manifest, untrusted signer and an engine failure are distinct states."""
     try:
-        import c2pa  # pip install c2pa-python (opcional)
+        import c2pa
     except ImportError:
-        return {"valid": None, "generator": "", "note": "tiene credenciales C2PA; instale c2pa-python para validarlas"}
+        return {"valid": None, "state": "not_run", "note": "Validador C2PA no instalado", "generator": ""}
     try:
-        with c2pa.Reader(str(path)) as r:
-            state = (r.get_validation_state() or "").lower()
-            info = r.json()
-        gen = ""
-        try:
-            import json as _j
-            m = _j.loads(info)
-            act = m.get("manifests", {}).get(m.get("active_manifest", ""), {})
-            gen = (act.get("claim_generator_info") or [{}])[0].get("name", "") or act.get("claim_generator", "")
-        except Exception:
-            pass
-        return {"valid": state in ("valid", "trusted"), "state": state, "generator": gen}
+        settings = c2pa.Settings.from_dict({'verify': {'fetch_remote_manifests': False, 'fetch_ocsp': False}})
+        with settings, c2pa.Context(settings=settings) as context, c2pa.Reader(str(path), context=context) as reader:
+            state = str(reader.get_validation_state() or "").lower()
+            import json
+            manifest = json.loads(reader.json())
+        active = manifest.get('manifests', {}).get(manifest.get('active_manifest', ''), {})
+        generator = (active.get('claim_generator_info') or [{}])[0].get('name', '') or active.get('claim_generator', '')
+        if state == 'trusted':
+            status, valid = 'valid_trusted', True
+        elif state == 'valid':
+            status, valid = 'valid_untrusted', True
+        elif state == 'invalid':
+            status, valid = 'invalid', False
+        else:
+            status, valid = 'error', None
+        return {'valid': valid, 'state': status, 'generator': generator,
+                'validation': manifest.get('validation_results', manifest.get('validation_status', {})),
+                'note': {'valid_trusted': 'Credencial válida con firmante confiable',
+                         'valid_untrusted': 'Integridad válida; confianza del firmante no establecida',
+                         'invalid': 'Credencial inválida; requiere revisar los códigos de validación',
+                         'error': 'Estado del validador no reconocido'}[status]}
     except Exception as ex:
-        return {"valid": False, "state": type(ex).__name__, "generator": ""}
+        name = type(ex).__name__.lower()
+        if 'manifestnotfound' in name:
+            return {'valid': None, 'state': 'absent', 'generator': '', 'note': 'Sin credenciales C2PA'}
+        return {'valid': None, 'state': 'error', 'generator': '',
+                'note': 'No se pudo validar C2PA', 'error_code': type(ex).__name__}
 
 
 # ---- 5. ruido inconsistente -------------------------------------------------------------------------------
@@ -424,12 +434,12 @@ def overlay(path, content: dict, maxside: int = 900) -> bytes | None:
     """Imagen reducida con las zonas sospechosas marcadas (PNG), para mostrar al liquidador."""
     boxes = []
     if (content.get("ghost") or {}).get("region"):
-        boxes.append((content["ghost"]["region"]["bbox"], (220, 38, 38), "zona agregada"))
+        boxes.append((content["ghost"]["region"]["bbox"], (220, 38, 38), "posible pegado"))
     if (content.get("noise") or {}).get("region"):
         boxes.append((content["noise"]["region"]["bbox"], (124, 58, 237), "grano distinto"))
     cl = content.get("clone") or {}
     if cl.get("src"):
-        boxes += [(cl["src"], (234, 140, 0), "original"), (cl["dst"], (234, 140, 0), "copia")]
+        boxes += [(cl["src"], (234, 140, 0), "region similar A"), (cl["dst"], (234, 140, 0), "region similar B")]
     if not boxes:
         return None
     with Image.open(path) as img:

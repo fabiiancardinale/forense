@@ -31,6 +31,7 @@ import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
+from evidex.core.storage import serialized, atomic_json
 
 from PIL import Image
 
@@ -184,8 +185,8 @@ def analyze(decl: dict, decl_ev: str, photos: list[Photo], registry: list[dict])
         w, h = m.get("width") or 0, m.get("height") or 0
         if not ai and not m.get("make") and (w, h) in AI_SIZES:
             out.append(Finding("ai_dimensions", "media", f"Tamaño típico de imagen generada por IA ({p.name})",
-                               f"La imagen {p.name} mide {w}×{h} y no trae datos de cámara. Ese tamaño es el que usan los "
-                               "generadores de imágenes con IA; ninguna cámara de teléfono guarda fotos así.", cite, p.ts))
+                               f"La imagen {p.name} mide {w}×{h} y no trae datos de cámara. Ese tamaño es el que usan "
+                               "algunos generadores de IA, pero también puede resultar de un recorte o exportación legítimos.", cite, p.ts))
         label = derived.ai_label(((m.get("content") or {}).get("ocr") or {}).get("text") or "")
         if label:
             out.append(Finding("ai_label_visible", "alta", f"La imagen dice que fue hecha con IA ({p.name})",
@@ -493,7 +494,7 @@ def content_findings(p: "Photo", decl: dict, place, cite) -> list[Finding]:
     if cp and cp.get("valid") is False:
         out.append(Finding("c2pa_invalid", "alta", f"Firma de autenticidad rota ({p.name})",
                            f"La foto {p.name} tiene credenciales de contenido C2PA (firma de la cámara o de la app), pero la "
-                           f"firma no es válida ({cp.get('state') or 'error'}): la imagen se modificó después de firmada.",
+                           f"credencial no es válida ({cp.get('state') or 'error'}). Esto no identifica por sí solo una edición de píxeles ni su causa.",
                            cite, p.ts))
     return out
 
@@ -520,6 +521,7 @@ def recommendation(findings: list[Finding]) -> tuple[str, str]:
 _REGISTRY_CACHE: dict[str, tuple[int, list[dict]]] = {}
 
 
+@serialized(lambda path, *a, **kw: path)
 def load_registry(path: Path | None) -> list[dict]:
     """Lee el registro compartido. Como solo se le agregan líneas al final, se guarda en memoria
     y en cada llamada se leen solo las líneas nuevas (importar miles de siniestros sigue siendo rápido)."""
@@ -540,6 +542,7 @@ def load_registry(path: Path | None) -> list[dict]:
     return rows
 
 
+@serialized(lambda path, *a, **kw: path)
 def update_registry(path: Path, claim: str, photos: list[Photo], docs=(), decl: dict | None = None,
                     level: str | None = None) -> None:
     """Agrega al registro las fotos, documentos y datos del siniestro (sin duplicar)."""
@@ -600,6 +603,8 @@ def load_case(case, timeline) -> tuple[dict, str, list[Photo]]:
         cache = json.loads(cache_path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         cache = {}
+    if not isinstance(cache, dict) or cache.get("_schema") != 2:
+        cache = {"_schema": 2}
     dirty = False
     for e in case.active_evidence():
         path, name = case.evidence_dir / e["subject"], e["data"]["original_name"]
@@ -640,7 +645,7 @@ def load_case(case, timeline) -> tuple[dict, str, list[Photo]]:
             timeline.add_event(ev, ts, name, "foto", None, cam,
                                f"Foto {name}: {json.dumps(meta, ensure_ascii=False, default=str)[:400]}")
     if dirty:
-        cache_path.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
+        atomic_json(cache_path, cache)
     if decl is None:
         raise ValueError("el caso no tiene declaración de siniestro")
     return decl, decl_ev, photos

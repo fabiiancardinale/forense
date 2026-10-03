@@ -10,6 +10,8 @@ import base64
 import hashlib
 import json
 import time
+import os
+from evidex.core.storage import atomic_json, serialized
 from pathlib import Path
 
 from cryptography.exceptions import InvalidSignature
@@ -40,6 +42,7 @@ class Ledger:
         self.pub_path = self.dir / "public_key.pem"
 
     # ---- claves -------------------------------------------------------
+    @serialized(lambda self, *a, **kw: self.path)
     def init_keys(self) -> None:
         if self.key_path.exists():
             return
@@ -62,6 +65,7 @@ class Ledger:
         return serialization.load_pem_private_key(self.key_path.read_bytes(), password=None)
 
     # ---- lectura / escritura -----------------------------------------
+    @serialized(lambda self, *a, **kw: self.path)
     def entries(self) -> list[dict]:
         """Entradas de la cadena. Se guarda en memoria mientras el archivo no cambie (mismo tamaño y fecha)."""
         try:
@@ -76,6 +80,7 @@ class Ledger:
         _CACHE[key[0]] = (key, items)
         return [{**e, "data": dict(e["data"])} for e in items]
 
+    @serialized(lambda self, *a, **kw: self.path)
     def append(self, actor: str, action: str, subject: str, data: dict | None = None) -> dict:
         entries = self.entries()
         prev = entries[-1]["hash"] if entries else GENESIS
@@ -91,8 +96,11 @@ class Ledger:
         entry["hash"] = entry_hash(entry)
         with self.path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+            f.flush()
+            os.fsync(f.fileno())
         return entry
 
+    @serialized(lambda self, *a, **kw: self.path)
     def seal(self) -> dict:
         """Firma la cabeza actual de la cadena. Devuelve el sello."""
         entries = self.entries()
@@ -104,7 +112,7 @@ class Ledger:
             "signature": base64.b64encode(sig).decode(),
             "sealed_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         }
-        (self.dir / "seal.json").write_text(json.dumps(seal, indent=2), encoding="utf-8")
+        atomic_json(self.dir / "seal.json", seal)
         return seal
 
 

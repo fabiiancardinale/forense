@@ -6,13 +6,13 @@ from evidex.claims import assignment, service
 from evidex.core.case import Case
 from evidex.web import create_app
 
-PW = "clave-segura-1"
+PW = "clave-segura-001"
 TRANSCRIPT = ("P: ¿Dónde estaba al momento del choque?\nR: En Av. Grecia con Macul, detenido en el semáforo.\n"
               "P: ¿A qué hora fue?\nR: Cerca de las siete y diez de la tarde.\n")
 
 
 def _app(tmp_path):
-    app = create_app(tmp_path / "casos")
+    app = create_app(tmp_path / "casos", {"DEMO_MODE": True, "CSRF_ENABLED": False, "LEGACY_MODULES": True})
     app.config["TESTING"] = True
     store = app.extensions["evidex"]["store"]
     store.add("admin", "Admin", "administrador", PW)
@@ -28,7 +28,7 @@ def _app(tmp_path):
 
 
 def _login(c, user):
-    c.get("/salir")
+    c.post("/salir")
     assert c.post("/ingresar", data={"usuario": user, "clave": PW}).status_code == 302
 
 
@@ -135,7 +135,7 @@ def test_derivation_to_expert_firm_end_to_end(tmp_path):
 
 
 def test_demo_is_shared_among_fictional_team(tmp_path):
-    app = create_app(tmp_path / "casos")
+    app = create_app(tmp_path / "casos", {"DEMO_MODE": True, "CSRF_ENABLED": False, "LEGACY_MODULES": True})
     app.config["TESTING"] = True
     c = app.test_client()
     c.post("/demo")

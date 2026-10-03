@@ -12,7 +12,7 @@
 <div class="panel">{% if rows %}<table class="queue">
 <colgroup><col style="width:20%"><col style="width:20%"><col><col><col><col><col><col style="width:13%"></colgroup>
 <thead><tr><th>Analista</th><th>Abiertos</th><th class="num">Riesgo alto</th><th class="num">Esperando asegurado</th><th class="num">En peritaje</th><th class="num">Atrasados</th><th class="num">Cerrados</th><th class="num">Fraudes</th></tr></thead>
-<tbody>{% for r in rows %}<tr class="row" onclick="location.href='{{ url_for('claims.index', analista=r.user or '-') }}'">
+<tbody>{% for r in rows %}<tr class="row" data-href="{{ url_for('claims.index', analista=r.user or '-') }}">
 <td><a class="strong" href="{{ url_for('claims.index', analista=r.user or '-') }}">{{ r.name }}</a><div class="line2">{{ r.total }} caso(s) en total</div></td>
 <td><div class="loadbar"><b>{{ r.open }}</b><span class="bar"><i style="width:{{ 100 * r.open / top }}%"></i></span></div></td>
 <td class="num">{{ r.high or '—' }}</td><td class="num">{{ r.waiting or '—' }}</td><td class="num">{{ r.derived or '—' }}</td>
@@ -24,7 +24,7 @@
 <div class="panel">{% if late %}<table class="queue">
 <colgroup><col style="width:24%"><col style="width:18%"><col><col style="width:22%"></colgroup>
 <thead><tr><th>Siniestro</th><th>Analista</th><th>Motivo</th><th>Recomendación</th></tr></thead>
-<tbody>{% for c in late %}<tr class="row" onclick="location.href='{{ url_for('claims.case_view', cid=c.id) }}'">
+<tbody>{% for c in late %}<tr class="row" data-href="{{ url_for('claims.case_view', cid=c.id) }}">
 <td><a class="strong" href="{{ url_for('claims.case_view', cid=c.id) }}">{{ c.numero }}</a><div class="line2">{{ c.asegurado }}</div></td>
 <td>{{ c.owner_name }}</td>
 <td>{% for r in c.late %}<div class="late-reason">{{ r }}</div>{% endfor %}</td>
@@ -41,7 +41,7 @@
 {% else %}<div class="pb hint">Aún no se ha derivado ningún caso a peritaje.</div>{% endif %}</div></section>
 
 <section class="block" id="reasignar"><div class="bh"><div><h2>Reasignar casos</h2><p>Por vacaciones, licencia o sobrecarga. Queda registrado en la cadena de custodia de cada caso.</p></div></div>
-<div class="panel">{% if open_cases %}<form method="post" action="{{ url_for('panel.reassign') }}">
+<div class="panel">{% if open_cases %}<form method="post" action="{{ url_for('panel.reassign') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <div class="filterbar">
 {% if team %}<select name="analista" required aria-label="Nuevo analista"><option value="">Pasar a…</option>{% for a in team %}<option value="{{ a.username }}">{{ a.name }}</option>{% endfor %}</select>
 {% else %}<input name="analista_nombre" placeholder="Nombre del analista" required aria-label="Nombre del analista" style="max-width:240px">{% endif %}
@@ -49,7 +49,7 @@
 <button class="btn pri" type="submit">Reasignar los marcados</button></div>
 <div style="max-height:420px;overflow:auto"><table class="queue">
 <colgroup><col style="width:44px"><col style="width:22%"><col style="width:20%"><col><col style="width:22%"><col style="width:12%"></colgroup>
-<thead><tr><th><input type="checkbox" aria-label="Marcar todos" onclick="document.querySelectorAll('input[name=cid]').forEach(x=>x.checked=this.checked)"></th><th>Siniestro</th><th>Analista</th><th>Asegurado</th><th>Recomendación</th><th class="num">Días sin mov.</th></tr></thead>
+<thead><tr><th><input type="checkbox" aria-label="Marcar todos" data-select-all></th><th>Siniestro</th><th>Analista</th><th>Asegurado</th><th>Recomendación</th><th class="num">Días sin mov.</th></tr></thead>
 <tbody>{% for c in open_cases %}<tr><td><input type="checkbox" name="cid" value="{{ c.id }}" aria-label="Marcar {{ c.numero }}"></td>
 <td><a class="strong" href="{{ url_for('claims.case_view', cid=c.id) }}">{{ c.numero }}</a></td><td>{{ c.owner_name }}</td><td class="ellip">{{ c.asegurado }}</td>
 <td><span class="badge {{ c.level }}">{{ level_text.get(c.level, c.rec) }}</span></td><td class="num">{{ c.idle }}</td></tr>{% endfor %}</tbody></table></div>

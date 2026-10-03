@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block body %}
+<h1>{{ job.name }}</h1><p>Estado del procesamiento: {{ job.status }}</p>
+<p>SHA-256: <code>{{ job.sha256 }}</code></p>
+{% if job.status in ['queued','running'] %}
+<p>El archivo está en espera o procesándose. El worker debe estar activo.</p>
+<script nonce="{{ csp_nonce }}">setTimeout(async()=>{try {const r=await fetch({{ url_for('inspection.status',job_id=job.id)|tojson }});if(r.ok){const x=await r.json(); if(!['queued','running'].includes(x.status)){location.reload();return;}}}catch(e){} location.reload();},5000);</script>
+{% endif %}
+{% if job.result %}{% set r=job.result %}
+<h2>{{ r.label or 'No concluyente' }}</h2><p>{{ r.summary }}</p>
+{% for f in r.findings or [] %}<article><h3>{{ f.title }}</h3><p>{{ f.detail }}</p>
+{% if f.removed %}<p>Contenido anterior: {{ f.removed }}</p>{% endif %}
+{% if f.added %}<p>Contenido posterior: {{ f.added }}</p>{% endif %}</article>{% endfor %}
+{% for a in r.artifacts or [] %}<figure><img style="max-width:100%" src="{{ url_for('inspection.artifact',job_id=job.id,name=a.file) }}" alt="{{ a.label }}"><figcaption>{{ a.label }}</figcaption></figure>{% endfor %}
+<h3>Comprobaciones y cobertura</h3>
+{% for d in r.detectors or [] %}<p><strong>{{ d.name }}</strong> · {{ d.status }} · {{ d.detail }}</p>{% endfor %}
+{% for text in r.limitations or [] %}<p>{{ text }}</p>{% endfor %}
+<details><summary>Informe técnico reproducible</summary><pre style="white-space:pre-wrap">{{ r|tojson(indent=2) }}</pre></details>
+{% endif %}
+{% if job.status == 'failed' and job.attempt < 3 %}<form method="post" action="{{ url_for('inspection.retry',job_id=job.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button>Reintentar (puede repetir una consulta externa autorizada)</button></form>{% endif %}
+<p><a href="{{ url_for('inspection.index') }}">Volver a mis análisis</a></p>
+{% endblock %}

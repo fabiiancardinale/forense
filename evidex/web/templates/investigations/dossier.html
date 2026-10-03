@@ -17,16 +17,16 @@
 <span>{{ x.title }}</span><small>{{ x.kind }}</small></a>{% endfor %}</div>{% endif %}
 </div></section>{% endif %}
 {% if not delivered %}<div class="cols2" style="margin-bottom:20px">
-<form class="card" method="post" action="{{ url_for('investigations.inv_interview', cid=cid) }}">
+<form class="card" method="post" action="{{ url_for('investigations.inv_interview', cid=cid) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <h2 style="margin:0 0 8px">Agregar entrevista</h2>
 <div class="grid" style="gap:8px"><input name="declarante" placeholder="Nombre del declarante" required aria-label="Declarante"><input name="rol" placeholder="Rol (asegurado, conductor, testigo…)" aria-label="Rol"><input name="fecha" type="date" aria-label="Fecha"></div>
 <textarea name="texto" rows="6" required style="margin-top:8px" placeholder="Pegue la transcripción: P: ¿pregunta?  R: respuesta" aria-label="Transcripción"></textarea>
 <button class="btn pri" type="submit" style="margin-top:8px">Agregar entrevista</button></form>
 <div class="card" style="display:grid;gap:12px;align-content:start">
-<form method="post" action="{{ url_for('investigations.inv_document', cid=cid) }}" enctype="multipart/form-data">
+<form method="post" action="{{ url_for('investigations.inv_document', cid=cid) }}" enctype="multipart/form-data"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <h2 style="margin:0 0 8px">Agregar documentos</h2><input type="file" name="docs" multiple required aria-label="Documentos">
 <button class="btn" type="submit" style="margin-top:8px">Subir</button></form>
-<form method="post" action="{{ url_for('investigations.inv_deliver', cid=cid) }}" onsubmit="return confirm('Al entregar, el expediente se cierra y el analista recibe el informe final. ¿Entregar?')">
+<form method="post" action="{{ url_for('investigations.inv_deliver', cid=cid) }}" data-confirm="Al entregar, el expediente se cierra y el analista recibe el informe final. ¿Entregar?"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <h2 style="margin:0 0 6px">Entregar informe final</h2><p class="hint" style="margin:0 0 8px">Requiere la conclusión. Después no se puede modificar.</p>
 <button class="btn pri" type="submit">Entregar informe final</button></form></div></div>{% endif %}
 <div class="verdict {{ 'ok' if not review else 'warn' }}"><b>{{ 'Revisión previa: listo para enviar' if not review else 'Revisión previa: ' ~ review|length ~ ' punto(s) pendiente(s)' }}</b>
@@ -42,14 +42,14 @@
 {% if matrix %}<div class="panel scroll"><table><tr><th>Tema</th>{% for iv in a.interviews %}<th>{{ iv.declarante }}<br><span class="hint">{{ iv.rol }}</span></th>{% endfor %}</tr>
 {% for t, cells in matrix %}<tr><td><b>{{ t }}</b></td>{% for c in cells %}<td>{{ c }}</td>{% endfor %}</tr>{% endfor %}</table></div>{% endif %}
 <h3 class="cat">Conclusión</h3>
-<form class="alert-card" method="post" action="{{ url_for('investigations.inv_conclusion', cid=cid) }}">
+<form class="alert-card" method="post" action="{{ url_for('investigations.inv_conclusion', cid=cid) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <select name="recomendacion">{% for r in recommendations %}<option {{ 'selected' if a.conclusion and a.conclusion.recomendacion == r }}>{{ r }}</option>{% endfor %}</select>
 <textarea name="texto" rows="4" style="margin:8px 0" placeholder="Fundamento de la recomendación">{{ a.conclusion.texto if a.conclusion else '' }}</textarea>
 <div class="toolbar">{% if current_user %}<input type="hidden" name="actor" value="{{ current_user.name }}">{% else %}<input name="actor" placeholder="Su nombre" required style="width:auto;flex:1">{% endif %}<button class="btn pri" type="submit">Guardar conclusión</button></div>
 {% if a.conclusion %}<p class="hint">Última versión: {{ a.conclusion.actor }} · {{ a.conclusion.ts[:16]|replace('T',' ') }} UTC</p>{% endif %}</form></div></div>
 <h3 class="cat">Respuesta a las alertas</h3>
 {% for al in d.alertas %}{% set i = loop.index %}{% set r = a.responses.get(i, {}) %}
-<form class="alert-card" method="post" action="{{ url_for('investigations.inv_response', cid=cid, idx=i) }}"><h4>{{ i }}. {{ al }} {% if r.estado %}<span class="badge {{ 'warn' if r.estado in ('No descartado','Indeterminado') else 'ok' }}">{{ r.estado }}</span>{% endif %}</h4>
+<form class="alert-card" method="post" action="{{ url_for('investigations.inv_response', cid=cid, idx=i) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><h4>{{ i }}. {{ al }} {% if r.estado %}<span class="badge {{ 'warn' if r.estado in ('No descartado','Indeterminado') else 'ok' }}">{{ r.estado }}</span>{% endif %}</h4>
 <div class="toolbar"><select name="estado" required><option value="" {{ 'selected' if not r.estado }}>Elija un estado…</option>{% for s in states %}<option {{ 'selected' if r.estado == s }}>{{ s }}</option>{% endfor %}</select>
 {% if current_user %}<input type="hidden" name="actor" value="{{ current_user.name }}">{% else %}<input name="actor" placeholder="Su nombre" required style="width:auto;flex:0 1 200px">{% endif %}</div>
 <textarea name="hallazgo" rows="2" style="margin:8px 0" placeholder="Hallazgo">{{ r.hallazgo }}</textarea>

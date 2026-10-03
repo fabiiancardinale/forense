@@ -154,7 +154,7 @@ def test_forensic_timeline_in_report_and_web(loaded):
     assert "Línea de tiempo forense" in html and "traslado imposible" in html and "chat·" in html
     assert "qué cambió de la versión 1" in html and "$1.850.000" in html
     from evidex.web import create_app
-    c = create_app(work).test_client()
+    c = create_app(work, {"DEMO_MODE": True, "CSRF_ENABLED": False, "LEGACY_MODULES": True}).test_client()
     case = service.find_case(work, ACTUAL)
     digest = next(e["subject"] for e in case.ledger.entries()
                   if e["action"] == "evidence_added" and e["data"]["original_name"] == "presupuesto_taller.pdf")

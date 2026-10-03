@@ -23,5 +23,7 @@ if not exist cloudflared.exe (
   pause
   exit /b 1
 )
-python -m evidex.web --publico
+if not exist "casos\usuarios.json" python -m evidex.accounts.setup --dir casos
+if errorlevel 1 exit /b 1
+python -m evidex.web --legacy --publico
 pause

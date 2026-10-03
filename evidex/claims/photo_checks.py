@@ -15,7 +15,7 @@ CHECKS = [
      lambda m: None if not m.get("make") else "trae datos de cámara (se revisa el tamaño anotado)"),
     ("Origen", "Captura de pantalla en vez de foto", ("screenshot",), None),
     ("Origen", "Firma de autenticidad de la cámara (C2PA)", ("c2pa_invalid",),
-     lambda m: None if (m.get("content") or {}).get("c2pa") else "la foto no trae firma C2PA"),
+     lambda m: "la foto no trae firma C2PA" if ((m.get("content") or {}).get("c2pa") or {}).get("state") == "absent" else None),
     ("Metadatos", "Fecha, cámara y ubicación presentes", ("no_metadata",), None),
     ("Metadatos", "Programas de edición", ("edited",), None),
     ("Metadatos", "Herramientas para cambiar metadatos", ("metadata_tool",), None),
@@ -70,6 +70,17 @@ def run(meta: dict, findings_for_photo: list, case_level: bool = True) -> list[d
     for group, name, rules, applies in CHECKS:
         if not case_level and group in ("Otros siniestros", "Este siniestro"):
             continue
+        content = meta.get('content') or {}
+        unavailable = None
+        if group == 'Píxeles' and (not content or content.get('error')):
+            unavailable = 'Motor de píxeles no ejecutado o fallido'
+        if 'C2PA' in name:
+            cp = content.get('c2pa') or {}
+            if cp.get('state') in ('error', 'not_run') or (cp and cp.get('valid') is None and cp.get('state') != 'absent'):
+                unavailable = cp.get('note') or 'Credencial no validada'
+        if unavailable:
+            out.append({'group': group, 'name': name, 'status': 'no ejecutada', 'why': unavailable})
+            continue
         hit = [got[r] for r in rules if r in got]
         if hit:
             sev = min(hit, key=lambda s: {"alta": 0, "media": 1, "baja": 2}[s])
@@ -83,4 +94,5 @@ def run(meta: dict, findings_for_photo: list, case_level: bool = True) -> list[d
 def summary(checks: list[dict]) -> dict:
     return {"total": len(checks), "ok": sum(c["status"] == "ok" for c in checks),
             "alert": sum(c["status"] == "alerta" for c in checks),
+            "unavailable": sum(c["status"] == "no ejecutada" for c in checks),
             "na": sum(c["status"] == "no aplica" for c in checks)}

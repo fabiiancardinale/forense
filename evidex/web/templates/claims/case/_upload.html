@@ -1,5 +1,5 @@
-{% if can('editar_siniestros') %}<form class="uploadbar" method="post" action="{{ url_for('claims.add_photos', cid=c.id) }}" enctype="multipart/form-data" data-busy="Analizando…">
+{% if can('editar_siniestros') %}<form class="uploadbar" method="post" action="{{ url_for('claims.add_photos', cid=c.id) }}" enctype="multipart/form-data" data-busy="Analizando…"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <input type="hidden" name="tab" value="{{ tab }}">
-<label class="btn">{{ icon('upload', 15) }}{{ upload_label }}<input type="file" name="fotos" multiple accept="image/*,.heic,.pdf,application/pdf,.txt,.zip" required hidden onchange="this.form.querySelector('.fname').textContent=[...this.files].map(f=>f.name).join(', ');this.form.querySelector('.go').hidden=!this.files.length"></label>
+<label class="btn">{{ icon('upload', 15) }}{{ upload_label }}<input type="file" name="fotos" multiple accept="image/*,.heic,.pdf,application/pdf,.txt,.zip" required hidden data-file-names></label>
 <span class="fname hint">Se guardan los originales sin modificarlos. Lo que sube el asegurado por el portal aparece aquí solo.</span>
 <button class="btn pri sm go" type="submit" hidden>Agregar y reanalizar</button></form>{% endif %}

@@ -20,7 +20,7 @@ Huella del archivo (SHA-256): <code>{{ report.sha256 }}</code></p>
 <a class="btn" href="{{ url_for('claims.index') }}">Ver siniestros</a></div>{% endif %}
 </div>{% endif %}
 <div class="cols2">
-<form class="card" method="post" enctype="multipart/form-data" data-busy="Importando y analizando…">
+<form class="card" method="post" enctype="multipart/form-data" data-busy="Importando y analizando…"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <h2 style="margin:0 0 14px">Subir archivo</h2>
 <input type="file" name="archivo" accept=".csv,.xlsx,.xlsm,text/csv" required style="margin-bottom:10px">
 {% if not current_user %}<label>Responsable de la importación</label>{% endif %}{% if current_user %}<input type="hidden" name="actor" value="{{ current_user.name }}">{% else %}<input name="actor" placeholder="Su nombre" required style="margin-bottom:12px">{% endif %}
@@ -30,7 +30,7 @@ Huella del archivo (SHA-256): <code>{{ report.sha256 }}</code></p>
 <div class="card"><h2 style="margin:0 0 10px">¿Primera vez?</h2>
 <p>Descargue la plantilla con las columnas esperadas, o pruebe con un historial ficticio de 147 siniestros que esconde dos redes.</p>
 <div class="toolbar"><a class="btn" href="{{ url_for('portfolio.template_download') }}">Descargar plantilla CSV</a>
-<form method="post" action="{{ url_for('portfolio.import_demo') }}" data-busy="Importando…"><button class="btn" type="submit">Importar historial de ejemplo</button></form></div>
+<form method="post" action="{{ url_for('portfolio.import_demo') }}" data-busy="Importando…"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn" type="submit">Importar historial de ejemplo</button></form></div>
 <p class="hint">Encabezados flexibles ("N° Siniestro", "Relato", "Monto", "Cuenta pago"...), fechas chilenas (20-09-2026) y separador coma o punto y coma.</p></div>
 </div>
 {% endblock %}

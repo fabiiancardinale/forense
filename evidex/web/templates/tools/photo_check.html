@@ -2,7 +2,7 @@
 {% block heading %}<h1>Revisar una foto</h1>
 <p class="sub">Aplica todas las pruebas de Evidex a una foto suelta: origen (IA, pantallazo), metadatos, píxeles y contexto. No se crea un caso ni se guarda la foto.</p>{% endblock %}
 {% block body %}
-<form class="card" method="post" enctype="multipart/form-data" data-busy="Analizando…" style="margin-bottom:20px"><div class="formrow">
+<form class="card" method="post" enctype="multipart/form-data" data-busy="Analizando…" style="margin-bottom:20px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><div class="formrow">
 <div><label for="fotos">Fotos</label><input id="fotos" type="file" name="fotos" accept="image/*" multiple required></div>
 <div><label for="fecha">Fecha del siniestro <span class="hint">(opcional)</span></label><input id="fecha" type="datetime-local" name="fecha"></div>
 <button class="btn pri" type="submit">Revisar</button></div></form>

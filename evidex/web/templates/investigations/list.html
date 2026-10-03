@@ -7,7 +7,7 @@
 <div class="panel">{% if expedientes %}<table class="queue">
 <colgroup><col style="width:22%">{% if not perito %}<col style="width:22%">{% endif %}<col style="width:13%"><col><col><col style="width:20%"></colgroup>
 <thead><tr><th>Siniestro</th>{% if not perito %}<th>Empresa</th>{% endif %}<th>Plazo</th><th class="num">Entrevistas</th><th class="num">Alertas respondidas</th><th>Estado</th></tr></thead>
-<tbody>{% for x in expedientes %}<tr class="row" onclick="location.href='{{ url_for('investigations.inv_view', cid=x.id) }}'">
+<tbody>{% for x in expedientes %}<tr class="row" data-href="{{ url_for('investigations.inv_view', cid=x.id) }}">
 <td><a class="strong" href="{{ url_for('investigations.inv_view', cid=x.id) }}">{{ x.numero }}</a><div class="line2">ocurrido {{ x.fecha[:10] }}</div></td>
 {% if not perito %}<td class="ellip">{{ x.empresa or 'Interno' }}</td>{% endif %}
 <td class="nowrap{{ ' late' if x.plazo and x.plazo < today and not x.delivered }}">{{ x.plazo or '—' }}</td>
@@ -19,20 +19,20 @@
 {% if can('investigaciones') %}
 <section class="block"><div class="bh"><div><h2>Auditoría de informes <span class="hint">{{ audits|length }}</span></h2><p>Suba un informe PDF terminado antes de enviarlo: Evidex revisa contradicciones entre entrevistados, secciones que se contradicen, errores de transcripción, alertas sin respuesta y la solidez de la conclusión.</p></div></div>
 <div class="panel">
-<form class="filterbar" method="post" action="{{ url_for('investigations.audit_upload') }}" enctype="multipart/form-data" data-busy="Auditando…">
+<form class="filterbar" method="post" action="{{ url_for('investigations.audit_upload') }}" enctype="multipart/form-data" data-busy="Auditando…"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <input type="file" name="pdf" accept=".pdf,application/pdf" required aria-label="Informe PDF" style="flex:1;max-width:420px">
 {% if current_user %}<input type="hidden" name="actor" value="{{ current_user.name }}">{% else %}<input name="actor" placeholder="Su nombre" required aria-label="Su nombre" style="max-width:220px">{% endif %}
 <button class="btn pri" type="submit">Auditar informe</button></form>
 {% if audits %}<table class="queue"><colgroup><col><col style="width:18%"><col style="width:18%"><col style="width:26%"></colgroup>
 <thead><tr><th>Archivo</th><th>Auditado</th><th>Por</th><th>Resultado</th></tr></thead>
-<tbody>{% for x in audits %}<tr class="row" onclick="location.href='{{ url_for('investigations.audit_view', cid=x.id) }}'"><td class="ellip"><a class="strong" href="{{ url_for('investigations.audit_view', cid=x.id) }}">{{ x.name }}</a></td>
+<tbody>{% for x in audits %}<tr class="row" data-href="{{ url_for('investigations.audit_view', cid=x.id) }}"><td class="ellip"><a class="strong" href="{{ url_for('investigations.audit_view', cid=x.id) }}">{{ x.name }}</a></td>
 <td class="nowrap">{{ x.ts }}</td><td>{{ x.actor }}</td><td><span class="badge {{ 'bad' if x.alta else ('warn' if x.media else 'ok') }}">{{ x.alta }} alta · {{ x.media }} media · {{ x.baja }} baja</span></td></tr>{% endfor %}</tbody></table>
 {% else %}<div class="pb hint">Aún no hay informes auditados.</div>{% endif %}</div></section>
 
 <section class="block"><div class="bh"><div><h2>Configuración y ejemplo</h2></div></div>
-<div class="panel"><form class="filterbar" method="post" action="{{ url_for('investigations.inv_settings') }}"><label for="emp" style="margin:0">Nombre de su empresa en los informes</label>
+<div class="panel"><form class="filterbar" method="post" action="{{ url_for('investigations.inv_settings') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label for="emp" style="margin:0">Nombre de su empresa en los informes</label>
 <input id="emp" name="empresa" value="{{ empresa }}" placeholder="Nombre de la consultora" style="flex:1;max-width:360px"><button class="btn" type="submit">Guardar</button></form>
-<form class="filterbar" style="border-bottom:0" method="post" action="{{ url_for('investigations.inv_demo') }}" data-busy="Cargando…"><button class="btn" type="submit">Cargar ejemplo ficticio</button>
+<form class="filterbar" style="border-bottom:0" method="post" action="{{ url_for('investigations.inv_demo') }}" data-busy="Cargando…"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn" type="submit">Cargar ejemplo ficticio</button>
 <span class="hint">Crea un expediente inventado a medio trabajar y la auditoría de un informe inventado con errores sembrados.</span></form></div></section>
 {% endif %}
 {% endblock %}
