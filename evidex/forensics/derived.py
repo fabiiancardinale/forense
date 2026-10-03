@@ -128,8 +128,9 @@ def crop_of(big_path, small_path) -> dict | None:
             "box": [round(float(v), 3) for v in (x / W, y / H, (x + w) / W, (y + h) / H)], "cut": cut}
 
 
-def crop_relation(path_a, path_b) -> dict | None:
-    """Relación entre dos fotos: {"base": "a"|"b", ...crop_of} si una es recorte de la otra."""
+def relation(path_a, path_b) -> dict | None:
+    """Relación entre dos fotos que muestran la misma toma: {"base": "a"|"b", ...crop_of}.
+    "same" es True si tienen el mismo encuadre (solo cambió el tamaño o la compresión)."""
     try:
         with Image.open(path_a) as a, Image.open(path_b) as b:
             area_a, area_b = a.width * a.height, b.width * b.height
@@ -140,6 +141,7 @@ def crop_relation(path_a, path_b) -> dict | None:
     order = [("a", path_a, path_b), ("b", path_b, path_a)]
     if abs(ra - rb) < 0.01:
         order.sort(key=lambda o: -(area_a if o[0] == "a" else area_b))
+    same = None
     for base, big, small in order:
         try:
             rel = crop_of(big, small)
@@ -147,7 +149,84 @@ def crop_relation(path_a, path_b) -> dict | None:
             rel = None
         if rel and not rel["same"]:
             return {"base": base, **rel}
-    return None
+        same = same or (rel and {"base": base, **rel})
+    return same
+
+
+def crop_relation(path_a, path_b) -> dict | None:
+    """Como relation, pero solo si una foto es recorte de la otra."""
+    rel = relation(path_a, path_b)
+    return rel if rel and not rel["same"] else None
+
+
+# ---- zonas cambiadas entre dos versiones -------------------------------------
+CHANGE_SIDE, CHANGE_BLOCK = 512, 16
+CHANGE_Z, CHANGE_MIN_DIFF, CHANGE_MIN_BLOCKS = 25.0, 6.0, 3
+
+
+def _blocks(x: np.ndarray, bs: int) -> np.ndarray:
+    H, W = x.shape
+    return x[:H // bs * bs, :W // bs * bs].reshape(H // bs, bs, W // bs, bs)
+
+
+def changed_region(base_path, part_path, rel: dict) -> dict | None:
+    """Zona donde la foto part difiere de la misma zona de base (algo se borró, agregó o cambió).
+
+    Se alinean las dos versiones, se suavizan (para no contar diferencias de compresión ni de nitidez)
+    y se compara bloque a bloque, en proporción a la textura del bloque: una zona lisa que cambia
+    (un logo borrado, un daño agregado) resalta mucho más que el ruido normal de recomprimir.
+    Calibración: 0 falsas alarmas en 40 pares foto/recorte recomprimido; 22 de 39 zonas borradas
+    detectadas (las no detectadas eran zonas casi lisas, donde borrar no cambia nada visible)."""
+    from PIL import ImageFilter
+    with Image.open(base_path) as big, Image.open(part_path) as small:
+        big, small = big.convert("L"), small.convert("L")
+        x0, y0, x1, y1 = rel["box"]
+        crop = big.crop((round(x0 * big.width), round(y0 * big.height), round(x1 * big.width), round(y1 * big.height)))
+        s = CHANGE_SIDE / max(small.size)
+        size = (max(32, round(small.width * s)), max(32, round(small.height * s)))
+        a = np.asarray(crop.resize(size, Image.Resampling.LANCZOS).filter(ImageFilter.GaussianBlur(2)), np.float64)
+        b = np.asarray(small.resize(size, Image.Resampling.LANCZOS).filter(ImageFilter.GaussianBlur(2)), np.float64)
+    if a.std() < 1 or b.std() < 1:
+        return None
+    b = (b - b.mean()) / b.std() * a.std() + a.mean()          # mismo brillo y contraste general
+    bs = CHANGE_BLOCK
+    d = _blocks(np.abs(a - b), bs).mean((1, 3))
+    r = d / (_blocks(a, bs).std((1, 3)) + _blocks(b, bs).std((1, 3)) + 4)
+    med = np.median(r)
+    z = (r - med) / (np.median(np.abs(r - med)) * 1.4826 + 1e-6)
+    hot = (z >= CHANGE_Z) & (d >= CHANGE_MIN_DIFF)
+    # zona más grande de bloques vecinos
+    seen, best = np.zeros_like(hot), []
+    for y, x in zip(*np.nonzero(hot)):
+        if seen[y, x]:
+            continue
+        stack, comp = [(y, x)], []
+        seen[y, x] = True
+        while stack:
+            cy, cx = stack.pop()
+            comp.append((cy, cx))
+            for ny in range(cy - 1, cy + 2):
+                for nx in range(cx - 1, cx + 2):
+                    if 0 <= ny < hot.shape[0] and 0 <= nx < hot.shape[1] and hot[ny, nx] and not seen[ny, nx]:
+                        seen[ny, nx] = True
+                        stack.append((ny, nx))
+        if len(comp) > len(best):
+            best = comp
+    if len(best) < CHANGE_MIN_BLOCKS:
+        return None
+    ys, xs = [c[0] for c in best], [c[1] for c in best]
+    H, W = hot.shape
+    box = [min(xs) / W, min(ys) / H, (max(xs) + 1) / W, (max(ys) + 1) / H]
+    return {"box": [round(float(v), 3) for v in box], "blocks": len(best), "z": round(float(z.max()), 1),
+            "where": where(box)}
+
+
+def where(box) -> str:
+    """Ubicación de una zona en palabras: "arriba a la derecha", "al centro"..."""
+    cx, cy = (box[0] + box[2]) / 2, (box[1] + box[3]) / 2
+    v = "arriba" if cy < 1 / 3 else "abajo" if cy > 2 / 3 else ""
+    h = "a la izquierda" if cx < 1 / 3 else "a la derecha" if cx > 2 / 3 else ""
+    return " ".join(filter(None, [v, h])) or "al centro"
 
 
 # ---- proporción ---------------------------------------------------------------

@@ -138,6 +138,10 @@ GUIDE: dict[str, tuple[str, str]] = {
         "Una foto es otra del mismo caso recortada, y el recorte quitó justo la marca que decía que la imagen se hizo "
         "o editó con IA. Es un intento de ocultar la edición.",
         "Trátela como fraude probable: derive a investigación y pida inspección presencial del vehículo."),
+    "changed_between_versions": (
+        "Dos fotos del caso son la misma toma, pero en una de ellas una zona cambió: se borró, agregó o cambió algo, "
+        "como hacen el borrador mágico o la edición con IA de los teléfonos.",
+        "Compare las dos fotos en la zona indicada. Si lo que cambió es parte del daño, derive a investigación."),
     "cropped_in_claim": (
         "Una foto del siniestro es otra foto del mismo caso recortada. Recortar puede ser para encuadrar, pero también "
         "para sacar algo que no convenía mostrar.",

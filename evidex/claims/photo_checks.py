@@ -52,6 +52,7 @@ CHECKS = [
     ("Este siniestro", "Misma foto repetida o espejada", ("duplicate_in_claim", "mirrored_in_claim"), None),
     ("Este siniestro", "Recorte de otra foto del caso (y marca de IA quitada)", ("cropped_in_claim", "ai_mark_cropped"),
      None),
+    ("Este siniestro", "Zona borrada o cambiada respecto de otra versión", ("changed_between_versions",), None),
     ("Este siniestro", "Fotos de varios teléfonos", ("multiple_devices",), None),
 ]
 

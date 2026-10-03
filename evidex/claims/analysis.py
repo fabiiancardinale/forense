@@ -336,6 +336,19 @@ def photo_set_findings(photos: list["Photo"]) -> list[Finding]:
     crops = _crop_pairs(ok)
     for a, b, rel in crops:
         base, part = (a, b) if rel["base"] == "a" else (b, a)
+        try:
+            change = derived.changed_region(base.path, part.path, rel)
+        except Exception:
+            change = None
+        if change:
+            seen.add((a.digest, b.digest))
+            how = "es la foto" if rel["same"] else "es un recorte de la foto"
+            out.append(Finding("changed_between_versions", "alta", f"Zona cambiada entre dos versiones ({part.name})",
+                               f"La foto {part.name} {how} {base.name}, pero una zona {change['where']} no es igual: "
+                               "algo se borró, se agregó o se cambió (por ejemplo con el borrador mágico o la edición "
+                               "con IA del teléfono). Compare las dos fotos en esa zona.", [base.ev, part.ev], part.ts))
+        if rel["same"]:
+            continue
         seen.add((a.digest, b.digest))
         sides = ", ".join(f"{round(v * 100)}% por {s}" for s, v in rel["cut"].items())
         mark = _ai_evidence(base)
@@ -389,7 +402,7 @@ CROP_MAX_PHOTOS = 20   # con más fotos solo se comparan los pares parecidos (ca
 
 
 def _crop_pairs(photos: list["Photo"]) -> list[tuple]:
-    """Pares de fotos (a, b, relación) donde una es recorte de la otra."""
+    """Pares de fotos (a, b, relación) que son la misma toma: recortada o con el mismo encuadre."""
     files = [p for p in photos if p.path and Path(p.path).exists()]
     out = []
     for i, a in enumerate(files):
@@ -398,7 +411,7 @@ def _crop_pairs(photos: list["Photo"]) -> list[tuple]:
                 continue
             if len(files) > CROP_MAX_PHOTOS and hamming(a.meta["dhash"], b.meta["dhash"]) > 20:
                 continue
-            rel = derived.crop_relation(a.path, b.path)
+            rel = derived.relation(a.path, b.path)
             if rel:
                 out.append((a, b, rel))
     return out

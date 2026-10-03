@@ -155,3 +155,22 @@ def test_visible_ai_label_and_crop_that_hides_it(tmp_path):
     pa.meta["content"]["ocr"]["text"] = "CTRL"                          # sin marca: solo un recorte
     rules = [f.rule for f in photo_set_findings([pa, pb])]
     assert rules == ["cropped_in_claim"]
+
+
+def test_zone_erased_between_two_versions(tmp_path):
+    from PIL import ImageDraw, ImageFilter
+    from evidex.forensics.derived import changed_region, relation
+    bg = textured_image(13, 1200, 1600).filter(ImageFilter.GaussianBlur(3))
+    orig = bg.copy()
+    ImageDraw.Draw(orig).polygon([(820, 900), (980, 860), (1000, 1000), (840, 1040)], fill=(150, 150, 160))  # un logo
+    a = _jpeg(orig, tmp_path / "original.jpg")
+    b = _jpeg(bg.crop((0, 0, 1200, 1400)).resize((1371, 1600)), tmp_path / "editada.jpg", quality=75)  # sin logo
+    rel = relation(a, b)
+    ch = changed_region(a, b, rel)
+    assert ch and ch["box"][0] > 0.55 and ch["box"][1] > 0.45
+    assert changed_region(a, _jpeg(orig.crop((0, 0, 1200, 1400)), tmp_path / "solo_recorte.jpg", quality=70),
+                          rel) is None
+    pa, pb = _photo(a, digest="a" * 64), _photo(b, digest="b" * 64)
+    pa.path, pb.path = a, b
+    rules = {f.rule for f in photo_set_findings([pa, pb])}
+    assert rules == {"changed_between_versions", "cropped_in_claim"}
