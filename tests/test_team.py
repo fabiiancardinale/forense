@@ -2,9 +2,9 @@
 import io
 
 from helpers import textured_image
-from veritas.claims import assignment, service
-from veritas.core.case import Case
-from veritas.web import create_app
+from evidex.claims import assignment, service
+from evidex.core.case import Case
+from evidex.web import create_app
 
 PW = "clave-segura-1"
 TRANSCRIPT = ("P: ¿Dónde estaba al momento del choque?\nR: En Av. Grecia con Macul, detenido en el semáforo.\n"
@@ -14,7 +14,7 @@ TRANSCRIPT = ("P: ¿Dónde estaba al momento del choque?\nR: En Av. Grecia con M
 def _app(tmp_path):
     app = create_app(tmp_path / "casos")
     app.config["TESTING"] = True
-    store = app.extensions["veritas"]["store"]
+    store = app.extensions["evidex"]["store"]
     store.add("admin", "Admin", "administrador", PW)
     store.add("jefa", "Jefa Soto", "jefe", PW)
     store.add("ana", "Ana Pérez", "analista", PW)

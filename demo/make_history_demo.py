@@ -7,7 +7,7 @@ Contiene ~150 siniestros entre octubre 2025 y septiembre 2026:
   - Red B: 4 siniestros con el mismo teléfono y dirección, y avisos tardíos.
   - Un par de siniestros con el mismo correo (uno fraude, otro legítimo: una falsa alarma).
   - Un cliente con siniestros repetidos.
-  - 3 fraudes confirmados SIN señales detectables (Veritas no los encuentra: métricas honestas).
+  - 3 fraudes confirmados SIN señales detectables (Evidex no los encuentra: métricas honestas).
   - 3 siniestros legítimos con aumento de cobertura reciente (falsas alarmas esperables).
 Los casos anteriores a agosto 2026 traen su resultado final; los recientes quedan pendientes.
 

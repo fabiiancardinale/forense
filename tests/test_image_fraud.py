@@ -6,9 +6,9 @@ import numpy as np
 from PIL import Image, ImageOps
 
 from helpers import textured_image
-from veritas.claims import photo_checks
-from veritas.claims.analysis import Photo, analyze, photo_metadata, photo_set_findings, registry_findings
-from veritas.forensics.image_content import ela_map, noise_inconsistency, noise_map
+from evidex.claims import photo_checks
+from evidex.claims.analysis import Photo, analyze, photo_metadata, photo_set_findings, registry_findings
+from evidex.forensics.image_content import ela_map, noise_inconsistency, noise_map
 
 DECL = {"numero": "SIN-T", "fecha_siniestro": "2026-09-20T18:30:00", "rut": "11.111.111-1"}
 
@@ -84,7 +84,7 @@ def test_mirrored_and_duplicate_inside_claim(tmp_path):
 def test_reuse_detected_when_mirrored_or_by_unique_id_and_same_phone(tmp_path):
     img = textured_image(6, 900, 600)
     p = _photo(_jpeg(ImageOps.mirror(img), tmp_path / "x.jpg", _camera_exif(serial="R58N91ABC", uid="A1B2C3D4E5")))
-    from veritas.claims.analysis import dhash
+    from evidex.claims.analysis import dhash
     reg = [{"type": "claim", "claim": "SIN-OTRO", "rut": "22.222.222-2"},
            {"type": "photo", "claim": "SIN-OTRO", "photo": "vieja.jpg", "sha256": "f" * 64, "dhash": dhash(img)}]
     found = registry_findings(p, DECL, reg, ["x:1"])

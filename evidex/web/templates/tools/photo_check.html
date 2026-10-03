@@ -1,0 +1,27 @@
+{% extends "base.html" %}{% block title %}Revisar foto{% endblock %}
+{% block heading %}<h1>Revisar una foto</h1>
+<p class="sub">Aplica todas las pruebas de Evidex a una foto suelta: origen (IA, pantallazo), metadatos, píxeles y contexto. No se crea un caso ni se guarda la foto.</p>{% endblock %}
+{% block body %}
+<form class="card" method="post" enctype="multipart/form-data" data-busy="Analizando…" style="margin-bottom:20px"><div class="formrow">
+<div><label for="fotos">Fotos</label><input id="fotos" type="file" name="fotos" accept="image/*" multiple required></div>
+<div><label for="fecha">Fecha del siniestro <span class="hint">(opcional)</span></label><input id="fecha" type="datetime-local" name="fecha"></div>
+<button class="btn pri" type="submit">Revisar</button></div></form>
+{% for r in results %}
+<section class="panel" style="margin-bottom:20px">
+<div class="ph"><h2>{{ r.name }}</h2><span class="r">
+{% if r.level == 'bad' %}<span class="badge bad">Señales graves</span>{% elif r.level == 'warn' %}<span class="badge warn">Revisar</span>
+{% else %}<span class="badge ok">Sin señales</span>{% endif %}</span></div>
+<div class="pb split">
+<div>{% for f in r.findings %}<div class="finding {{ f.severity }}"><span class="sev {{ f.severity }}">{{ f.severity|upper }}</span><b>{{ f.title.split(' (')[0] }}</b><p>{{ f.summary }}</p></div>
+{% else %}<p style="margin:0">No se encontraron señales. Eso no prueba que la foto sea auténtica: una edición cuidadosa puede no dejar rastros.</p>{% endfor %}
+{% if r.marked %}<h3 class="cat">Zonas marcadas</h3>
+<img src="data:image/png;base64,{{ r.marked }}" alt="Zonas sospechosas marcadas" style="max-width:100%;border-radius:8px;border:1px solid var(--line)">{% endif %}
+{% if r.ela or r.noise %}<h3 class="cat">Mapas para mirar la foto</h3>
+<div class="maps">{% if r.ela %}<figure><img src="data:image/png;base64,{{ r.ela }}" alt="Mapa ELA"><figcaption><b>ELA:</b> cuánto cambia cada zona al volver a guardar la foto. Una zona que brilla distinto al resto, con bordes nítidos, puede estar editada.</figcaption></figure>{% endif %}
+{% if r.noise %}<figure><img src="data:image/png;base64,{{ r.noise }}" alt="Mapa de ruido"><figcaption><b>Grano del sensor:</b> rojo = más grano de lo esperado, azul = menos. En una foto sin editar el color se reparte sin formar figuras.</figcaption></figure>{% endif %}</div>{% endif %}
+</div>
+<div><h3 class="cat" style="margin-top:0">Pruebas aplicadas</h3>{% set checks = r.checks %}{% include "claims/case/_checks.html" %}
+<h3 class="cat">Datos leídos</h3><dl class="kv">{% for k, v in r.rows %}<dt>{{ k }}</dt><dd>{{ v }}</dd>{% endfor %}</dl></div>
+</div></section>
+{% endfor %}
+{% endblock %}

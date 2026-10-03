@@ -1,0 +1,12 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ingresar · Evidex by Zelekpress</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}"></head><body><form class="box" method="post">
+<div class="brand"><span class="mark">{{ icon('shield', 20, '#fff') }}</span><span><b>EVIDEX</b><small>by Zelekpress</small></span></div>
+<h1>Ingresar</h1><p class="sub">Use el usuario que le entregó el administrador.</p>
+{% if error %}<div class="err">{{ error }}</div>{% endif %}
+<label for="u">Usuario</label><input id="u" name="usuario" autocomplete="username" required autofocus value="{{ usuario or '' }}">
+<label for="p">Contraseña</label><input id="p" name="clave" type="password" autocomplete="current-password" required>
+<input type="hidden" name="next" value="{{ next or '' }}">
+<button type="submit">Ingresar</button>
+<div class="foot">Cada ingreso queda registrado.</div></form></body></html>

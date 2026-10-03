@@ -10,13 +10,13 @@ INV_DEMO = ROOT / "demo" / "investigacion_demo"
 
 
 def analysis_of(work, numero):
-    from veritas.claims import service
-    from veritas.core.case import Case
+    from evidex.claims import service
+    from evidex.core.case import Case
     return service.run_analysis(Case(work / numero), work / "registro.jsonl")
 
 
 def web_client(tmp_path):
-    from veritas.web import create_app
+    from evidex.web import create_app
     app = create_app(tmp_path / "casos")
     app.config["TESTING"] = True
     return app.test_client()

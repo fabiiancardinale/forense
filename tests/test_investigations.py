@@ -3,11 +3,11 @@ import zipfile
 
 
 from helpers import INV_DEMO, web_client
-from veritas.core.case import Case
-from veritas.core.ledger import verify_chain
-from veritas.investigations import audit as RA
-from veritas.investigations import dossier as INV
-from veritas.investigations import interviews as IV
+from evidex.core.case import Case
+from evidex.core.ledger import verify_chain
+from evidex.investigations import audit as RA
+from evidex.investigations import dossier as INV
+from evidex.investigations import interviews as IV
 
 
 def test_transcript_parsing_formats():

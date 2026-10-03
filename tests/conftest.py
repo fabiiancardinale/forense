@@ -9,8 +9,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from veritas.claims import importer, service  # noqa: E402
-from veritas.cli import main  # noqa: E402
+from evidex.claims import importer, service  # noqa: E402
+from evidex.cli import main  # noqa: E402
 
 
 @pytest.fixture

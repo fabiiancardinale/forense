@@ -1,0 +1,39 @@
+{% extends "base.html" %}{% block title %}Métricas{% endblock %}
+{% block heading %}<h1>Métricas</h1><p class="sub">Desempeño de Evidex frente a las decisiones finales de los liquidadores. "Alerta" = recomendación de derivar
+a investigación. Solo cuentan los siniestros con decisión de fraude confirmado o legítimo.</p>{% endblock %}
+{% block actions %}<a class="btn" href="{{ url_for('portfolio.export_xlsx', what='metricas') }}">{{ icon('download', 15) }}Excel</a>{% endblock %}
+{% block body %}
+{% if m.tp + m.fn + m.fp + m.tn == 0 %}
+<div class="card empty"><h2>Aún no hay decisiones para medir</h2><p>Registre decisiones en los siniestros o importe un historial con la columna "resultado".</p>
+<a class="btn pri" href="{{ url_for('portfolio.import_view') }}">Importar historial</a></div>
+{% else %}
+<div class="tiles">
+<div class="tile accent-grn"><div class="lbl">Detección</div><div class="big">{{ m.recall }}%</div><span>de los fraudes confirmados fueron detectados ({{ m.tp }} de {{ m.tp + m.fn }})</span></div>
+<div class="tile accent-blue"><div class="lbl">Precisión</div><div class="big">{{ m.precision }}%</div><span>de las alertas resultaron fraude ({{ m.tp }} de {{ m.tp + m.fp }})</span></div>
+<div class="tile accent-amb"><div class="lbl">Falsas alarmas</div><div class="big">{{ m.false_alarm }}%</div><span>de los siniestros legítimos recibió una alerta ({{ m.fp }} de {{ m.fp + m.tn }})</span></div>
+<div class="tile accent-red"><div class="lbl">Monto detectado</div><div class="big">${{ money(m.monto_detectado) }}</div><span>reclamados en fraudes detectados, de ${{ money(m.monto_fraude) }} en fraudes confirmados</span></div>
+</div>
+<div class="cols2">
+<div class="card"><h2 style="margin:0 0 14px">Aciertos y errores</h2>
+<table class="matrix"><tr><th></th><th>Evidex alertó</th><th>Evidex no alertó</th></tr>
+<tr><td><b style="font-size:13.5px;display:inline">Fraude confirmado</b></td><td class="cell-good"><b>{{ m.tp }}</b><small>detectados</small></td><td class="cell-bad"><b>{{ m.fn }}</b><small>no detectados</small></td></tr>
+<tr><td><b style="font-size:13.5px;display:inline">Legítimo</b></td><td class="cell-bad"><b>{{ m.fp }}</b><small>falsas alarmas</small></td><td class="cell-good"><b>{{ m.tn }}</b><small>correctamente sin alerta</small></td></tr>
+</table>
+<p class="hint">{{ m.total }} siniestros en total · {{ m.decisions.get('pendiente', 0) }} sin decisión · {{ m.decisions.get('rechazado', 0) }} rechazados por otra causa.</p></div>
+<div class="card"><h2 style="margin:0 0 14px">Señales más frecuentes</h2>
+<div class="bars">{% set mx = (m.rules[0][1] if m.rules else 1) %}{% for r, n in m.rules[:8] %}
+<span>{{ rule_names.get(r, r) }}</span><div class="track" title="{{ rule_names.get(r, r) }}: {{ n }} siniestro(s)"><div class="bar" style="width:calc((100% - 40px) * {{ n / mx }})"></div>
+<span class="val" style="left:calc((100% - 40px) * {{ n / mx }})">{{ n }}</span></div>{% endfor %}</div>
+<p class="hint">Cantidad de siniestros en que apareció cada señal.</p></div>
+</div>
+<div class="cols2" style="margin-top:16px">
+<div class="card"><h2 style="margin:0 0 4px">Alertas pendientes de decisión</h2><p class="hint" style="margin:0 0 8px">
+{{ m.pendientes_alerta|length }} siniestros derivados sin decisión · ${{ money(m.monto_pendiente_alerta) }} reclamados</p>
+<table>{% for r in m.pendientes_alerta[:8] %}<tr class="row" onclick="location.href='{{ url_for('claims.case_view', cid=r.id) }}'"><td style="white-space:nowrap"><a href="{{ url_for('claims.case_view', cid=r.id) }}"><b>{{ r.numero }}</b></a></td>
+<td><span class="risk bad" style="--w:{{ r.score }}%"><i></i>{{ r.score }}</span></td><td class="num">${{ money(r.monto) }}</td></tr>{% else %}<tr><td class="hint">No hay alertas pendientes.</td></tr>{% endfor %}</table></div>
+<div class="card"><h2 style="margin:0 0 4px">Para mejorar</h2><p class="hint" style="margin:0 0 8px">Revisar estos casos ayuda a ajustar los umbrales.</p>
+<table>{% for r in m.missed %}<tr class="row" onclick="location.href='{{ url_for('claims.case_view', cid=r.id) }}'"><td style="white-space:nowrap"><a href="{{ url_for('claims.case_view', cid=r.id) }}"><b>{{ r.numero }}</b></a></td><td>Fraude no detectado</td></tr>{% endfor %}
+{% for r in m.false_alarms %}<tr class="row" onclick="location.href='{{ url_for('claims.case_view', cid=r.id) }}'"><td style="white-space:nowrap"><a href="{{ url_for('claims.case_view', cid=r.id) }}"><b>{{ r.numero }}</b></a></td><td>Falsa alarma · {{ r.rules|map('extract', rule_names)|join(', ') if r.rules else '' }}</td></tr>{% endfor %}</table></div>
+</div>
+{% endif %}
+{% endblock %}
