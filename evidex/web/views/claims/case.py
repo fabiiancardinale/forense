@@ -38,13 +38,15 @@ def _refresh_if_needed(case: Case) -> None:
     n_ev = sum(1 for e in case.ledger.entries()
                if e["action"] in ("evidence_added", "evidence_excluded", "evidence_restored"))
     mark = case.root / "informe.evidencias"
+    # también se reanaliza cuando Evidex se actualiza con pruebas nuevas (cambia ANALYSIS_VERSION)
+    want = f"{n_ev}|{service.ANALYSIS_VERSION}"
     try:
-        seen = int(mark.read_text())
-    except (OSError, ValueError):
-        seen = -1
-    if not (case.root / "informe.html").exists() or not (case.root / service.SNAPSHOT).exists() or seen != n_ev:
+        seen = mark.read_text().strip()
+    except OSError:
+        seen = ""
+    if not (case.root / "informe.html").exists() or not (case.root / service.SNAPSHOT).exists() or seen != want:
         service.analyze_claim(case, cx.registry)
-        mark.write_text(str(n_ev))
+        mark.write_text(want)
 
 
 def evidence_items(case: Case, snap: dict) -> list[dict]:
