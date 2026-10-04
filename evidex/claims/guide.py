@@ -245,6 +245,11 @@ GUIDE: dict[str, tuple[str, str]] = {
         "Las apps que editan con IA ponen una marca visible en la esquina. El editor registró que esa marca se quitó: "
         "alguien no quería que se notara la edición.",
         "Trátela como fraude probable: derive a investigación y pida inspección presencial del vehículo."),
+    "copy_of_ai_photo": (
+        "Esta foto es la misma imagen (o un recorte) de otra foto que sí declara uso de inteligencia artificial. La copia "
+        "perdió las marcas porque pasó por WhatsApp, redes sociales o una captura de pantalla, que las borran.",
+        "Trátela igual que la original editada con IA: no la acepte como prueba y pida la foto original o una "
+        "inspección presencial."),
     "phone_edit": (
         "El archivo guarda el historial de lo que se le hizo después de tomarlo: recortes, giros, cambios de luz o color, "
         "filtros, o que se creó a partir de otra foto. Puede ser inocente (encuadrar), pero cambia lo que se ve.",
@@ -269,6 +274,8 @@ WHY = {
     "ai_generated": "Alta porque una imagen hecha con IA no muestra un hecho real: no sirve como prueba del daño.",
     "ai_edited": "Alta porque con IA se puede borrar, agregar o agrandar un daño con un resultado que a la vista parece una "
                  "foto real. Aunque el cambio haya sido pequeño, la foto ya no prueba por sí sola cómo estaba el vehículo.",
+    "copy_of_ai_photo": "Alta porque es la misma imagen que una foto editada con IA: perder las marcas al reenviarla "
+                        "no cambia lo que muestra.",
     "ai_watermark_removed": "Alta porque quitar la marca de IA es un acto deliberado para ocultar la edición.",
     "ai_label_visible": "Alta porque la propia imagen dice que fue generada o editada con IA.",
     "ai_mark_cropped": "Alta porque recortar justo la marca de IA es un intento de ocultar la edición.",

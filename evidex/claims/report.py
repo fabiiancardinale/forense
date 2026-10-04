@@ -253,6 +253,7 @@ RULE_NAMES = {
     "multiple_devices": "Fotos de varios teléfonos", "ai_label_visible": "Marca visible de IA",
     "ai_mark_cropped": "Recortada para ocultar la marca de IA", "cropped_in_claim": "Foto recortada de otra del caso",
     "changed_between_versions": "Zona cambiada entre dos versiones",
+    "copy_of_ai_photo": "Copia de una foto editada con IA",
     "odd_ratio": "Proporción que no es de cámara",
 }
 

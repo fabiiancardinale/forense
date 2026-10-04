@@ -369,9 +369,18 @@ def registry_findings(p: "Photo", decl: dict, registry: list[dict], cite) -> lis
                 how = ("la misma toma: ambas llevan el mismo identificador único que la cámara graba en cada foto, "
                        "aunque la imagen se haya editado")
             if how:
+                ai_note = ""
+                if r.get("ai") and not _ai_evidence(p):
+                    ai_note = (f" Además, esa foto declaraba uso de inteligencia artificial ({r['ai']}): esta copia "
+                               "llegó sin esas marcas.")
                 out.append(Finding("reused_photo", "alta", f"Foto ya usada en otro siniestro ({p.name})",
-                                   f"La foto {p.name} es {how}, igual a la foto {r['photo']} del siniestro {r['claim']}.",
-                                   cite, p.ts))
+                                   f"La foto {p.name} es {how}, igual a la foto {r['photo']} del siniestro {r['claim']}."
+                                   + ai_note, cite, p.ts))
+                if ai_note:
+                    out.append(Finding("copy_of_ai_photo", "alta", f"Copia de una foto editada con IA ({p.name})",
+                                       f"La foto {p.name} es {how} de la foto {r['photo']} del siniestro {r['claim']}, "
+                                       f"que declaraba uso de inteligencia artificial: {r['ai']}. La copia llegó sin "
+                                       "esas marcas.", cite, p.ts))
                 reused = True
         if not device and serial and r.get("serial") == serial:
             ruts = ruts if ruts is not None else _ruts_by_claim(registry)
@@ -404,15 +413,20 @@ def photo_set_findings(photos: list["Photo"]) -> list[Finding]:
                                "algo se borró, se agregó o se cambió (por ejemplo con el borrador mágico o la edición "
                                "con IA del teléfono). Compare las dos fotos en esa zona.", [base.ev, part.ev], part.ts))
         if rel["same"]:
+            if (copy := _copy_of_ai(a, b, "es la misma imagen que la foto")):
+                seen.add((a.digest, b.digest))
+                out.append(copy)
             continue
         seen.add((a.digest, b.digest))
         sides = ", ".join(f"{round(v * 100)}% por {s}" for s, v in rel["cut"].items())
-        mark = _ai_evidence(base)
-        if mark and not _ai_evidence(part):
+        label = _ai_label(base)
+        if label and not _ai_label(part):
             out.append(Finding("ai_mark_cropped", "alta", f"Foto recortada para sacar la marca de IA ({part.name})",
                                f"La foto {part.name} es la foto {base.name} recortada (se quitó {sides}). La foto completa "
-                               f"tiene {mark}, y la recortada ya no la muestra: se recortó para que no se note que la "
-                               "imagen fue generada o editada con IA.", [base.ev, part.ev], part.ts))
+                               f"tiene el texto «{label}», y la recortada ya no lo muestra: se recortó para que no se note "
+                               "que la imagen fue generada o editada con IA.", [base.ev, part.ev], part.ts))
+        elif (copy := _copy_of_ai(base, part, f"es un recorte (se quitó {sides}) de la foto")):
+            out.append(copy)
         else:
             out.append(Finding("cropped_in_claim", "media", f"Una foto es recorte de otra ({part.name})",
                                f"La foto {part.name} es la foto {base.name} recortada (se quitó {sides}). Si se presentaron "
@@ -433,6 +447,8 @@ def photo_set_findings(photos: list["Photo"]) -> list[Finding]:
                                    f"La foto {b.name} es la foto {a.name} invertida de izquierda a derecha. Se usa para "
                                    "mostrar el mismo daño como si fuera del otro costado del vehículo.",
                                    [a.ev, b.ev], b.ts))
+            elif (copy := _copy_of_ai(a, b, "es prácticamente la misma imagen que la foto")):
+                out.append(copy)
             else:
                 out.append(Finding("duplicate_in_claim", "media", f"La misma foto dos veces ({b.name})",
                                    f"Las fotos {a.name} y {b.name} son prácticamente la misma imagen. Puede ser una ráfaga, "
@@ -516,15 +532,36 @@ def _crop_pairs(photos: list["Photo"]) -> list[tuple]:
     return out
 
 
+def _ai_label(p: "Photo") -> str | None:
+    """La marca visible «Contenido generado por IA» leída en la imagen."""
+    return derived.ai_label(((p.meta.get("content") or {}).get("ocr") or {}).get("text") or "")
+
+
 def _ai_evidence(p: "Photo") -> str | None:
-    """Qué muestra que la foto se hizo o editó con IA (para saber si un recorte la escondió)."""
+    """Qué muestra que la foto se hizo o editó con IA: marca visible, marcas en el archivo o lo que declara
+    el teléfono o la app (Galaxy AI, C2PA, XMP)."""
     m = p.meta
-    label = derived.ai_label(((m.get("content") or {}).get("ocr") or {}).get("text") or "")
-    if label:
+    if label := _ai_label(p):
         return f"el texto «{label}»"
     if m.get("ai_markers"):
         return f"marcas de IA en el archivo ({', '.join(m['ai_markers'])})"
+    deep_ai = (m.get("deep") or {}).get("ai") or []
+    if deep_ai:
+        return "; ".join(deep_ai[:2])
     return None
+
+
+def _copy_of_ai(a: "Photo", b: "Photo", how: str) -> "Finding | None":
+    """Si una de dos fotos que son la misma toma tiene marcas de IA y la otra no, la otra es una copia que
+    perdió las marcas (WhatsApp, captura de pantalla, recorte): hereda la alerta."""
+    ea, eb = _ai_evidence(a), _ai_evidence(b)
+    if bool(ea) == bool(eb):
+        return None
+    src, copy, mark = (a, b, ea) if ea else (b, a, eb)
+    return Finding("copy_of_ai_photo", "alta", f"Copia de una foto editada con IA ({copy.name})",
+                   f"La foto {copy.name} {how} {src.name}, que declara uso de inteligencia artificial: {mark}. "
+                   f"La copia llegó sin esas marcas (WhatsApp, redes sociales o una captura las borran), pero la "
+                   f"imagen es la misma.", [src.ev, copy.ev], copy.ts)
 
 
 def content_findings(p: "Photo", decl: dict, place, cite) -> list[Finding]:
@@ -646,12 +683,15 @@ def update_registry(path: Path, claim: str, photos: list[Photo], docs=(), decl: 
     """Agrega al registro las fotos, documentos y datos del siniestro (sin duplicar)."""
     reg = load_registry(path)
     known = {(r.get("type", "photo"), r["claim"], r.get("sha256")) for r in reg}
+    with_ai = {(r["claim"], r.get("sha256")) for r in reg if r.get("type", "photo") == "photo" and r.get("ai")}
     lines = []
     for p in photos:
-        if "dhash" in p.meta and ("photo", claim, p.digest) not in known:
+        ai = _ai_evidence(p) if "dhash" in p.meta else None
+        # se agrega la foto nueva, o se vuelve a anotar una ya registrada si ahora se sabe que tiene marcas de IA
+        if "dhash" in p.meta and (("photo", claim, p.digest) not in known or (ai and (claim, p.digest) not in with_ai)):
             fx = p.meta.get("forensics") or {}
             row = {"type": "photo", "claim": claim, "photo": p.name, "sha256": p.digest, "dhash": p.meta["dhash"]}
-            row.update({k: v for k, v in (("uid", fx.get("image_uid")), ("serial", fx.get("serial"))) if v})
+            row.update({k: v for k, v in (("uid", fx.get("image_uid")), ("serial", fx.get("serial")), ("ai", ai)) if v})
             lines.append(row)
     for d in docs:
         if ("doc", claim, d.digest) not in known:

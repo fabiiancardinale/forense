@@ -142,3 +142,23 @@ def test_case_with_cropped_pair_saves_cache_and_reanalyzes(tmp_path):
     assert cache.exists() and json.loads(cache.read_text())["pairs"]
     page = c.post("/caso/SIN-P1/analizar", follow_redirects=True).get_data(as_text=True)
     assert "Análisis actualizado" in page and "recorte" in page.lower()
+
+
+def test_whatsapp_copy_inherits_ai_mark_in_claim_and_across_claims(tmp_path):
+    """La foto editada con Galaxy AI tiene marcas; su copia por WhatsApp no. La copia hereda la alerta."""
+    from evidex.claims.analysis import photo_set_findings, registry_findings, update_registry
+    orig = _samsung_jpeg(tmp_path / "regfri.jpg", {"PEg_Info": json.dumps({"genAIType": 1}).encode()})
+    wa = tmp_path / "WhatsApp Image 1.jpeg"
+    Image.open(orig).convert("RGB").resize((600, 450)).save(wa, "JPEG", quality=70)   # sin metadatos, achicada
+    po, pw = _photo(orig), _photo(wa)
+    po.digest, pw.digest = "a" * 64, "b" * 64
+    assert not pw.meta["deep"]["ai"]                                   # la copia ya no dice nada de IA
+    found = [f for f in photo_set_findings([po, pw]) if f.rule == "copy_of_ai_photo"]
+    assert found and "regfri.jpg" in found[0].summary and "Galaxy AI" in found[0].summary
+    reg = tmp_path / "registro.jsonl"
+    update_registry(reg, "SIN-A", [po])
+    from evidex.claims.analysis import load_registry
+    rows = load_registry(reg)
+    assert rows[0]["ai"]
+    rules = [f.rule for f in registry_findings(pw, {"numero": "SIN-B", "rut": ""}, rows, ["x:1"])]
+    assert rules == ["reused_photo", "copy_of_ai_photo"]
