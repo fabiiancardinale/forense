@@ -13,10 +13,10 @@ class InvalidFile(ValueError):
     pass
 
 
-def validate(path, name):
+def validate(path, name, max_pages=MAX_PAGES, formats=None):
     path = Path(path)
     ext = Path(name).suffix.lower()
-    expected = FORMATS.get(ext)
+    expected = (formats or FORMATS).get(ext)
     if not expected:
         raise InvalidFile('Formato no soportado. Use JPG, PNG, WebP, HEIC/HEIF o PDF.')
     if not 0 < path.stat().st_size <= MAX_BYTES:
@@ -28,8 +28,8 @@ def validate(path, name):
                 if getattr(pdf.doc, 'encryption', None):
                     raise InvalidFile('PDF cifrado: envíe una copia sin contraseña.')
                 count = len(pdf.pages)
-                if not 0 < count <= MAX_PAGES:
-                    raise InvalidFile('El PDF debe tener entre 1 y 20 páginas.')
+                if not 0 < count <= max_pages:
+                    raise InvalidFile(f'El PDF debe tener entre 1 y {max_pages} páginas.')
                 for page in pdf.pages:
                     if not (0 < float(page.width) <= 14400 and 0 < float(page.height) <= 14400):
                         raise InvalidFile('Dimensiones de página no soportadas.')

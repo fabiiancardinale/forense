@@ -33,7 +33,6 @@ import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from PIL import Image
 
 SHOTS = [
     ("frontal", "Vehículo completo de frente"),
@@ -183,6 +182,19 @@ def remove_file(case, data: dict, sha256: str) -> dict:
     return rec
 
 
+def _guard(blob: bytes, ext: str) -> dict:
+    """Revisa el archivo del asegurado en un proceso aparte (formato real, tamaño, páginas)."""
+    from evidex.core import upload_guard
+    from evidex.inspection.validation import InvalidFile
+    with tempfile.TemporaryDirectory() as td:
+        p = Path(td) / f"subida{ext}"
+        p.write_bytes(blob)
+        try:
+            return upload_guard.check(p, p.name, "portal")
+        except InvalidFile as ex:
+            raise ValueError(f"El archivo no se aceptó: {ex}") from ex
+
+
 def receive_file(case, data: dict, filename: str, blob: bytes, kind: str, title: str = "", user_agent: str = "",
                  last_modified: str = "") -> dict:
     """Foto o documento que sube el asegurado, con el título que él le da.
@@ -204,18 +216,7 @@ def receive_file(case, data: dict, filename: str, blob: bytes, kind: str, title:
     ext = Path(filename or "").suffix.lower()
     if ext not in FILE_EXT:
         raise ValueError("Solo se aceptan fotos (JPG, PNG, HEIC) o documentos PDF.")
-    if ext == ".pdf":
-        if not blob[:1024].lstrip().startswith(b"%PDF"):
-            raise ValueError("El archivo no es un PDF válido.")
-    elif ext in (".heic", ".heif"):
-        if b"ftyp" not in blob[:32]:
-            raise ValueError("El archivo no es una foto válida.")
-    else:
-        try:
-            with Image.open(io.BytesIO(blob)) as img:
-                img.verify()
-        except Exception:
-            raise ValueError("El archivo no es una foto válida.")
+    _guard(blob, ext)        # contenido real (foto que se abre, PDF sano), en un proceso aparte
     if kind == "photo" and ext == ".pdf":
         kind = "doc"                      # un PDF siempre es un documento
     if kind == "photo" and sum(1 for f in data.get("files", []) if f["kind"] in ("photo", "extra")) >= MAX_PHOTOS:
@@ -306,13 +307,8 @@ def receive(case, data: dict, blob: bytes, form: dict, user_agent: str = "") -> 
         raise ValueError("Ya se recibió el máximo de fotos para este enlace.")
     if len(blob) > MAX_BYTES:
         raise ValueError("La foto es demasiado grande.")
-    try:
-        with Image.open(io.BytesIO(blob)) as img:
-            img.verify()
-        with Image.open(io.BytesIO(blob)) as img:
-            fmt, size = img.format, img.size
-    except Exception:
-        raise ValueError("El archivo recibido no es una imagen válida.")
+    info = _guard(blob, ".jpg")
+    fmt, size = info.get("format"), (info.get("width"), info.get("height"))
     if fmt != "JPEG":
         raise ValueError("Formato no permitido.")
     shot = form.get("shot", "")

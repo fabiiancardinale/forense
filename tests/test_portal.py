@@ -65,7 +65,8 @@ def test_register_case_and_portal_for_insured(tmp_path):
     def up(kind, name, blob, title):
         return c.post(f"/c/{tok}/archivo", data={"kind": kind, "titulo": title, "archivo": (_io.BytesIO(blob), name)},
                       content_type="multipart/form-data")
-    pdf = b"%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n"
+    from helpers import real_pdf
+    pdf = real_pdf()
     exif = Image.Exif(); exif[0x010F] = "Apple"; exif[0x0110] = "iPhone 14"; exif[0x8769] = {0x9003: "2026:09:30 19:14:00"}
     g = _io.BytesIO(); Image.new("RGB", (640, 480), (120, 110, 100)).save(g, "JPEG", exif=exif)
     raw = g.getvalue()

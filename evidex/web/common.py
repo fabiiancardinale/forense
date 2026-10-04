@@ -15,7 +15,9 @@ from werkzeug.utils import secure_filename
 from evidex.accounts import users as U
 from evidex.web.security import demo_open
 from evidex.claims import assignment, service
+from evidex.core import upload_guard
 from evidex.core.case import Case
+from evidex.inspection.validation import InvalidFile
 from evidex.investigations import dossier as INV
 
 FORM_FIELDS = ("numero", "poliza", "asegurado", "rut", "telefono", "email", "direccion", "cuenta_bancaria", "patente",
@@ -146,6 +148,23 @@ def _work_state(case: Case) -> dict:
             "derivation": d, "portal": portal, "idle": assignment.idle_days(case)}
 
 
+
+def save_checked(fs, folder: Path, purpose: str, default: str = "archivo") -> tuple[Path | None, str | None]:
+    """Guarda un archivo subido solo si pasa la revisión de contenido. Devuelve (ruta, None) o (None, motivo)."""
+    if not fs or not fs.filename:
+        return None, None
+    dest = Path(folder) / (secure_filename(fs.filename) or default)
+    if not Path(dest.name).suffix:
+        dest = dest.with_name(dest.name + Path(default).suffix)
+    fs.save(dest)
+    try:
+        upload_guard.check(dest, dest.name, purpose)
+    except InvalidFile as ex:
+        dest.unlink()
+        return None, f"{fs.filename}: {ex}"
+    return dest, None
+
+
 def save_uploads(files, folder: Path) -> tuple[list[Path], list[str]]:
     saved, rejected, used = [], [], set()
     for fs in files:
@@ -161,9 +180,15 @@ def save_uploads(files, folder: Path) -> tuple[list[Path], list[str]]:
         used.add(name.lower())
         dest = folder / name
         fs.save(dest)
+        try:                                        # contenido real, tamaño y formato, en un proceso aparte
+            upload_guard.check(dest, name, "evidencia")
+        except InvalidFile as ex:
+            dest.unlink()
+            rejected.append(f"{fs.filename} ({ex})")
+            continue
         if service.evidence_note(dest) is None:     # .txt o .zip que no es un chat exportado
             dest.unlink()
-            rejected.append(fs.filename)
+            rejected.append(f"{fs.filename} (no es un chat de WhatsApp exportado)")
             continue
         saved.append(dest)
     return saved, rejected

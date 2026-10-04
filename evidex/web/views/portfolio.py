@@ -6,10 +6,9 @@ import tempfile
 from pathlib import Path
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, send_file, url_for
-from werkzeug.utils import secure_filename
 
 from evidex.claims import service
-from evidex.web.common import LEVEL_TEXT, actor_name, claim_list, cx, log_access, network_components
+from evidex.web.common import LEVEL_TEXT, actor_name, claim_list, cx, log_access, network_components, save_checked
 
 bp = Blueprint("portfolio", __name__)
 
@@ -46,8 +45,10 @@ def import_view():
         flash("Seleccione un archivo CSV o Excel (.xlsx).", "bad")
         return redirect(url_for("portfolio.import_view"))
     with tempfile.TemporaryDirectory() as td:
-        path = Path(td) / (secure_filename(fs.filename) or "historial.csv")
-        fs.save(path)
+        path, why = save_checked(fs, Path(td), "historial", "historial.csv")
+        if why:
+            flash("Archivo rechazado: " + why, "bad")
+            return redirect(url_for("portfolio.import_view"))
         return _import_file(path, actor, fs.filename)
 
 

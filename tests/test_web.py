@@ -42,7 +42,7 @@ def test_web_validation_and_demo(tmp_path):
     c = web_client(tmp_path)
     r = c.post("/nuevo", data={"numero": "X1", "fecha_siniestro": "2026-09-20T18:30",
                                 "fotos": [(_io.BytesIO(b"hola"), "nota.txt")]}, content_type="multipart/form-data")
-    assert r.status_code == 400 and "no son fotos ni PDF" in r.get_data(as_text=True)
+    assert r.status_code == 400 and "no se aceptaron" in r.get_data(as_text=True)
     r = c.post("/nuevo", data={"numero": "X1", "fecha_siniestro": "2026-09-20T18:30"}, content_type="multipart/form-data")
     assert "al menos una foto o documento" in r.get_data(as_text=True)
     assert c.get("/caso/..%2Fetc").status_code == 404
@@ -61,7 +61,7 @@ def test_chat_upload_accepted_only_if_real_chat(tmp_path):
     assert r.status_code == 302
     r = c.post("/nuevo", data={"numero": "CH-2", "fecha_siniestro": "2026-09-20T18:30",
                                 "fotos": [(_io.BytesIO(b"no es un chat"), "notas.txt")]}, content_type="multipart/form-data")
-    assert r.status_code == 400 and "chats de WhatsApp" in r.get_data(as_text=True)
+    assert r.status_code == 400 and "chat de WhatsApp" in r.get_data(as_text=True)
     assert "Servicios externos para fotos" in c.get("/configuracion").get_data(as_text=True)
     c.post("/configuracion", data={"empresa": "Consultora X", "google_vision_key": "k"})
     assert "Activos" in c.get("/configuracion").get_data(as_text=True)

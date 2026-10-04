@@ -32,7 +32,7 @@ def add_photos(cid):
                 case.add_evidence(p, note=service.evidence_note(p))
                 added += 1
     if rejected:
-        flash("No se agregaron (no son fotos ni PDF ni chats de WhatsApp): " + ", ".join(rejected), "bad")
+        flash("No se agregaron: " + ", ".join(rejected), "bad")
     if added:
         service.analyze_claim(case, cx.registry)
         flash(f"{added} archivo(s) agregado(s) y caso reanalizado.", "ok")

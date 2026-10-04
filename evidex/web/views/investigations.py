@@ -8,14 +8,13 @@ import tempfile
 from pathlib import Path
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, send_file, url_for
-from werkzeug.utils import secure_filename
 
 from evidex.claims import service
 from evidex.core import export
 from evidex.core.case import Case, sha256_file
 from evidex.investigations import dossier as INV
 from evidex.claims import assignment
-from evidex.web.common import (actor_name, current_user, cx, dossier_lists, has_perm, load_dossier, load_settings,
+from evidex.web.common import (actor_name, save_checked, current_user, cx, dossier_lists, has_perm, load_dossier, load_settings,
                                 log_access, send_evidence)
 
 bp = Blueprint("investigations", __name__)
@@ -88,12 +87,16 @@ def inv_new():
            for dcl, rol, fch, txt in zip(f.getlist("iv_declarante"), f.getlist("iv_rol"), f.getlist("iv_fecha"), f.getlist("iv_texto"))
            if dcl.strip() and txt.strip()]
     with tempfile.TemporaryDirectory() as td:
-        saved = []
+        saved, bad = [], []
         for fs in request.files.getlist("docs"):
-            if fs and fs.filename:
-                dest = Path(td) / (secure_filename(fs.filename) or "documento")
-                fs.save(dest)
+            dest, why = save_checked(fs, Path(td), "documento", "documento.pdf")
+            if why:
+                bad.append(why)
+            elif dest:
                 saved.append(dest)
+        if bad:
+            return render_template("investigations/new.html", f=f, error="Archivos rechazados: " + "; ".join(bad),
+                                   active="inv_new"), 400
         INV.create(cx.workdir, cid, data, ivs, saved, actor=actor)
     flash("Expediente creado y analizado.", "ok")
     return redirect(url_for("investigations.inv_view", cid=cid))
@@ -136,15 +139,19 @@ def inv_interview(cid):
 def inv_document(cid):
     case = _open_dossier(cid)
     if case is not None:
-        n = 0
+        n, bad = 0, []
         with tempfile.TemporaryDirectory() as td:
             for fs in request.files.getlist("docs"):
-                if fs and fs.filename:
-                    dest = Path(td) / (secure_filename(fs.filename) or "documento")
-                    fs.save(dest)
+                dest, why = save_checked(fs, Path(td), "documento", "documento.pdf")
+                if why:
+                    bad.append(why)
+                elif dest:
                     INV.add_document(case, dest, actor_name() or "perito")
                     n += 1
-        flash(f"{n} documento(s) agregado(s)." if n else "Elija al menos un documento.", "ok" if n else "bad")
+        if bad:
+            flash("Archivos rechazados: " + "; ".join(bad), "bad")
+        if n or not bad:
+            flash(f"{n} documento(s) agregado(s)." if n else "Elija al menos un documento.", "ok" if n else "bad")
     return redirect(url_for("investigations.inv_view", cid=cid))
 
 
@@ -237,8 +244,10 @@ def audit_upload():
         flash("Seleccione un informe en PDF.", "bad")
         return redirect(url_for("investigations.investigations"))
     with tempfile.TemporaryDirectory() as td:
-        path = Path(td) / (secure_filename(fs.filename) or "informe.pdf")
-        fs.save(path)
+        path, why = save_checked(fs, Path(td), "informe", "informe.pdf")
+        if why:
+            flash("Informe rechazado: " + why, "bad")
+            return redirect(url_for("investigations.investigations"))
         aid = "AUD-" + sha256_file(path)[:8]
         if (cx.workdir / aid / "case.json").exists():
             flash("Ese informe ya estaba auditado; se muestra el resultado.", "info")

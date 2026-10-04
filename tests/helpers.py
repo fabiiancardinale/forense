@@ -32,3 +32,12 @@ def textured_image(seed, w=960, h=720):
     arr = np.asarray(coarse, dtype=np.float32) * 0.6 + rng.randint(60, 190, 3) * 0.4
     arr += rng.normal(0, 6, arr.shape)
     return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
+
+
+def real_pdf() -> bytes:
+    """Un PDF de una página válido (los PDF falsos se rechazan al subir)."""
+    import io
+    from PIL import Image
+    b = io.BytesIO()
+    Image.new("RGB", (200, 260), "white").save(b, "PDF")
+    return b.getvalue()

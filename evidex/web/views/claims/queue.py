@@ -64,7 +64,7 @@ def new_claim():
         td = Path(td)
         photos, rejected = save_uploads(request.files.getlist("fotos"), td)
         if rejected:
-            return fail("Estos archivos no son fotos ni PDF ni chats de WhatsApp: " + ", ".join(rejected))
+            return fail("Estos archivos no se aceptaron: " + ", ".join(rejected))
         send_link = f.get("enviar_enlace") == "1"
         if not photos and not send_link:
             return fail("Agregue al menos una foto o documento del siniestro, o marque la opción de enviar el enlace al asegurado.")
