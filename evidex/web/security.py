@@ -17,11 +17,22 @@ def csrf_token():
     return session['csrf']
 
 
+def _allowed_origins():
+    """Origen de esta misma página. Detrás del túnel de Cloudflare (que corre en este equipo) el navegador
+    usa https:// pero la solicitud llega a Evidex como http://: se acepta la versión https del mismo host."""
+    own = request.host_url.rstrip('/')
+    allowed = {own}
+    if (request.remote_addr in ('127.0.0.1', '::1') and request.headers.get('X-Forwarded-Proto') == 'https'
+            and own.startswith('http://')):
+        allowed.add('https://' + own[len('http://'):])
+    return allowed
+
+
 def protect_mutations():
     if request.method not in ('POST', 'PUT', 'PATCH', 'DELETE'):
         return
     origin = request.headers.get('Origin')
-    if origin and origin != request.host_url.rstrip('/'):
+    if origin and origin not in _allowed_origins():
         abort(403, 'Origen no permitido.')
     if current_app.config['CSRF_ENABLED']:
         supplied = request.headers.get('X-CSRF-Token') or request.form.get('csrf_token', '')

@@ -192,3 +192,32 @@ def test_tunnel_allows_portal_design_only(tmp_path):
     assert c.get("/static/portal.css", headers=via).status_code == 200
     for path in ("/static/app.css", "/static/inspection.js", "/ingresar", "/"):
         assert c.get(path, headers=via).status_code == 404, path
+
+
+def test_portal_upload_through_tunnel_with_https_origin(tmp_path):
+    """Cloudflare entrega https al celular pero llama a Evidex por http: la subida no debe dar 'Origen no permitido'."""
+    from evidex.portal import links as capture
+    from evidex.web import create_app
+    service.load_demo(tmp_path)
+    case = service.find_case(tmp_path, LIMPIO)
+    capture.create_link(case, actor="prueba")
+    tok = capture.load(case)["token"]
+    app = create_app(tmp_path, {"LEGACY_MODULES": True, "PUBLIC": True, "PUBLIC_BASE": "https://x.trycloudflare.com"})
+    c = app.test_client()
+    via = {"Cf-Ray": "a", "Cf-Connecting-Ip": "200.1.1.1", "X-Forwarded-Proto": "https"}
+    page = c.get(f"/c/{tok}", headers=via, base_url="http://x.trycloudflare.com").get_data(as_text=True)
+    import re
+    csrf = re.search(r'"X-CSRF-Token":"([^"]+)"', page).group(1)
+    data = {"kind": "photo", "titulo": "Parachoques", "archivo": (io.BytesIO(_jpeg()), "IMG_1.jpg")}
+    r = c.post(f"/c/{tok}/archivo", data=data, content_type="multipart/form-data", base_url="http://x.trycloudflare.com",
+               headers={**via, "Origin": "https://x.trycloudflare.com", "X-CSRF-Token": csrf})
+    assert r.status_code == 200 and r.get_json()["titulo"] == "Parachoques"
+    # otro sitio sigue rechazado, y el https solo se acepta si la solicitud viene del túnel local
+    r = c.post(f"/c/{tok}/archivo", base_url="http://x.trycloudflare.com",
+               headers={**via, "Origin": "https://malo.example", "X-CSRF-Token": csrf})
+    assert r.status_code == 403
+    r = c.post(f"/c/{tok}/relato", data={"texto": "una frase de prueba"}, base_url="http://x.trycloudflare.com",
+               headers={"X-Forwarded-Proto": "https", "Origin": "https://x.trycloudflare.com", "X-CSRF-Token": csrf},
+               environ_base={"REMOTE_ADDR": "200.9.9.9"})
+    assert r.status_code == 403
+    assert "async function api(" in page and "No se pudo completar" in page   # mensajes claros si algo falla
