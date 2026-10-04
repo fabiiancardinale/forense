@@ -20,6 +20,10 @@ Conclusión: sin la firma, las heurísticas actuales casi no ven la edición. El
 
 ## Pasos (Kaggle o Colab gratis, con GPU)
 
+**Lo más fácil:** importe `training/evidex_kaggle.ipynb` en Kaggle (*Create → New Notebook → File → Import Notebook*), active GPU e Internet en *Settings* y apriete **Run all**. El notebook hace los pasos de abajo solo y, al final, mide con fotos que el modelo nunca vio. Si cambia algo en `training/*.py`, regenere el notebook con `python training/hacer_notebook.py`.
+
+Paso a paso a mano:
+
 1. Datos (unos 30 GB entre las particiones de entrenamiento y validación):
 
    ```bash
