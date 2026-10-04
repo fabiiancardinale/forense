@@ -189,7 +189,8 @@ def _tab_portal(case, snap, items):
     out.update(cap_url=cap_url, cap_qr=base64.b64encode(png).decode() if png else None, share_msg=share,
                wa_url=wa, mail_url=mail, pr=links.progress(cap, case.excluded()),
                cap_state="Vencido" if links.status(cap) and not cap.get("finished") else None,
-               cap_local=tunnel.is_local(cap_url))
+               cap_local=tunnel.is_local(cap_url), cap_temp=tunnel.is_temporary(cap_url),
+               cap_moved=links.address_changed(cap, public_base()))
     return out
 
 

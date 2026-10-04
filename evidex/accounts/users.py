@@ -49,6 +49,7 @@ ENDPOINTS = {
     "claims.doc_version": "ver_siniestros", "claims.evidence_file": "ver_siniestros", "claims.export_zip": "ver_siniestros",
     "claims.verify": "ver_siniestros", "claims.new_claim": "editar_siniestros", "claims.add_photos": "editar_siniestros",
     "claims.reanalyze": "editar_siniestros", "claims.decide": "editar_siniestros", "claims.capture_link": "editar_siniestros",
+    "claims.capture_sent": "editar_siniestros",
     "claims.load_demo": "editar_siniestros", "claims.evidence_exclude": "editar_siniestros",
     "claims.evidence_restore": "editar_siniestros", "claims.derive": "editar_siniestros",
     "claims.derive_cancel": "editar_siniestros", "claims.dossier_report": "ver_siniestros",

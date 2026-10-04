@@ -27,6 +27,11 @@ def is_local(url: str) -> bool:
     return host in LOCAL_HOSTS or host.startswith(("192.168.", "10.", "172.")) or not host
 
 
+def is_temporary(url: str) -> bool:
+    """True si es una dirección de prueba de Cloudflare: cambia cada vez que se reinicia Evidex."""
+    return (urlparse(url).hostname or "").lower().endswith(".trycloudflare.com")
+
+
 def find_cloudflared(base: Path) -> str | None:
     for c in (base / "cloudflared.exe", base / "cloudflared"):
         if c.exists():

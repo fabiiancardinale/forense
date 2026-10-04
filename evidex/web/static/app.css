@@ -74,6 +74,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .flash{border-radius:8px;padding:11px 14px;margin-bottom:16px;font-weight:500;border:1px solid}
 .flash.ok{background:var(--grnbg);color:var(--grn);border-color:var(--grnln)}.flash.bad{background:var(--redbg);color:var(--red);border-color:var(--redln)}
 .flash.info{background:var(--accentbg);color:var(--accent);border-color:#c7dcf2}
+.flash.warn{background:var(--ambbg);color:var(--amb);border-color:var(--ambln)}
 .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .empty{text-align:center;padding:56px 24px}.empty h2{font-size:18px;margin-bottom:6px}.empty p{color:var(--muted);max-width:560px;margin:8px auto 18px}
 input,textarea,select{font:inherit;font-size:13.5px;width:100%;padding:8px 11px;border:1px solid var(--line2);border-radius:8px;background:#fff;color:var(--ink)}

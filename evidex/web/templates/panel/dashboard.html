@@ -8,7 +8,7 @@
 <a class="tile accent-red" href="{{ url_for('claims.index') }}"><div class="lbl">{{ icon('alert', 14) }}Riesgo alto sin decidir</div><b>{{ k.pend_bad }}</b><span>${{ money(k.monto_pend) }} reclamados</span></a>
 <a class="tile accent-amb" href="{{ url_for('claims.index') }}"><div class="lbl">{{ icon('clock', 14) }}Revisión manual</div><b>{{ k.pend_warn }}</b><span>con alertas medias, sin decidir</span></a>
 <div class="tile accent-blue"><div class="lbl">{{ icon('folder', 14) }}En peritaje</div><b>{{ expert|length }}</b><span>{{ expert|selectattr('derivation.state', 'equalto', 'atrasado')|list|length }} fuera de plazo</span></div>
-<div class="tile accent-grn"><div class="lbl">{{ icon('link', 14) }}Esperando al asegurado</div><b>{{ waiting|length }}</b><span>{{ waiting|selectattr('expired')|list|length }} con enlace vencido</span></div>
+<div class="tile accent-grn"><div class="lbl">{{ icon('link', 14) }}Esperando al asegurado</div><b>{{ waiting|length }}</b><span>{% set mv = waiting|selectattr('moved')|list|length %}{% if mv %}{{ mv }} por reenviar · {% endif %}{{ waiting|selectattr('expired')|list|length }} con enlace vencido</span></div>
 </div></section>
 
 <div class="layout-side">
@@ -34,7 +34,7 @@
 <div class="panel"><div class="ph"><h2>{{ icon('link', 15) }} Esperando al asegurado</h2><span class="r hint">{{ waiting|length }}</span></div>
 {% if waiting %}<table class="mini">{% for w in waiting %}<tr class="row" data-href="{{ url_for('claims.case_view', cid=w.id, tab='asegurado') }}">
 <td><a class="strong" href="{{ url_for('claims.case_view', cid=w.id, tab='asegurado') }}">{{ w.numero }}</a><div class="line2">{{ w.asegurado }} · hace {{ w.days }} día(s)</div></td>
-<td class="num">{% if w.expired %}<span class="st p-vencido">Vencido</span>{% elif w.opened %}<span class="st p-abierto">Subiendo</span>{% else %}<span class="st p-enviado">Sin abrir</span>{% endif %}
+<td class="num">{% if w.moved %}<span class="st p-vencido" title="La dirección del enlace cambió al reiniciar Evidex">Reenviar enlace</span>{% elif w.expired %}<span class="st p-vencido">Vencido</span>{% elif w.opened %}<span class="st p-abierto">Subiendo</span>{% else %}<span class="st p-enviado">Sin abrir</span>{% endif %}
 <div class="line2">{{ w.done }} de {{ w.total }} pasos</div></td></tr>{% endfor %}</table>
 {% else %}<div class="pb hint">No hay enlaces pendientes.</div>{% endif %}</div>
 </div></section>

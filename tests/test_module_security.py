@@ -130,3 +130,25 @@ def test_full_app_is_default_from_command_line(monkeypatch):
     with pytest.raises(SystemExit):
         cli.main(["--dir", "x", "--no-abrir", "--solo-analisis"])
     assert seen["LEGACY_MODULES"] is False
+
+
+def test_temporary_address_warns_and_detects_changed_link(tmp_path):
+    from evidex.portal import links as capture
+    from evidex.web import create_app
+    service.load_demo(tmp_path)
+    case = service.find_case(tmp_path, LIMPIO)
+    app = create_app(tmp_path, {"DEMO_MODE": True, "CSRF_ENABLED": False, "LEGACY_MODULES": True,
+                                "PUBLIC": True, "PUBLIC_BASE": "https://uno-dos-tres.trycloudflare.com"})
+    c = app.test_client()
+    c.post(f"/caso/{case.root.name}/captura")
+    tab = c.get(f"/caso/{case.root.name}?tab=asegurado").get_data(as_text=True)
+    assert "Dirección temporal" in tab and "data-sent-url" in tab
+    assert c.post(f"/caso/{case.root.name}/captura/enviado").status_code == 204
+    assert capture.load(case)["sent_base"] == "https://uno-dos-tres.trycloudflare.com"
+    app.config["PUBLIC_BASE"] = "https://cuatro-cinco.trycloudflare.com"      # Evidex se reinició: otro túnel
+    tab = c.get(f"/caso/{case.root.name}?tab=asegurado").get_data(as_text=True)
+    assert "El enlace que envió ya no funciona" in tab and "uno-dos-tres" in tab
+    assert "Reenviar enlace" in c.get("/").get_data(as_text=True)
+    c.post(f"/caso/{case.root.name}/captura/enviado")                         # lo reenvió
+    assert "ya no funciona" not in c.get(f"/caso/{case.root.name}?tab=asegurado").get_data(as_text=True)
+    assert capture.share_message("X", "alberto pérez", "https://a/c/t", "2026-10-08T10:00:00").startswith("Hola Alberto")

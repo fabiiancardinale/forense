@@ -51,7 +51,8 @@ def dashboard():
 
 def _waiting(cases):
     from evidex.portal import links
-    out = []
+    from evidex.web.common import public_base
+    base, out = public_base(), []
     for c in cases:
         if c["portal"] not in ("enviado", "abierto", "vencido"):
             continue
@@ -60,8 +61,9 @@ def _waiting(cases):
         pr = links.progress(data, cc.excluded())
         out.append({**c, "pct": pr["pct"], "done": pr["done"], "total": pr["total"], "opened": data.get("opened"),
                     "expired": c["portal"] == "vencido",
+                    "moved": c["portal"] != "vencido" and links.address_changed(data, base),
                     "days": (datetime.now() - datetime.fromisoformat(data["created"])).days})
-    out.sort(key=lambda w: (w["expired"], -w["days"]))
+    out.sort(key=lambda w: (not w["moved"], w["expired"], -w["days"]))
     return out
 
 

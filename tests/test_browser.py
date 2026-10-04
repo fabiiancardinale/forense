@@ -127,3 +127,24 @@ def test_insured_portal_upload_from_browser(page, tmp_path):
     data = capture.load(case)
     assert [f["title"] for f in data["files"]] == ["Parachoques trasero", "Licencia de conducir"] and data["finished"]
     assert not [e for e in errors if "Content Security Policy" in e or "Refused" in e]
+
+
+def test_send_buttons_record_address(page):
+    from evidex.claims import service
+    from evidex.portal import links as capture
+    pg, base, errors, root = page
+    _login(pg, base)
+    pg.goto(base + "/nuevo")
+    pg.fill("input[name=numero]", "SIN-2026-7003")
+    pg.fill("input[name=fecha_siniestro]", "2026-09-20T18:30")
+    pg.click("button:has-text('Registrar siniestro')")
+    pg.wait_for_load_state("networkidle")
+    pg.goto(f"{base}/caso/SIN-2026-7003?tab=asegurado")
+    if pg.query_selector("button:has-text('Crear enlace para el asegurado')"):
+        pg.click("button:has-text('Crear enlace para el asegurado')")
+        pg.wait_for_load_state("networkidle")
+    pg.click("[data-copy-message]")
+    pg.wait_for_timeout(800)
+    case = service.find_case(root / "casos", "SIN-2026-7003")
+    assert capture.load(case).get("sent_base") == base
+    assert not [e for e in errors if "Content Security Policy" in e or "Refused" in e]

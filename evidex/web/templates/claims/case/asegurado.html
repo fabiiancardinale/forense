@@ -18,11 +18,18 @@
 {% if cap_local %}<div class="flash bad" style="margin:0 0 10px;font-size:13px"><b>El asegurado no podrá abrir este enlace.</b>
 Apunta a {{ 'la red interna' if cap_lan else 'este computador' }} ({{ cap_url.split('/c/')[0] }}), por eso WhatsApp tampoco lo muestra como enlace.
 Cierre Evidex y ábralo con <code>iniciar_publico.bat</code>: el enlace pasa a ser https://…trycloudflare.com y funciona desde cualquier celular.
-En producción, configure el dominio de la compañía en Configuración.</div>{% endif %}
+En producción, configure el dominio de la compañía en Configuración.</div>
+{% elif cap_moved %}<div class="flash bad" style="margin:0 0 10px;font-size:13px"><b>El enlace que envió ya no funciona.</b>
+Lo envió el {{ cap.sent_at[8:10] }}-{{ cap.sent_at[5:7] }} a las {{ cap.sent_at[11:16] }} con la dirección {{ cap.sent_base }}, que dejó de existir
+al cerrar o reiniciar Evidex. Envíelo de nuevo con los botones de abajo: sale con la dirección actual y lo ya recibido se conserva.</div>
+{% elif cap_temp %}<div class="flash warn" style="margin:0 0 10px;font-size:13px"><b>Dirección temporal.</b>
+El enlace funciona mientras Evidex siga abierto con <code>iniciar_publico.bat</code> y el computador encendido y con internet.
+Si lo cierra o reinicia, Evidex le avisará aquí para que lo reenvíe. Para una dirección fija, configure un dominio en Configuración.</div>{% endif %}
 <div class="sharebtns">
-{% if wa_url %}<a class="btn pri" href="{{ wa_url }}" target="_blank" rel="noopener">Enviar por WhatsApp</a>{% endif %}
-{% if mail_url %}<a class="btn" href="{{ mail_url }}">Enviar por correo</a>{% endif %}
-<button class="btn" type="button" data-copy-message>Copiar mensaje</button></div>
+{% set sent = url_for('claims.capture_sent', cid=c.id) %}
+{% if wa_url %}<a class="btn pri" href="{{ wa_url }}" target="_blank" rel="noopener" data-sent-url="{{ sent }}">Enviar por WhatsApp</a>{% endif %}
+{% if mail_url %}<a class="btn" href="{{ mail_url }}" data-sent-url="{{ sent }}">Enviar por correo</a>{% endif %}
+<button class="btn" type="button" data-copy-message data-sent-url="{{ sent }}">Copiar mensaje</button></div>
 {% if not wa_url %}<p class="hint" style="margin:6px 0 0">Sin teléfono en la declaración: copie el mensaje y envíelo por el medio que use.</p>{% endif %}
 <textarea id="capmsg" readonly rows="4" class="hint" style="margin-top:10px;font-size:12.5px">{{ share_msg }}</textarea>
 <details style="margin-top:8px"><summary class="hint">Enlace, código QR y código</summary>

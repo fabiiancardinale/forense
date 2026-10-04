@@ -267,6 +267,18 @@ def finish(case, data: dict) -> None:
                         "relato": p["story"]})
 
 
+def mark_sent(case, data: dict, base: str) -> None:
+    """El analista envió (o copió) el enlace: se guarda con qué dirección, para avisar si después cambia."""
+    data["sent_base"] = base
+    data["sent_at"] = _now_pair()[0]
+    _save(case, data)
+
+
+def address_changed(data: dict, base: str) -> bool:
+    """El enlace se envió con otra dirección (por ejemplo, un túnel temporal que cambió al reiniciar Evidex)."""
+    return bool(data.get("sent_base")) and data["sent_base"] != base
+
+
 def mark_opened(case, data: dict) -> None:
     if not data.get("opened"):
         data["opened"] = _now_pair()[0]
@@ -275,7 +287,7 @@ def mark_opened(case, data: dict) -> None:
 
 def share_message(numero: str, nombre: str, url: str, expires: str, empresa: str = "") -> str:
     vence = datetime.fromisoformat(expires).strftime("%d-%m-%Y")
-    saludo = f"Hola {nombre.split()[0]}" if nombre and not nombre.lower().startswith("asegurado") else "Hola"
+    saludo = f"Hola {nombre.split()[0].capitalize()}" if nombre and not nombre.lower().startswith("asegurado") else "Hola"
     quien = f" de {empresa}" if empresa else ""
     return (f"{saludo}, le escribimos{quien} por su siniestro {numero}. Para continuar necesitamos fotos del vehículo "
             f"(puede subir las que tomó ese día desde la galería de su teléfono) y algunos documentos. Súbalos en este "

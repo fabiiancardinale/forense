@@ -43,6 +43,7 @@ document.querySelectorAll('[data-href]').forEach(x=>x.addEventListener('click',(
 document.querySelectorAll('[data-auto-submit]').forEach(x=>x.addEventListener('change',()=>x.form.requestSubmit()));
 document.querySelectorAll('[data-select]').forEach(x=>x.addEventListener('click',()=>x.select()));
 document.querySelectorAll('[data-select-all]').forEach(x=>x.addEventListener('change',()=>document.querySelectorAll('input[name=cid]').forEach(c=>c.checked=x.checked)));
+document.querySelectorAll('[data-sent-url]').forEach(x=>x.addEventListener('click',()=>{fetch(x.dataset.sentUrl,{method:'POST',keepalive:true,headers:{'X-CSRF-Token':{{ csrf_token()|tojson }}}})}));
 document.querySelectorAll('[data-copy-message]').forEach(x=>x.addEventListener('click',async()=>{await navigator.clipboard.writeText(document.getElementById('capmsg').value);x.textContent='Mensaje copiado'}));
 document.querySelectorAll('[data-confirm]').forEach(x=>x.addEventListener('submit',e=>{if(!confirm(x.dataset.confirm))e.preventDefault()}));
 document.querySelectorAll('[data-file-names]').forEach(x=>x.addEventListener('change',()=>{x.form.querySelector('.fname').textContent=[...x.files].map(f=>f.name).join(', ');x.form.querySelector('.go').hidden=!x.files.length}));
