@@ -40,7 +40,9 @@ def start_session(user):
 def security_headers(response):
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'DENY'
-    response.headers['Referrer-Policy'] = 'no-referrer'
+    # no-referrer can turn a native form POST's Origin into 'null'.
+    # Keep same-origin form origins intact without sending referrers off-site.
+    response.headers['Referrer-Policy'] = 'same-origin'
     response.headers['Cache-Control'] = 'no-store'
     response.headers['Content-Security-Policy'] = (
         "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; "

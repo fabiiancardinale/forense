@@ -192,3 +192,21 @@ def test_known_incremental_pdf_reports_actual_text_change(demo_src,tmp_path):
     assert changes and changes[0]['removed'] and changes[0]['added']
     assert result['processing_status']=='partial'  # known edits do not establish full authenticity
     assert result['coverage']['pages_read']==result['coverage']['pages_total']
+
+
+def test_native_login_policy_preserves_origin_without_relaxing_csrf(tmp_path):
+    app,_=app_users(tmp_path)
+    c=app.test_client()
+    page=c.get('/ingresar')
+    assert page.headers['Referrer-Policy']=='same-origin'
+    with c.session_transaction() as session:
+        csrf=session['csrf']
+    credentials={'usuario':'admin','clave':PW,'csrf_token':csrf}
+    # Opaque or foreign origins remain forbidden, even with a valid form token.
+    for origin in ('null','https://evil.example','http://localhost:9999'):
+        assert c.post('/ingresar',data=credentials,headers={'Origin':origin}).status_code==403
+    assert c.post('/ingresar',data={'usuario':'admin','clave':PW},
+                  headers={'Origin':'http://localhost'}).status_code==400
+    response=c.post('/ingresar',data=credentials,headers={'Origin':'http://localhost'})
+    assert response.status_code==302 and response.location.endswith('/analizar')
+    assert c.get('/analizar').status_code==200
