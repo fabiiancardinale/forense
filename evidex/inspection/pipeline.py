@@ -32,7 +32,10 @@ def analyze(path, name, output, config=None):
     else:
         pdf_analysis(path, output, result)
     detectors = result['detectors']
-    incomplete = any(d['status'] in ('error','not_run','partial') and d.get('required', True) for d in detectors)
+    pending = [d for d in detectors if d['status'] in ('error','not_run','partial')]
+    incomplete = any(d.get('required', True) for d in pending)
+    result['pending_checks'] = [d['name'] for d in pending]
+    result['assessment_scope'] = 'Comprobaciones locales de edición' if info['kind'] == 'image' else 'Revisiones recuperables, lectura y firmas disponibles del PDF'
     if any(f.get('confirmed_change') for f in result['findings']):
         verdict = 'alteration_detected'
     elif result['findings']:
@@ -47,7 +50,12 @@ def analyze(path, name, output, config=None):
                          'suspicious':'Existen indicios que requieren revisión; no prueban por sí solos adulteración.',
                          'inconclusive':'Faltan comprobaciones o evidencia suficiente para evaluar el archivo completo.',
                          'no_indications':'No se encontraron indicios en los métodos ejecutados; no certifica originalidad.'}[verdict]
-    result['processing_status'] = 'partial' if incomplete else 'completed'
+    if verdict == 'no_indications':
+        if info['kind'] == 'image' and any(d['name'] == 'IA global' and d['status'] == 'not_run' for d in detectors):
+            result['summary'] += ' La generación por IA no se evaluó.'
+        elif info['kind'] == 'pdf':
+            result['summary'] += ' Una edición puede no dejar revisiones recuperables en el PDF.'
+    result['processing_status'] = 'partial' if pending else 'completed'
     return result
 
 
@@ -63,7 +71,8 @@ def image_analysis(path, name, output, config, result):
     if meta.get('error'):
         detector(result,'imagen','error',meta['error']); return
     detector(result,'metadatos','completed','Los metadatos pueden ser modificados.')
-    detector(result,'pixeles','error' if content.get('error') else 'completed',content.get('error',''))
+    detector(result,'pixeles','error' if not content or content.get('error') else 'completed',
+             content.get('error','') if content else 'El motor no devolvió resultados.')
     cp = content.get('c2pa') or {'state':'not_run'}
     result['provenance'] = cp
     detector(result,'C2PA', 'not_run' if cp['state']=='not_run' else 'error' if cp['state']=='error' else 'completed',
@@ -74,7 +83,7 @@ def image_analysis(path, name, output, config, result):
     result['findings'] = [{'rule':f.rule,'title':f.title,'detail':f.summary,'severity':f.severity,
                            'evidence_type':'heuristic','confirmed_change':False}
                           for f in findings if f.rule not in ignore]
-    if not content.get('error'):
+    if content and not content.get('error'):
         image = image_content.overlay(path, content)
         if image:
             (output/'regions.png').write_bytes(image)
@@ -92,7 +101,7 @@ def image_analysis(path, name, output, config, result):
                     'detail':f"Score del proveedor: {response['score']:.3f}. No localiza cambios ni identifica con certeza la herramienta.",
                     'confirmed_change':False,'evidence_type':'model'})
     else:
-        detector(result,'IA global','not_run','No se habilitó un detector de IA con autorización para este archivo.')
+        detector(result,'IA global','not_run','No se habilitó un detector de IA con autorización para este archivo.',required=False)
     detector(result,'localización aprendida','not_run','No hay un modelo de localización validado y con licencia incorporado.',required=False)
     result['limitations'].append('Las regiones marcadas son indicios de heurísticas; no reconstruyen el contenido anterior.')
 
@@ -144,7 +153,7 @@ def pdf_analysis(path, output, result):
     detector(result,'texto/OCR','completed' if read == result['coverage']['pages'] else 'partial',f"{read} de {result['coverage']['pages']} páginas legibles")
     result['text_pages'] = text_pages
     # An OCR transcript is not a document authenticity detector.
-    detector(result,'autenticidad documental','not_run','Sin original de referencia ni localizador documental validado; OCR no prueba autenticidad.')
+    detector(result,'autenticidad documental','not_run','Sin original de referencia ni localizador documental validado; OCR no prueba autenticidad.',required=False)
     try:
         from pyhanko.pdf_utils.reader import PdfFileReader
         from pyhanko.sign.validation import validate_pdf_signature

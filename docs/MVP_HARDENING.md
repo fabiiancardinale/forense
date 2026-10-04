@@ -63,3 +63,11 @@ Los tests de endurecimiento cubren corrupción, CSRF, revocación, bloqueo persi
 Antes de prometer detección fiable, reunir un conjunto de referencia con permiso: originales verificables de cámaras diversas, edición clásica localizada, generación IA de varias familias, edición IA, recodificación/WhatsApp, PDFs digitales e incrementales, escaneados y documentos legítimamente corregidos. Separar familias de origen entre entrenamiento/calibración/prueba; conservar máscaras de edición y referencias para evaluar localización. Medir precisión, recuperación, falsos positivos y abstención por grupo, incluyendo archivos dañados y desconocidos. El evaluador JSONL cuenta abstenciones en los denominadores y rechaza IDs duplicados; no inventa resultados ni fija un umbral clínico/legal/comercial universal.
 
 Pendiente para ese lanzamiento: corpus real etiquetado y métricas, modelo/localizador con licencia apta y calibración del dominio, revisión independiente, aislamiento operativo, retención/borrado y monitorización. El cambio endurece el software; no demuestra exactitud forense universal ni atribución inequívoca a IA.
+
+## Resultados por alcance (pipeline 2.1.0)
+
+La falta de un detector de IA opcional no invalida las comprobaciones locales ya realizadas. Si estas terminan sin hallazgos, el resultado es «Sin indicios detectados», limitado explícitamente a esas comprobaciones, con «La generación por IA no se evaluó» y la lista visible de capacidades pendientes. No significa «Original». En PDF, la ausencia de una referencia de autenticidad tampoco invalida una comparación de revisiones o una lectura que sí terminó; no se descartan ediciones sin revisiones recuperables.
+
+El estado del procesamiento continúa siendo parcial cuando hay capacidades pendientes. Un fallo de píxeles, contenido ausente, lectura documental incompleta o fallo del servicio IA habilitado impide emitir un resultado local sin indicios cuando no hay otros hallazgos. Hallazgos positivos se conservan con sus limitaciones. No se incorporó un modelo nuevo de generación/localización de IA.
+
+Los JSON del worker se leen explícitamente como UTF-8 para evitar texto corrupto con la configuración regional de Windows. Los informes previamente guardados no se reescriben: para obtener la nueva interpretación y corregir los acentos, reiniciar la aplicación y volver a subir el archivo.

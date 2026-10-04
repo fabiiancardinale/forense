@@ -18,3 +18,7 @@ Carga y resultados rediseñados: estados en español, resultado principal destac
 - Verificación de JavaScript con eventos simulados: progreso real, prevención de doble envío, recuperación de error y navegación al resultado.
 - Sintaxis JavaScript y `git diff --check`: correctas.
 - No se completó una inspección visual en navegador: la descarga de Chromium falló en este entorno. Queda pendiente comprobar visualmente escritorio/móvil y probar con usuarios finales; no se afirma haber hecho esas pruebas.
+
+## Agregación por alcance y UTF-8 (4 de octubre de 2026)
+
+22 pruebas aprobadas en 6,35 segundos: endurecimiento, presentación y cobertura. Los nuevos casos distinguen IA opcional ausente de fallo local o de proveedor solicitado, conservan hallazgos de clonado, verifican límites de un PDF sin referencia y procesan una imagen con un worker real mientras se simula una lectura predeterminada CP1252 en el supervisor. Esta validación comprueba la lógica y la codificación; no mide precisión de detección sobre imágenes reales.

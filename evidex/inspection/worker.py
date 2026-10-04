@@ -23,7 +23,7 @@ def run_one(workdir, timeout=120):
         config = {}
         if job['consent']:
             settings = Path(workdir)/'config.json'
-            cfg = json.loads(settings.read_text()) if settings.exists() else {}
+            cfg = json.loads(settings.read_text(encoding="utf-8")) if settings.exists() else {}
             if cfg.get('sightengine_user') and cfg.get('sightengine_secret'):
                 config = {k:cfg[k] for k in ('sightengine_user','sightengine_secret')}
                 config['external_ai'] = True
@@ -33,7 +33,7 @@ def run_one(workdir, timeout=120):
                               text=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                               timeout=timeout, env=env, cwd=Path(__file__).resolve().parents[2])
         if proc.returncode == 0:
-            result = json.loads((folder/'result.json').read_text())
+            result = json.loads((folder/'result.json').read_text(encoding='utf-8'))
             status = result['processing_status']
     except (OSError, ValueError, subprocess.TimeoutExpired):
         pass

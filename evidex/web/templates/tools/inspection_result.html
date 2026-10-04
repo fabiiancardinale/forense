@@ -20,8 +20,10 @@
 {% if job.result %}{% set r=job.result %}{% set verdict=r.verdict or 'inconclusive' %}
 <section class="card verdict-card verdict-{{ verdict }}" aria-labelledby="verdict-title">
 <span class="eyebrow">{{ 'No pudimos completar la revisión' if job.status in ['failed','rejected'] else 'Resultado principal' }}</span>
+{% if r.assessment_scope %}<p class="muted subtle">Alcance: {{ r.assessment_scope }}</p>{% endif %}
 <h2 id="verdict-title">{{ verdict_labels.get(verdict, 'No concluyente') }}</h2><p>{{ r.summary }}</p>
-{% if job.status == 'partial' %}<p class="notice">Algunas comprobaciones no se completaron. Los hallazgos disponibles se muestran a continuación.</p>{% endif %}
+{% if job.status == 'partial' %}<p class="notice">El resultado se limita a las comprobaciones realizadas; no evalúa todas las formas posibles de edición.</p>{% endif %}
+{% if r.pending_checks %}<p><strong>Comprobaciones pendientes o no disponibles:</strong></p><ul>{% for name in r.pending_checks %}<li>{{ detector_labels.get(name,name) }}</li>{% endfor %}</ul>{% endif %}
 <div class="next-step"><strong>Qué puedes hacer</strong><p>{{ 'Prueba con un archivo compatible y legible, dentro de los límites indicados.' if job.status == 'rejected' else 'Reintenta la revisión. Si vuelve a fallar, contacta al administrador.' if job.status == 'failed' else next_steps.get(verdict, next_steps.inconclusive) }}</p></div>
 {% if job.status == 'failed' and job.attempt < 3 %}<form method="post" action="{{ url_for('inspection.retry',job_id=job.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn pri" type="submit">Reintentar análisis</button>{% if job.consent %}<p class="muted subtle">El reintento puede repetir la consulta externa que autorizaste.</p>{% endif %}</form>{% endif %}
 </section>

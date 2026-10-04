@@ -87,9 +87,10 @@ def test_upload_owner_idempotency_and_real_worker(tmp_path):
     assert run_one(tmp_path)
     job=Jobs(tmp_path).list('admin')[0]
     assert job['status']=='partial',job
-    assert job['result']['verdict']=='inconclusive',job['result']
+    assert job['result']['verdict']=='no_indications',job['result']
+    assert 'IA global' in job['result']['pending_checks']
     assert job['result']['versions']['pillow']
-    assert 'No concluyente' in a.get(first.location).get_data(as_text=True)
+    assert 'Sin indicios detectados' in a.get(first.location).get_data(as_text=True)
     assert a.get(first.location+'/archivo/original').status_code==404
 
 def test_invalid_pdf_is_rejected_by_worker(tmp_path):
