@@ -40,7 +40,9 @@ def start_session(user):
 def security_headers(response):
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'DENY'
-    response.headers['Referrer-Policy'] = 'no-referrer'
+    # 'same-origin' y no 'no-referrer': con 'no-referrer' el navegador envía 'Origin: null' en los formularios
+    # (POST) y la revisión de origen rechaza hasta el inicio de sesión. Así no se filtra la dirección a otros sitios.
+    response.headers['Referrer-Policy'] = 'same-origin'
     response.headers['Cache-Control'] = 'no-store'
     response.headers['Content-Security-Policy'] = (
         "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; "

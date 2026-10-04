@@ -192,3 +192,11 @@ def test_known_incremental_pdf_reports_actual_text_change(demo_src,tmp_path):
     assert changes and changes[0]['removed'] and changes[0]['added']
     assert result['processing_status']=='partial'  # known edits do not establish full authenticity
     assert result['coverage']['pages_read']==result['coverage']['pages_total']
+
+def test_browser_login_sends_real_origin(tmp_path):
+    # con Referrer-Policy: no-referrer los navegadores mandan "Origin: null" en los POST y el login daba 403
+    app,store=app_users(tmp_path);c=app.test_client()
+    assert c.get('/ingresar').headers['Referrer-Policy']=='same-origin'
+    r=c.post('/ingresar',data={'usuario':'admin','clave':PW,'csrf_token':token(c)},headers={'Origin':'http://localhost'})
+    assert r.status_code==302
+    assert c.post('/ingresar',data={'usuario':'admin','clave':PW,'csrf_token':token(c)},headers={'Origin':'null'}).status_code==403
