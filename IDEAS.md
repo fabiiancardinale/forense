@@ -31,6 +31,19 @@ Ningún método solo detecta todo: se combinan las tres capas.
 - [ ] Guardar los pesos en safetensors (no pickle: puede ejecutar código y se rompe entre versiones) y correrlo con ONNX + onnxruntime, sin instalar PyTorch. Cargar una vez al iniciar; el archivo se descarga al instalar con su huella digital, fuera de GitHub; cada versión nueva reanaliza los casos.
 - [ ] Opción: huella del ruido propia (idea de Noiseprint del artículo de TruFor, con código y datos propios), entrenada solo con fotos sin editar.
 
+**Datasets con licencia que permite uso comercial** (revisar la letra chica con un abogado antes de vender)
+- [ ] **TGIF / TGIF2** (Universidad de Gante, CC BY 4.0 / CC BY-SA 4.0): ~271.000 fotos reales editadas localmente con IA (SD2, SDXL, Firefly, FLUX) con la máscara de la zona cambiada. Base para entrenar el modelo que marca la zona editada. Cuidado: fotos de MS-COCO (licencias de Flickr mezcladas) y parte hecha con FLUX.1 dev (licencia propia): preferir la parte de SD2/SDXL o confirmar con los autores. https://github.com/IDLabMedia/tgif-dataset
+- [ ] **Community Forensics** (CVPR 2025, CC BY 4.0, versión base, no la "Small" que es no comercial): imágenes reales y generadas por miles de modelos. Para el detector de imágenes 100% inventadas con IA.
+- [ ] **Fotos de daños de autos** (Roboflow Universe, revisar licencia de cada uno; muchos CC BY 4.0): fotos base para el generador propio (borrar o agregar daños con IA).
+- Descartados: CASIA v2, DEFACTO, DocTamper (solo investigación o no comercial), Semi-Truths (licencia no especificada), InfImagine (comercial solo con permiso escrito). Sirven solo para pruebas internas si su licencia lo permite.
+- [ ] **Plan de entrenamiento:** 1) TGIF2 pasado por compresión tipo WhatsApp para aprender a ubicar zonas editadas; 2) ajuste con fotos de autos editadas automáticamente y con las fotos propias (Galaxy AI, Google, iPhone); 3) detector aparte con Community Forensics; 4) medir siempre con fotos propias que no se usan para entrenar. Guardar el modelo en safetensors/ONNX con la lista de datasets y licencias usadas (BCI lo va a preguntar).
+- [ ] **Medición del punto de partida** (rápida): 200 fotos editadas con IA y pasadas por WhatsApp (TGIF2 + propias) y 200 normales por Evidex de hoy; repetir con el modelo entrenado. El número para BCI: "de 100 fotos editadas con IA mandadas por WhatsApp, Evidex detecta X, con Y falsas alarmas por cada 100 normales".
+- Qué mejora: la foto editada con IA que llega sola por WhatsApp (hoy casi no se detecta) y las imágenes inventadas sin marcas. Qué no cambia: lo que ya detectan los metadatos, fotos repetidas, documentos y redes. Límites: la compresión de WhatsApp borra huellas, las IA nuevas obligan a reentrenar y habrá falsas alarmas (mostrar como "revisar esta zona").
+
+**Heredar la marca de IA a las copias** (rápida)
+- [ ] Si una foto es copia, recorte o versión achicada de otra del caso con marcas de IA, alerta alta "Copia de una foto editada con IA".
+- [ ] Lo mismo entre siniestros: guardar en el registro si la foto tenía marcas de IA.
+
 **Banco de pruebas** (media)
 - [ ] Sección en Evidex: se sube una carpeta con pares original/editada, Evidex los empareja, marca la zona cambiada (sirve de etiqueta para entrenar) y mide cada prueba.
 - [ ] Juntar fotos: autos propios o de conocidos (nunca de asegurados), editados con Galaxy AI, Google Fotos, iPhone, Meta AI, ChatGPT y Gemini (borrar o agregar daño, cambiar patente o color, quitar objetos), cada editada también pasada por WhatsApp. Nombres 001_original.jpg, 001_editada.jpg, 001_whatsapp.jpg y una nota de qué se cambió y con qué app. Meta: 100 pares para medir, 500 a 1.000 para entrenar, más 300 fotos sin editar.
