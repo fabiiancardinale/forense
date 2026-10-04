@@ -77,6 +77,14 @@ No es "taller externo = sospechoso": se mira cada taller, en convenio o no, sobr
 - [ ] **Mismo teléfono en el portal para distintos asegurados** (rápida): huella del navegador y red desde donde se suben las fotos; si coinciden entre asegurados distintos, puede ser la misma persona o el mismo taller armando los casos.
 - [ ] **Odómetro** (media): leer el kilometraje en la foto del tablero y compararlo con siniestros o revisiones técnicas anteriores del mismo auto.
 - [ ] **Fraude interno** (media): analistas o peritos que cierran como legítimos, una y otra vez, casos con alertas altas, o que siempre derivan al mismo taller.
+- [ ] **Inspección al contratar** (media): comparar las fotos del siniestro con las de la inspección que se hizo al contratar la póliza; si el daño ya estaba, es un daño previo cobrado como nuevo.
+- [ ] **Contraparte relacionada** (rápida): el otro conductor del choque comparte apellido, dirección, teléfono o correo con el asegurado (choque arreglado entre conocidos).
+- [ ] **Testigos repetidos** (rápida): la misma persona aparece como testigo o contraparte en varios siniestros.
+- [ ] **Cuenta de pago de otra persona** (rápida): el RUT del titular de la cuenta bancaria no es el del asegurado.
+- [ ] **Contacto desechable** (rápida): correo de dominios temporales o teléfono recién creado en los datos del siniestro.
+- [ ] **Documentos del auto vencidos** (rápida): revisión técnica o permiso de circulación vencidos a la fecha del choque (posible motivo para inventar fecha o circunstancias).
+- [ ] **Riesgo que aprende de las decisiones** (grande): con los casos ya cerrados como fraude o legítimos, ajustar el peso de cada alerta según cuánto acertó en la cartera de BCI.
+- [ ] **Explicar el puntaje** (rápida): mostrar qué alertas suman cuánto al riesgo del caso, para que el analista entienda y pueda justificar la decisión.
 
 ## Para el analista y el jefe
 - [ ] Notificaciones por correo o WhatsApp: el asegurado subió algo, el perito entregó, un caso se atrasó (media).
