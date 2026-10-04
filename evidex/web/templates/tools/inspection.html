@@ -1,14 +1,31 @@
 {% extends 'base.html' %}
+{% block title %}Analizar archivos{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='inspection.css') }}">{% endblock %}
+{% block heading %}<h1>Analizar imagen o documento</h1><p class="sub">Sube un archivo y revisa si encontramos señales de edición.</p>{% endblock %}
 {% block body %}
-<h1>Analizar imagen o documento</h1>
-<p>JPG, PNG, WebP, HEIC o PDF. Hasta 25 MB, 40 megapíxeles y 20 páginas. No se certifica originalidad por ausencia de señales.</p>
-<form method="post" enctype="multipart/form-data">
+<div class="inspection">
+<section class="card upload-card" aria-labelledby="upload-title">
+<h2 id="upload-title">¿Qué archivo quieres revisar?</h2>
+<p class="muted">El análisis y sus resultados solo estarán disponibles en tu cuenta.</p>
+<form id="inspection-upload" method="post" enctype="multipart/form-data" data-max-bytes="25000000">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <input type="hidden" name="request_key" value="{{ request_key }}">
-<input type="file" name="archivo" accept=".jpg,.jpeg,.png,.webp,.heic,.heif,.pdf" required>
-<p><label><input type="checkbox" name="external_consent" value="yes"> Autorizo enviar este archivo a Sightengine para evaluar generación por IA, si el administrador configuró el servicio.</label></p>
-<button type="submit">Subir y analizar</button>
+<label class="file-picker" for="inspection-file"><strong>Selecciona una imagen o un PDF</strong><span class="muted">Un archivo a la vez, hasta 25 MB.</span>
+<input id="inspection-file" type="file" name="archivo" accept=".jpg,.jpeg,.png,.webp,.heic,.heif,.pdf" aria-describedby="file-limits file-meta" required></label>
+<p class="limits muted" id="file-limits">JPG, PNG, WebP, HEIC o PDF · Hasta 40 megapíxeles o 20 páginas.</p>
+<p class="file-meta" id="file-meta" aria-live="polite"></p>
+{% if external_available %}<label class="consent"><input type="checkbox" name="external_consent" value="yes"><span><strong>Incluir detección externa de imágenes generadas con IA</strong><br>Autorizo enviar una copia de mi imagen a Sightengine. Es opcional y no identifica por sí solo dónde se editó.</span></label>
+{% else %}<p class="notice subtle">Se revisarán las señales locales de edición. La detección externa de generación con IA no está habilitada.</p>{% endif %}
+<div id="upload-error" class="error-box" role="alert" hidden></div>
+<div class="upload-actions"><button id="upload-submit" class="btn pri" type="submit">Subir y analizar</button><span class="muted subtle">El resultado puede ser no concluyente.</span></div>
+<div id="upload-progress" class="upload-progress" hidden><label for="upload-meter" id="upload-message" aria-live="polite">Subiendo archivo…</label><progress id="upload-meter" max="100" value="0">0%</progress></div>
 </form>
-<h2>Mis análisis</h2>
-{% for job in jobs %}<p><a href="{{ url_for('inspection.result',job_id=job.id) }}">{{ job.name }}</a> · {{ job.status }}</p>{% else %}<p>No hay archivos todavía.</p>{% endfor %}
+</section>
+<section class="card" style="margin-top:24px" aria-labelledby="history-title"><h2 id="history-title">Mis análisis</h2>
+{% if jobs %}<ul class="analysis-list">{% for job in jobs %}<li><a href="{{ url_for('inspection.result',job_id=job.id) }}"><span><strong>{{ job.name }}</strong><small>{{ verdict_labels.get((job.result or {}).get('verdict'), 'Abre el archivo para revisar su estado') }}</small></span><span class="state-pill state-{{ job.status }}">{{ status_labels.get(job.status, 'Estado no disponible') }}</span></a></li>{% endfor %}</ul>
+{% else %}<div class="empty"><h3>Aquí aparecerán tus resultados</h3><p class="muted">Selecciona tu primer archivo para comenzar.</p></div>{% endif %}
+</section>
+<p class="muted subtle">No encontrar señales de edición no certifica que un archivo sea original.</p>
+</div>
+<script defer src="{{ url_for('static',filename='inspection.js') }}"></script>
 {% endblock %}

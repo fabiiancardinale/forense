@@ -3,10 +3,10 @@
 <title>{% block title %}Evidex{% endblock %} · Evidex by Zelekpress</title>
 
 
-<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}"></head><body>
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">{% block extra_head %}{% endblock %}</head><body>
 <aside class="side" id="side">
 <a class="brand" href="{{ url_for('panel.dashboard') }}"><span class="mark">{{ icon('shield', 18, '#fff') }}</span><span><b>EVIDEX</b><small>by Zelekpress</small></span></a>
-<nav class="navs">{% if can("ver_siniestros") %}<a href="{{ url_for('inspection.index') }}">Analizar archivos</a>{% endif %}
+<nav class="navs">{% if can("ver_siniestros") %}<a class="{{ 'on' if active == 'analizar' }}" href="{{ url_for('inspection.index') }}">{{ icon('upload') }}Analizar archivos</a>{% endif %}
 {% if legacy_modules %}
 {% set perito = current_user and current_user.role == 'perito' %}
 {% if not perito %}<a href="{{ url_for('panel.dashboard') }}" class="{{ 'on' if active=='dash' }}">{{ icon('grid') }}{{ 'Mis casos' if current_user and not can('ver_todos') else 'Panel' }}</a>{% endif %}

@@ -7,9 +7,35 @@ from flask import Blueprint, abort, g, jsonify, redirect, render_template, reque
 from werkzeug.utils import secure_filename
 from evidex.inspection.jobs import Jobs, QueueFull
 from evidex.inspection.validation import MAX_BYTES
-from evidex.web.common import cx
+from evidex.web.common import cx, load_settings
+from werkzeug.exceptions import HTTPException
 
 bp = Blueprint('inspection', __name__)
+
+@bp.context_processor
+def presentation():
+    return {
+        'status_labels': {'queued':'En espera','running':'En análisis','completed':'Completado',
+            'partial':'Revisión parcial','failed':'No se pudo completar','rejected':'Archivo no admitido',
+            'not_run':'No realizado','error':'No se pudo completar'},
+        'verdict_labels': {'alteration_detected':'Alteración detectada','suspicious':'Indicios de alteración',
+            'no_indications':'Sin indicios detectados','inconclusive':'No concluyente'},
+        'next_steps': {'alteration_detected':'Compara los cambios recuperados y solicita una versión de referencia si necesitas verificar su origen.',
+            'suspicious':'Revisa los indicios y las zonas señaladas. Pueden tener explicaciones legítimas; compara con un archivo de referencia.',
+            'no_indications':'Conserva este resultado como apoyo. Si necesitas confirmar autenticidad, solicita el archivo de origen o evidencia adicional.',
+            'inconclusive':'Consulta qué quedó pendiente. Un archivo de mayor calidad o una versión de referencia puede ayudar a una revisión adicional.'},
+        'detector_labels': {'pixeles':'Señales en la imagen','metadatos':'Datos internos del archivo',
+            'C2PA':'Credenciales de procedencia','IA global':'Generación con inteligencia artificial',
+            'localización aprendida':'Detección especializada de zonas editadas',
+            'versiones PDF':'Cambios entre revisiones del PDF','texto/OCR':'Lectura de texto',
+            'autenticidad documental':'Autenticidad del documento','firmas PDF':'Firmas digitales del PDF'}}
+
+@bp.errorhandler(HTTPException)
+def request_error(error):
+    if request.accept_mimetypes.best == 'application/json':
+        return jsonify(error=error.description), error.code
+    return error
+
 
 def owner():
     return g.user['username'] if g.user else '__demo__'
@@ -52,7 +78,10 @@ def index():
                               request.form.get('external_consent') == 'yes')
             if chosen != job_id:
                 shutil.rmtree(folder)
-            return redirect(url_for('inspection.result', job_id=chosen), code=303)
+            url = url_for('inspection.result', job_id=chosen)
+            if request.accept_mimetypes.best == 'application/json':
+                return jsonify(url=url), 201
+            return redirect(url, code=303)
         except QueueFull:
             shutil.rmtree(folder, ignore_errors=True)
             raise
@@ -62,7 +91,9 @@ def index():
         except BaseException:
             shutil.rmtree(folder, ignore_errors=True)
             raise
-    return render_template('tools/inspection.html', jobs=jobs.list(owner()), request_key=secrets.token_hex(24), active='analizar')
+    settings = load_settings()
+    return render_template('tools/inspection.html', jobs=jobs.list(owner()), request_key=secrets.token_hex(24), active='analizar',
+                           external_available=bool(settings.get('sightengine_user') and settings.get('sightengine_secret')))
 
 @bp.get('/analizar/<job_id>')
 def result(job_id):
@@ -91,4 +122,6 @@ def retry(job_id):
 
 @bp.errorhandler(QueueFull)
 def full(ex):
+    if request.accept_mimetypes.best == 'application/json':
+        return jsonify(error=str(ex)), 429
     return str(ex), 429
