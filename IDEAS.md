@@ -80,7 +80,14 @@ No es "taller externo = sospechoso": se mira cada taller, en convenio o no, sobr
 - [ ] Montos fuera de rango para ese daño y ese modelo (media).
 - [ ] Coherencia entre las fotos del siniestro: color, modelo y patente del auto (media).
 - [ ] Huella del sensor: comprobar que varias fotos vienen del mismo teléfono aunque no tengan metadatos (grande).
-- [ ] Revisión de videos (choque, cámara de tablero) (grande).
+- [ ] **Revisión de videos** (grande), por partes:
+  - Metadatos del video: fecha, GPS, teléfono y programa con que se grabó o editó (sirven igual que en las fotos).
+  - Cortes y empalmes: saltos de imagen, cuadros repetidos o insertados, cambios de calidad a mitad del video.
+  - Mismo auto en una sola toma: patente y daño visibles sin corte, lo que prueba que el daño es de ese auto.
+  - Cuadros clave: sacar imágenes del video y pasarles todas las pruebas de foto (reuso, internet, IA, zonas pegadas).
+  - Video generado con IA: marcas C2PA y de los generadores (Sora, Veo y otros), y señales típicas como reflejos o letras que cambian entre cuadros.
+  - Sonido: ambiente que no calza con el lugar o la hora (lluvia en un día seco, ruido de autopista en un pasaje).
+  - Cámara de tablero: velocidad y hora del choque según el video contra lo declarado.
 - [ ] **Código al azar en la foto** (rápida): el portal muestra un código (por ejemplo "K7P2") y el asegurado lo escribe en un papel junto al daño. Prueba que la foto se tomó en ese momento; una foto antigua o editada no lo trae.
 - [ ] **Video corto alrededor del auto** (media): en la captura segura, 10 segundos rodeando el vehículo con la patente visible. Un video es mucho más difícil de editar con IA que una foto y confirma que el daño es de ese auto.
 - [ ] **Mismo teléfono en el portal para distintos asegurados** (rápida): huella del navegador y red desde donde se suben las fotos; si coinciden entre asegurados distintos, puede ser la misma persona o el mismo taller armando los casos.
