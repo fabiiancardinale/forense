@@ -51,7 +51,8 @@ def create_app(workdir: Path, config: dict | None = None) -> Flask:
     app.config.setdefault("PUBLIC_BASE", "http://127.0.0.1:8765")
     app.extensions["evidex"] = {"workdir": workdir, "registry": workdir / "registro.jsonl", "store": U.Store(workdir)}
 
-    app.jinja_env.globals.update(icon=icon, level_text=LEVEL_TEXT, roles=U.ROLES,
+    from evidex.claims.guide import explain
+    app.jinja_env.globals.update(explain=explain, icon=icon, level_text=LEVEL_TEXT, roles=U.ROLES,
                                  money=lambda n: f"{int(n or 0):,}".replace(",", "."))
     app.jinja_env.filters["extract"] = lambda k, d: d.get(k, k)
 

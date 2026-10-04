@@ -73,6 +73,30 @@ def evidence_file(cid, digest):
     return send_evidence(load_claim(cid), digest, bool(request.args.get("mini")))
 
 
+@bp.get("/caso/<cid>/archivo/<digest>/metadatos")
+def evidence_metadata(cid, digest):
+    """Todo lo que trae el archivo: estructura, EXIF, nota del fabricante, XMP, IPTC, ICC, Samsung, Google, Apple, C2PA."""
+    from flask import render_template
+    from evidex.forensics.deep_meta import read_all
+    case = load_claim(cid)
+    if not re.fullmatch(r"[0-9a-f]{64}", digest or "") or not service.has_evidence(case, digest):
+        abort(404)
+    name = next((e["data"].get("original_name") for e in case.ledger.entries()
+                 if e["action"] == "evidence_added" and e["subject"] == digest), digest[:12])
+    log_access("ver_metadatos", name)
+    data = read_all(case.evidence_dir / digest)
+    data["archivo"]["Nombre"] = name
+    return render_template("claims/metadata.html", data=data, name=name, cid=cid, digest=digest, sections=META_SECTIONS,
+                           active="index")
+
+
+META_SECTIONS = [("archivo", "Archivo"), ("samsung", "Samsung: datos propios del teléfono (SEF)"),
+                 ("apple", "Apple"), ("google", "Google / Android (XMP de cámara)"), ("c2pa", "Credenciales de contenido (C2PA)"),
+                 ("exif", "EXIF (todas las carpetas)"), ("fabricante", "Nota del fabricante (MakerNote)"), ("xmp", "XMP"),
+                 ("iptc", "IPTC / Photoshop"), ("icc", "Perfil de color (ICC)"), ("jpeg", "Compresión JPEG"),
+                 ("png", "Bloques de texto PNG"), ("dates", "Todas las fechas encontradas")]
+
+
 @bp.get("/caso/<cid>/documento/<digest>/version/<int:n>")
 def doc_version(cid, digest, n):
     from evidex.forensics.pdf_versions import version_bytes

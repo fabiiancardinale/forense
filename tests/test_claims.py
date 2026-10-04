@@ -168,7 +168,7 @@ def test_report_findings_show_thumbnail_and_guidance(loaded):
     work, _ = loaded
     html = (work / ACTUAL / "informe.html").read_text(encoding="utf-8")
     assert 'class="finding alta withpic"' in html and 'class="fthumb"' in html
-    assert "Por qué importa:" in html and "Qué hacer:" in html
+    assert "Qué significa:" in html and "Por qué es" in html and "Qué hacer:" in html
 
 
 def test_decisions_are_in_custody_and_feed_metrics(tmp_path, demo_src):

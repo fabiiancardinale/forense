@@ -1,0 +1,8 @@
+{# Explicación de una alerta: qué encontró, qué significa, por qué ese nivel y qué hacer. Requiere `f` (rule, severity, summary). #}
+{% set x = explain(f.rule, f.severity) %}
+<div class="explain">
+{% if show_found|default(true) %}<p><b>Qué encontró:</b> {{ f.summary }}</p>{% endif %}
+{% if x.what %}<p><b>Qué significa:</b> {{ x.what }}</p>{% endif %}
+{% if x.why %}<p><b>Por qué es {{ f.severity }}:</b> {{ x.why }}</p>{% endif %}
+{% if x.todo %}<p><b>Qué hacer:</b> {{ x.todo }}</p>{% endif %}
+</div>

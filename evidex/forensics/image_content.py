@@ -293,13 +293,21 @@ def c2pa_status(path) -> dict:
         elif state == 'valid':
             status, valid = 'valid_untrusted', True
         elif state == 'invalid':
-            status, valid = 'invalid', False
+            # "inválida" mezcla dos cosas distintas: que la imagen cambió después de firmarse (grave) y que el
+            # certificado del fabricante no está en la lista de confianza de la librería (Samsung, OpenAI...).
+            # Solo lo primero es una firma rota.
+            from evidex.forensics.deep_meta import TRUST_CODES
+            codes = [str(x.get('code', '')) for x in manifest.get('validation_status') or []]
+            if codes and all(c.startswith(TRUST_CODES) for c in codes):
+                status, valid = 'valid_untrusted', True
+            else:
+                status, valid = 'invalid', False
         else:
             status, valid = 'error', None
         return {'valid': valid, 'state': status, 'generator': generator,
                 'validation': manifest.get('validation_results', manifest.get('validation_status', {})),
                 'note': {'valid_trusted': 'Credencial válida con firmante confiable',
-                         'valid_untrusted': 'Integridad válida; confianza del firmante no establecida',
+                         'valid_untrusted': 'Íntegra: la imagen no cambió desde que se firmó (el emisor no está en la lista de confianza)',
                          'invalid': 'Credencial inválida; requiere revisar los códigos de validación',
                          'error': 'Estado del validador no reconocido'}[status]}
     except Exception as ex:
@@ -421,7 +429,7 @@ def noise_map(path, maxside: int = 900) -> bytes:
 def analyze_image(path) -> dict:
     with Image.open(path) as img:
         img.load()
-        q = estimate_quality(img) if img.format == "JPEG" else None
+        q = estimate_quality(img) if img.format in ("JPEG", "MPO") else None
         out = {"ghost": ghost(img, q) if q else {}, "clone": copy_move(img), "sky_day": daylight_sky(img),
                "noise": noise_inconsistency(img)}
     c = c2pa_status(path)

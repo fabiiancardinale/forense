@@ -52,7 +52,7 @@ def chile_plate_ok(p) -> bool:
 def _fmt_plate(p: str) -> str:
     return f"{p[:4]}·{p[4:]}" if plate_format(p) == "nueva" else f"{p[:2]}·{p[2:]}"
 from evidex.forensics import image_content
-from evidex.forensics import derived, ocr
+from evidex.forensics import deep_meta, derived, ocr
 from evidex.forensics import photo_metadata as photo_forensics
 
 IMAGE_EXT = {".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".heic"}
@@ -137,6 +137,10 @@ def photo_metadata(path: Path, name: str | None = None, content: bool = True) ->
             "has_exif": len(exif) > 0, "text_keys": sorted(text), "dhash": dhash(img), **dhash_variants(img),
             "forensics": photo_forensics.inspect(img, raw[:4_000_000], name or Path(path).name, dhash),
         }
+    try:                       # todas las secciones y metadatos del archivo (Samsung, Apple, Google, XMP, C2PA...)
+        meta["deep"] = deep_meta.compact(deep_meta.read_all(path, raw))
+    except Exception as ex:
+        meta["deep"] = {"error": type(ex).__name__}
     meta["ai_markers"] = sorted({m.decode("utf-8", "ignore") for m in AI_MARKERS if m in raw[:4_000_000]})
     if content:
         try:
@@ -160,6 +164,35 @@ class Photo:
         return f"{self.digest[:8]}:1"
 
 
+DATE_TOLERANCE = timedelta(hours=14)     # diferencias de zona horaria posibles entre una fecha local y una UTC
+
+
+def _parse_any_date(v: str) -> datetime | None:
+    v = str(v).strip()
+    for fmt, n in (("%Y:%m:%d %H:%M:%S", 19), ("%Y-%m-%dT%H:%M:%S", 19), ("%Y-%m-%d %H:%M:%S", 19), ("%Y%m%d %H%M%S", 15)):
+        try:
+            return datetime.strptime(v[:n], fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def _date_conflict(dates: dict, taken: str | None) -> str | None:
+    """Compara la fecha de la foto (EXIF) con las demás fechas de captura que guarda el archivo.
+    Solo fechas de captura: las de modificación o firma pueden ser posteriores sin problema."""
+    base = _parse_any_date(taken) if taken else None
+    if not base:
+        return None
+    capture_keys = ("Samsung: hora UTC", "XMP xmp:CreateDate", "XMP photoshop:DateCreated", "XMP exif:DateTimeOriginal",
+                    "IPTC: creación", "XMP Iptc4xmpCore:DateCreated")
+    diffs = []
+    for k in capture_keys:
+        other = _parse_any_date(dates.get(k, "")) if dates.get(k) else None
+        if other and abs(other - base) > DATE_TOLERANCE:
+            diffs.append(f"la foto dice {_fmt(base)} y «{k}» dice {_fmt(other)}")
+    return "; ".join(diffs) or None
+
+
 def _fmt(dt: datetime) -> str:
     return dt.strftime("%d-%m-%Y %H:%M")
 
@@ -177,9 +210,32 @@ def analyze(decl: dict, decl_ev: str, photos: list[Photo], registry: list[dict])
             continue
 
         ai = m["ai_markers"] + [k for k in AI_TEXT_KEYS if k in m["text_keys"]]
+        deep = m.get("deep") or {}
+        deep_ai = deep.get("ai") or []
         if ai:
+            detail = (" Lo que dice el archivo: " + "; ".join(deep_ai) + ".") if deep_ai else ""
             out.append(Finding("ai_generated", "alta", f"Posible imagen generada por IA ({p.name})",
-                               f"La imagen {p.name} contiene marcas de herramientas de generación por IA ({', '.join(ai)}).",
+                               f"La imagen {p.name} contiene marcas de herramientas de generación por IA ({', '.join(ai)})."
+                               + detail, cite, p.ts))
+        elif deep_ai:
+            out.append(Finding("ai_edited", "alta", f"Editada con IA según el propio archivo ({p.name})",
+                               f"El archivo {p.name} declara que se usó inteligencia artificial: " + "; ".join(deep_ai)
+                               + ". Lo anota el teléfono o la app al guardar la imagen; no depende de cuánto se haya "
+                               "cambiado, así que también aparece cuando la edición es pequeña.", cite, p.ts))
+        if (deep.get("flags") or {}).get("ai_watermark_removed"):
+            out.append(Finding("ai_watermark_removed", "alta", f"Se quitó la marca de IA ({p.name})",
+                               f"El editor de la galería de Samsung registró que en {p.name} se quitó la marca visible "
+                               "que indica que la imagen fue editada con IA.", cite, p.ts))
+        edits = [e for e in deep.get("edits") or [] if "«converted»" not in e]
+        if edits:
+            out.append(Finding("phone_edit", "media", f"Editada después de tomarla ({p.name})",
+                               f"El archivo {p.name} trae el registro de estas ediciones: " + "; ".join(edits) + ".",
+                               cite, p.ts))
+        conflict = _date_conflict(deep.get("dates") or {}, m.get("taken"))
+        if conflict:
+            out.append(Finding("meta_dates_conflict", "media", f"Fechas internas que no coinciden ({p.name})",
+                               f"El archivo {p.name} guarda fechas distintas en distintas secciones: {conflict}. "
+                               "Cuando se cambia la fecha de una foto con una app, suele cambiarse solo una de ellas.",
                                cite, p.ts))
 
         w, h = m.get("width") or 0, m.get("height") or 0
@@ -263,6 +319,8 @@ def analyze(decl: dict, decl_ev: str, photos: list[Photo], registry: list[dict])
         if m.get("received"):
             received = datetime.fromisoformat(m["received"].rstrip("Z")).replace(tzinfo=None)
         for rule, sev, title, text in ([] if m.get("secure_capture") else photo_forensics.signals(m, received, hamming)):
+            if rule == "resized_after_capture" and any(e.startswith("Recorte en la galería") for e in edits):
+                continue                            # ya se informa con el detalle del recorte en "Editada después de tomarla"
             out.append(Finding(rule, sev, f"{title} ({p.name})", f"Foto {p.name}: {text}", cite, p.ts))
 
         out += content_findings(p, decl, place, cite)

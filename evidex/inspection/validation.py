@@ -6,6 +6,7 @@ from PIL import Image
 MAX_BYTES = 25_000_000
 MAX_PIXELS = 40_000_000
 MAX_PAGES = 20
+MAX_MPO_FRAMES = 8          # foto principal + mapas HDR / profundidad
 FORMATS = {'.jpg': 'JPEG', '.jpeg': 'JPEG', '.png': 'PNG', '.webp': 'WEBP',
            '.heic': 'HEIF', '.heif': 'HEIF', '.pdf': 'PDF'}
 
@@ -48,9 +49,14 @@ def validate(path, name, max_pages=MAX_PAGES, formats=None):
         with warnings.catch_warnings():
             warnings.simplefilter('error', Image.DecompressionBombWarning)
             with Image.open(path) as im:
-                if im.format != expected or im.width * im.height > MAX_PIXELS or getattr(im, 'n_frames', 1) != 1:
+                # Las fotos HDR de iPhone y de muchos Android son JPEG con imágenes extra incrustadas (mapa de
+                # ganancia, profundidad): Pillow las abre como MPO. Son fotos normales de cámara, no se rechazan.
+                fmt = 'JPEG' if im.format == 'MPO' and expected == 'JPEG' else im.format
+                frames = getattr(im, 'n_frames', 1)
+                if (fmt != expected or im.width * im.height > MAX_PIXELS
+                        or frames > (MAX_MPO_FRAMES if im.format == 'MPO' else 1)):
                     raise InvalidFile('Formato, dimensiones o número de imágenes no soportados.')
-                info = {'kind': 'image', 'format': im.format, 'width': im.width, 'height': im.height}
+                info = {'kind': 'image', 'format': fmt, 'width': im.width, 'height': im.height}
                 im.verify()
             with Image.open(path) as im:
                 im.load()

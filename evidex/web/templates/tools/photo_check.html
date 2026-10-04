@@ -12,7 +12,7 @@
 {% if r.level == 'bad' %}<span class="badge bad">Señales graves</span>{% elif r.level == 'warn' %}<span class="badge warn">Revisar</span>
 {% else %}<span class="badge ok">Sin señales</span>{% endif %}</span></div>
 <div class="pb split">
-<div>{% for f in r.findings %}<div class="finding {{ f.severity }}"><span class="sev {{ f.severity }}">{{ f.severity|upper }}</span><b>{{ f.title.split(' (')[0] }}</b><p>{{ f.summary }}</p></div>
+<div>{% for f in r.findings %}<div class="finding {{ f.severity }}"><span class="sev {{ f.severity }}">{{ f.severity|upper }}</span><b>{{ f.title.split(' (')[0] }}</b><p>{{ f.summary }}</p><details class="why"><summary>Qué significa, por qué es {{ f.severity }} y qué hacer</summary>{% set show_found = false %}{% include "claims/case/_explain.html" %}</details></div>
 {% else %}<p style="margin:0">No se encontraron señales. Eso no prueba que la foto sea auténtica: una edición cuidadosa puede no dejar rastros.</p>{% endfor %}
 {% if r.marked %}<h3 class="cat">Zonas marcadas</h3>
 <img src="data:image/png;base64,{{ r.marked }}" alt="Zonas sospechosas marcadas" style="max-width:100%;border-radius:8px;border:1px solid var(--line)">{% endif %}

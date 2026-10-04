@@ -71,9 +71,23 @@ def image_analysis(path, name, output, config, result):
     # Context of insurance is not file tampering. Weak metadata cues stay separate.
     ignore = {'taken_before','taken_late','taken_future','taken_future_portal','odd_ratio','no_metadata','recompressed','daylight_at_night'}
     result['observations'] = [{'rule':f.rule, 'detail':f.summary} for f in findings if f.rule in ignore]
+    from evidex.claims.guide import explain
+    # el propio archivo declara la IA (lo anota el teléfono o la app): no es una estimación
+    declared = {'ai_edited', 'ai_watermark_removed', 'ai_generated', 'ai_label_visible'}
     result['findings'] = [{'rule':f.rule,'title':f.title,'detail':f.summary,'severity':f.severity,
-                           'evidence_type':'heuristic','confirmed_change':False}
+                           'evidence_type':'metadata' if f.rule in declared else 'heuristic',
+                           'confirmed_change':f.rule in ('ai_edited', 'ai_watermark_removed'),
+                           **explain(f.rule, f.severity)}
                           for f in findings if f.rule not in ignore]
+    try:                                        # todas las secciones y metadatos del archivo, para mostrarlos
+        from evidex.forensics.deep_meta import read_all
+        full = read_all(path)
+        full['archivo']['Nombre'] = name
+        result['metadata'] = json.loads(json.dumps(full, default=str))
+        detector(result, 'metadatos completos', 'completed',
+                 'EXIF, nota del fabricante, XMP, IPTC, ICC, secciones de Samsung/Google/Apple y C2PA.', required=False)
+    except Exception as ex:
+        detector(result, 'metadatos completos', 'error', type(ex).__name__, required=False)
     if not content.get('error'):
         image = image_content.overlay(path, content)
         if image:

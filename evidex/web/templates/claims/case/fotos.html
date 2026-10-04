@@ -10,7 +10,8 @@
 <dt>Tomada</dt><dd>{{ (i.info.taken or '')[:16]|replace('T',' ') or 'sin fecha' }}</dd>
 <dt>Cámara</dt><dd>{{ i.info.camera or '—' }}</dd>
 <dt>Ubicación</dt><dd>{{ 'sí (GPS)' if i.info.gps else 'no' }}</dd></dl>
-{% if i.findings %}<ul class="flinks">{% for f in i.findings %}<li class="{{ f.severity }}">{{ f.title|replace(' (' ~ i.name ~ ')', '') }}</li>{% endfor %}</ul>{% endif %}
+{% if i.findings %}<ul class="flinks">{% for f in i.findings %}<li class="{{ f.severity }}"><details class="why"><summary>{{ f.title|replace(' (' ~ i.name ~ ')', '') }}</summary>{% include "claims/case/_explain.html" %}</details></li>{% endfor %}</ul>{% endif %}
+<a class="hint metalink" href="{{ url_for('claims.evidence_metadata', cid=c.id, digest=i.digest) }}" target="_blank" rel="noopener">Ver todos los datos del archivo</a>
 {% set checks = i.info.checks %}{% include "claims/case/_checks.html" %}
 <div class="acts">{% include "claims/case/_remove.html" %}</div>
 </div></article>{% endfor %}</div>

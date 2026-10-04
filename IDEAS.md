@@ -17,6 +17,7 @@ Ningún método solo detecta todo: se combinan las tres capas.
 - [ ] **Pedir el original** (rápida): si una foto llega de galería o WhatsApp, sin datos o recortada, se marca "no verificable" y se le pide al asegurado el archivo original (WhatsApp como Documento o por el portal). El original trae la anotación de IA de Samsung o Google y la firma C2PA, que Evidex ya lee.
 
 **Capa 2: reglas de Evidex** (hechas)
+- [x] Lectura completa de metadatos de cualquier marca: Samsung Galaxy AI y editor de galería, Google, Apple, XMP/IPTC «tipo de origen digital», C2PA (acciones y foto de origen), fechas de todas las secciones.
 - [x] Marca visible "Contenido generado por IA" leída con OCR.
 - [x] Foto recorte de otra del caso, y recorte que sacó la marca de IA.
 - [x] Zona borrada o cambiada entre dos versiones de la misma foto.

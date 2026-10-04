@@ -234,6 +234,25 @@ GUIDE: dict[str, tuple[str, str]] = {
     "fraud_ring": (
         "Este siniestro está conectado con varios otros siniestros de distintos asegurados.",
         "Revise la sección Red de siniestros y derive a investigación."),
+    "ai_edited": (
+        "El propio archivo declara que se usó inteligencia artificial: lo anotan el teléfono o la app al guardar "
+        "(Galaxy AI de Samsung, las herramientas de IA de Google Fotos, credenciales C2PA, el campo IPTC «tipo de "
+        "origen digital»). Basta con usar la IA una vez, aunque el cambio sea pequeño (borrar un objeto, rellenar un "
+        "fondo, \"mejorar\" la foto).",
+        "Pida la foto original sin editar, por el portal y no por WhatsApp. Compare con las otras fotos del mismo daño y, "
+        "si la parte editada puede ser el daño, pida inspección presencial."),
+    "ai_watermark_removed": (
+        "Las apps que editan con IA ponen una marca visible en la esquina. El editor registró que esa marca se quitó: "
+        "alguien no quería que se notara la edición.",
+        "Trátela como fraude probable: derive a investigación y pida inspección presencial del vehículo."),
+    "phone_edit": (
+        "El archivo guarda el historial de lo que se le hizo después de tomarlo: recortes, giros, cambios de luz o color, "
+        "filtros, o que se creó a partir de otra foto. Puede ser inocente (encuadrar), pero cambia lo que se ve.",
+        "Pida la foto original y compare: fíjese en qué quedó fuera del recorte o qué cambió de color o brillo."),
+    "meta_dates_conflict": (
+        "Una foto guarda su fecha en varias secciones (EXIF, XMP, IPTC y, en Samsung, una hora UTC propia). Deben "
+        "coincidir. Cuando alguien cambia la fecha con una app, casi siempre cambia solo una de ellas.",
+        "No use la fecha de la foto como prueba. Pregunte cuándo se tomó y pida el original."),
     "copied_narrative": (
         "El relato es muy parecido al de otro siniestro. Los relatos reales suelen ser distintos.",
         "Compare ambos relatos y revise si comparten taller o intermediario."),
@@ -242,3 +261,65 @@ GUIDE: dict[str, tuple[str, str]] = {
 
 def for_rule(rule: str) -> tuple[str, str] | None:
     return GUIDE.get(rule)
+
+
+# Por qué cada alerta tiene el nivel que tiene (alta, media o baja). Se muestra junto a la explicación.
+WHY = {
+    # IA
+    "ai_generated": "Alta porque una imagen hecha con IA no muestra un hecho real: no sirve como prueba del daño.",
+    "ai_edited": "Alta porque con IA se puede borrar, agregar o agrandar un daño con un resultado que a la vista parece una "
+                 "foto real. Aunque el cambio haya sido pequeño, la foto ya no prueba por sí sola cómo estaba el vehículo.",
+    "ai_watermark_removed": "Alta porque quitar la marca de IA es un acto deliberado para ocultar la edición.",
+    "ai_label_visible": "Alta porque la propia imagen dice que fue generada o editada con IA.",
+    "ai_mark_cropped": "Alta porque recortar justo la marca de IA es un intento de ocultar la edición.",
+    "ai_detected": "Alta o media según el puntaje del detector externo: es una estimación, no una prueba.",
+    "ai_dimensions": "Media porque el tamaño coincide con generadores de IA, pero por sí solo no lo prueba.",
+    # edición
+    "phone_edit": "Media porque editar en la galería es común y suele ser inocente (encuadrar, aclarar), pero puede "
+                  "sacar del cuadro o disimular algo; no es alta mientras no haya IA ni cambios de contenido.",
+    "edited": "Alta porque un editor de imágenes permite cambiar el contenido, no solo el encuadre.",
+    "resized_after_capture": "Media porque recortar puede ser inocente, pero también sirve para sacar algo del cuadro.",
+    "odd_ratio": "Baja porque un recorte a mano es común; solo indica que falta parte de la foto original.",
+    "edit_filename": "Baja porque el nombre del archivo se cambia fácil; solo sugiere que pasó por una app.",
+    "recompressed": "Media porque volver a guardar una foto es común, pero borra rastros y puede ocultar ediciones.",
+    "changed_between_versions": "Alta porque hay dos versiones de la misma foto y en una cambió el contenido.",
+    "cropped_in_claim": "Media porque recortar puede ser inocente, pero hay que ver qué quedó fuera.",
+    # píxeles
+    "pasted_region": "Alta porque una zona con otra huella de compresión indica que se pegó desde otra imagen.",
+    "cloned_region": "Alta porque una parte copiada dentro de la misma foto es una manipulación del contenido.",
+    "noise_inconsistent": "Media porque el grano distinto puede venir de una zona pegada, pero también de luz muy dispareja.",
+    "daylight_at_night": "Media porque indica que la fecha de la foto no es la real, aunque no prueba el fraude.",
+    "c2pa_invalid": "Alta porque la imagen cambió después de que el teléfono o la app la firmó.",
+    # metadatos y fechas
+    "no_metadata": "Media si la subió el asegurado (no se puede verificar) y baja si llegó por WhatsApp, que borra "
+                   "estos datos siempre.",
+    "meta_dates_conflict": "Media porque fechas que no calzan indican que una se cambió, pero no dicen cuál es la real.",
+    "exif_dates_mismatch": "Alta porque las fechas internas deben coincidir; si no, alguien las cambió.",
+    "saved_before_taken": "Alta porque es imposible que el archivo exista antes de tomar la foto: la fecha se cambió.",
+    "metadata_tool": "Alta porque esos programas sirven para cambiar fecha, lugar o cámara de una foto.",
+    "taken_before": "Alta porque una foto anterior al choque no puede mostrar el daño de este choque.",
+    "taken_late": "Media porque fotos tardías pueden ser normales, pero el daño pudo cambiar en ese tiempo.",
+    "photo_before_policy": "Alta porque sugiere que el daño existía antes de contratar la póliza.",
+    "gps_mismatch": "Alta si está a más de 50 km y media si está más cerca: la foto no es del lugar declarado.",
+    "screenshot": "Media porque un pantallazo no trae datos de cámara: no prueba cuándo ni dónde.",
+    "makernote_missing": "Media porque a un iPhone no le falta esa sección salvo que el archivo se haya reprocesado.",
+    # repetición
+    "reused_photo": "Alta porque la misma foto ya se usó en otro siniestro.",
+    "mirrored_in_claim": "Alta porque espejar una foto para mostrarla como el otro costado es engañar a propósito.",
+    "duplicate_in_claim": "Media porque puede ser una ráfaga; importa si se presentó como daños distintos.",
+    "same_device_other_claim": "Alta porque la misma cámara aparece en siniestros de personas distintas.",
+    "multiple_devices": "Media porque es normal si otra persona tomó fotos, pero no si el asegurado dice que las tomó él.",
+    "found_online": "Alta porque una foto publicada en internet antes del choque no es de este siniestro.",
+    "plate_photo_mismatch": "Alta si es la foto de la patente y media si es otra foto: puede ser otro vehículo.",
+}
+SEVERITY_WHY = {
+    "alta": "Alta: si se confirma, la evidencia no prueba lo que se declaró; conviene aclararlo antes de pagar.",
+    "media": "Media: puede tener una explicación inocente, pero junto con otras alertas cambia la evaluación; hay que preguntar.",
+    "baja": "Baja: por sí sola no indica fraude; se informa para tener el cuadro completo.",
+}
+
+
+def explain(rule: str, severity: str) -> dict:
+    """Qué es, por qué ese nivel y qué hacer, para mostrar junto a cada alerta."""
+    what, todo = GUIDE.get(rule, ("", ""))
+    return {"what": what, "why": WHY.get(rule) or SEVERITY_WHY.get(severity, ""), "todo": todo}

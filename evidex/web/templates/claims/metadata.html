@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% block title %}Datos del archivo · {{ name }}{% endblock %}
+{% block crumbs %}<a href="{{ url_for('claims.index') }}">Cola de trabajo</a> / <a href="{{ url_for('claims.case_view', cid=cid, tab='fotos') }}">{{ cid }}</a> / Datos del archivo{% endblock %}
+{% block heading %}<h1>Todos los datos de {{ name }}</h1>
+<p class="sub">Todo lo que trae el archivo, sección por sección. Lo que delata IA o edición se resume arriba.</p>{% endblock %}
+{% block body %}
+<section class="panel metasec"><div class="ph"><h2>Resumen</h2></div><div class="pb">
+<img src="{{ url_for('claims.evidence_file', cid=cid, digest=digest, mini=1) }}" alt="{{ name }}" style="float:right;max-width:180px;border-radius:8px;margin:0 0 8px 12px">
+{% for a in data.ai %}<div class="sig"><b>IA:</b> {{ a }}</div>{% endfor %}
+{% for e in data.edits %}<div class="ed"><b>Edición:</b> {{ e }}</div>{% endfor %}
+{% if data.flags.ai_watermark_removed %}<div class="sig"><b>Se quitó la marca de IA</b> según el editor de la galería.</div>{% endif %}
+{% if not data.ai and not data.edits %}<p class="hint" style="margin:0">El archivo no declara uso de IA ni ediciones. Eso no certifica que sea original: si pasó por WhatsApp, redes sociales o una captura de pantalla, estos datos se borran.</p>{% endif %}
+<p class="hint" style="clear:both;margin:8px 0 0">Estructura: {{ data.estructura|join(' · ') or '—' }}</p>
+</div></section>
+{% for key, title in sections %}{% set sec = data[key] %}
+{% if sec %}<section class="panel metasec"><div class="ph"><h2>{{ title }}</h2><span class="r hint">{{ sec|length }} dato{{ 's' if sec|length != 1 }}</span></div>
+<table>{% for k, v in sec.items() %}<tr><td>{{ k }}</td><td>{% if v is mapping %}{{ v|tojson }}{% elif v is iterable and v is not string %}{{ v|join(' · ') if v else '—' }}{% else %}{{ v }}{% endif %}</td></tr>{% endfor %}</table></section>{% endif %}
+{% endfor %}
+{% endblock %}

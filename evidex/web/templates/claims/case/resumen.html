@@ -12,7 +12,7 @@
 <img src="{{ url_for('claims.evidence_file', cid=c.id, digest=f.ref.digest, mini=1) }}" alt="{{ f.ref.title }}" loading="lazy"><small>{{ f.ref.title }}</small></a>{% endif %}
 <div><div class="ft"><span class="sev {{ f.severity }}">{{ f.severity|capitalize }}</span> <b>{{ f.title }}</b></div>
 <p>{{ f.summary }}</p>
-{% if f.guide %}<details class="why"><summary>Por qué importa y qué hacer</summary><p><b>Por qué importa:</b> {{ f.guide[0] }}</p><p><b>Qué hacer:</b> {{ f.guide[1] }}</p></details>{% endif %}
+<details class="why"><summary>Qué significa, por qué es {{ f.severity }} y qué hacer</summary>{% set show_found = false %}{% include "claims/case/_explain.html" %}</details>
 </div></article>{% endfor %}</div>
 {% else %}<p class="muted" style="margin:0">Evidex no encontró alertas en este caso.</p>{% endif %}</div></section>
 </div>

@@ -5,7 +5,7 @@ import html
 import re
 
 from evidex.core.assistant import CITE
-from evidex.claims.guide import for_rule
+from evidex.claims.guide import explain
 from evidex.core.compliance import deadlines
 from evidex.core.ledger import verify_chain, verify_seal
 
@@ -443,9 +443,11 @@ def build_claim(case, decl, decl_ev, photos, findings, verified, rec, docs=(), n
                     pic = (f'<a class="fthumb" href="#ev-{anchor}" title="Ver {html.escape(lbl)}">'
                            + (f'<img src="{src}" alt="{html.escape(lbl)}">' if src else '<span class="noimg">sin vista previa</span>')
                            + f'<small>{html.escape(lbl)}</small></a>')
-                g = for_rule(f.rule)
-                tips = (f'<div class="tips"><p><b>Por qué importa:</b> {html.escape(g[0])}</p>'
-                        f'<p><b>Qué hacer:</b> {html.escape(g[1])}</p></div>') if g else ""
+                g = explain(f.rule, f.severity)
+                tips = ('<div class="tips">'
+                        + (f'<p><b>Qué significa:</b> {html.escape(g["what"])}</p>' if g["what"] else "")
+                        + (f'<p><b>Por qué es {f.severity}:</b> {html.escape(g["why"])}</p>' if g["why"] else "")
+                        + (f'<p><b>Qué hacer:</b> {html.escape(g["todo"])}</p>' if g["todo"] else "") + "</div>")
                 h.append(f'<div class="finding {f.severity}{" withpic" if pic else ""}">{pic}<div class="fbody">'
                          f'<span class="sev {f.severity}">{f.severity.upper()}</span>'
                          f"<b>{html.escape(f.title)}</b><p>{html.escape(f.summary)}</p>{tips}"

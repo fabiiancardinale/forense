@@ -26,9 +26,17 @@
 {% if job.status == 'failed' and job.attempt < 3 %}<form method="post" action="{{ url_for('inspection.retry',job_id=job.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn pri" type="submit">Reintentar análisis</button>{% if job.consent %}<p class="muted subtle">El reintento puede repetir la consulta externa que autorizaste.</p>{% endif %}</form>{% endif %}
 </section>
 {% if r.findings %}<section class="card" style="margin-top:24px"><h2>Qué encontramos</h2>
-{% for f in r.findings %}<article class="finding"><h3>{{ f.title }}</h3><p>{{ f.detail }}</p>
+{% for f in r.findings %}<article class="finding"><h3>{% if f.severity %}<span class="sev {{ f.severity }}">{{ f.severity|capitalize }}</span> {% endif %}{{ f.title }}</h3><p>{{ f.detail }}</p>
+{% if f.what or f.why or f.todo %}<details class="why"><summary>Qué significa, por qué es {{ f.severity }} y qué hacer</summary><div class="explain">
+{% if f.what %}<p><b>Qué significa:</b> {{ f.what }}</p>{% endif %}{% if f.why %}<p><b>Por qué es {{ f.severity }}:</b> {{ f.why }}</p>{% endif %}{% if f.todo %}<p><b>Qué hacer:</b> {{ f.todo }}</p>{% endif %}</div></details>{% endif %}
 {% if f.removed or f.added %}<div class="text-diff"><div><strong>En la revisión anterior</strong><ul>{% for line in f.removed or [] %}<li>{{ line }}</li>{% else %}<li>No se recuperó texto eliminado.</li>{% endfor %}</ul></div><div><strong>En la revisión posterior</strong><ul>{% for line in f.added or [] %}<li>{{ line }}</li>{% else %}<li>No se recuperó texto añadido.</li>{% endfor %}</ul></div></div>{% endif %}</article>{% endfor %}
 {% for a in r.artifacts or [] %}<figure><img src="{{ url_for('inspection.artifact',job_id=job.id,name=a.file) }}" alt="Zonas que requieren revisión en la imagen"><figcaption>Las zonas marcadas muestran indicios; no son una prueba definitiva de edición.</figcaption></figure>{% endfor %}</section>{% endif %}
+{% if r.metadata %}{% set md = r.metadata %}<details class="card metasec" style="margin-top:24px"><summary>Todos los datos del archivo</summary>
+{% for a in md.ai or [] %}<div class="sig"><b>IA:</b> {{ a }}</div>{% endfor %}{% for e in md.edits or [] %}<div class="ed"><b>Edición:</b> {{ e }}</div>{% endfor %}
+<p class="subtle">Estructura: {{ (md.estructura or [])|join(' · ') or '—' }}</p>
+{% for key, title in [('archivo','Archivo'),('samsung','Samsung: datos propios del teléfono (SEF)'),('apple','Apple'),('google','Google / Android'),('c2pa','Credenciales de contenido (C2PA)'),('exif','EXIF (todas las carpetas)'),('fabricante','Nota del fabricante (MakerNote)'),('xmp','XMP'),('iptc','IPTC / Photoshop'),('icc','Perfil de color (ICC)'),('jpeg','Compresión JPEG'),('png','Bloques de texto PNG'),('dates','Todas las fechas encontradas')] %}{% set sec = md[key] %}
+{% if sec %}<h3>{{ title }}</h3><table>{% for k, v in sec.items() %}<tr><td>{{ k }}</td><td>{% if v is mapping %}{{ v|tojson }}{% elif v is iterable and v is not string %}{{ v|join(' · ') if v else '—' }}{% else %}{{ v }}{% endif %}</td></tr>{% endfor %}</table>{% endif %}{% endfor %}
+</details>{% endif %}
 <details class="card" style="margin-top:24px"><summary>Qué se revisó y qué quedó pendiente</summary>
 {% if r.coverage and r.coverage.pages_total %}<p>Se pudo leer contenido en {{ r.coverage.pages_read }} de {{ r.coverage.pages_total }} páginas.</p>{% endif %}
 <ul class="check-list">{% for d in r.detectors or [] %}<li><div><strong>{{ detector_labels.get(d.name,d.name) }}</strong><p>{{ d.detail }}</p></div><span>{{ status_labels.get(d.status, 'Estado no disponible') }}</span></li>{% endfor %}</ul>

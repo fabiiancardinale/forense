@@ -19,7 +19,6 @@ from pathlib import Path
 from flask import abort, flash, redirect, render_template, request, send_file, url_for
 
 from evidex.claims import assignment, service
-from evidex.claims.guide import for_rule
 from evidex.claims.report import ACTIONS
 from evidex.core import export
 from evidex.core.case import Case
@@ -104,7 +103,7 @@ def _tab_summary(case, snap, items):
     top = []
     for f in findings[:6]:
         ref = next((thumbs[e] for e in f["evidence"] if e in thumbs), None)
-        top.append({**f, "ref": ref, "guide": for_rule(f["rule"])})
+        top.append({**f, "ref": ref})
     return {"decl": decl, "top": top, "decisions": service.DECISIONS, "history": service.decision_history(case),
             "todo": _todo(case, items), "team": analysts() if has_perm("equipo") else [],
             "can_reassign": has_perm("equipo")}

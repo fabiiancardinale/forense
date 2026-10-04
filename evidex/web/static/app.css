@@ -311,3 +311,15 @@ details.checks .mark{margin-top:1px}
 .maps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:10px}
 .maps figure{margin:0}.maps img{width:100%;border:1px solid var(--line);border-radius:6px;display:block;background:#eef1f5}
 .maps figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+/* explicación de cada alerta */
+.flinks details.why{margin:0;font-size:12.5px}.flinks details.why summary{color:inherit;font-weight:500}
+.flinks details.why[open] summary{font-weight:600}
+.explain{color:var(--ink);font-size:12.5px;line-height:1.45;background:var(--bg,#f6f8fb);border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin:6px 0 4px}
+.explain p{margin:4px 0}.explain b{color:var(--ink)}
+.metalink{display:inline-block;margin-top:8px;font-size:12px}
+/* página de todos los metadatos */
+.metasec{margin-bottom:14px}.metasec h2{font-size:15px;margin:0}.metasec table{width:100%;border-collapse:collapse;font-size:12.5px}
+.metasec td{border-top:1px solid var(--line);padding:5px 8px;vertical-align:top;word-break:break-word}.metasec td:first-child{width:34%;color:var(--muted)}
+.metasec .sig{background:var(--redbg);color:var(--red);border-radius:6px;padding:6px 10px;margin:8px 0;font-size:13px}
+.metasec .ed{background:var(--ambbg);color:var(--amb);border-radius:6px;padding:6px 10px;margin:8px 0;font-size:13px}
+.flinks li:has(> details){list-style:none;margin-left:-14px}
