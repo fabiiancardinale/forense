@@ -7,7 +7,7 @@ Incluye además un módulo de respuesta a incidentes informáticos.
 
 ## MVP endurecido: login y análisis de archivos
 
-El inicio predeterminado abre un MVP autenticado para imágenes y PDF, con procesamiento en un worker, acceso por propietario y resultados que distinguen hallazgos de análisis incompletos. Los módulos históricos descritos más abajo se habilitan con `--legacy`.
+El inicio predeterminado abre un MVP autenticado para imágenes y PDF, con procesamiento en un worker, acceso por propietario y resultados que distinguen hallazgos de análisis incompletos. Por defecto se abre Evidex completo (siniestros, portal, investigaciones, cartera); `--solo-analisis` deja solo el análisis de archivos.
 
 ```sh
 python -m pip install -r requirements.txt
@@ -15,7 +15,7 @@ python -m evidex.accounts.setup --dir casos
 python -m evidex.web --dir casos
 ```
 
-En Windows también puede usar `iniciar_evidex.bat`. Sin usuarios no hay acceso anónimo: se inicializa el administrador por consola. La demo requiere `--demo --legacy` explícitamente y solo funciona localmente.
+En Windows también puede usar `iniciar_evidex.bat`. Sin usuarios no hay acceso anónimo: se inicializa el administrador por consola. La demo sin usuarios requiere `--demo` explícitamente y solo funciona localmente.
 
 **No se certifica «Original» por ausencia de indicios.** Se distinguen alteración detectada entre revisiones, indicios de alteración, sin indicios detectados y no concluyente. La detección/localización de IA no está validada contra un corpus real del negocio.
 

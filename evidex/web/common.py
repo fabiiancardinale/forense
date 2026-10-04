@@ -149,6 +149,23 @@ def _work_state(case: Case) -> dict:
 
 
 
+def run_claim_analysis(case: Case, notify: bool = True) -> dict | None:
+    """Analiza el siniestro desde la web: en un proceso aparte con tiempo máximo (ISOLATED_ANALYSIS).
+    Si no termina, avisa al usuario y devuelve None; el caso conserva su análisis anterior."""
+    from flask import flash
+    from evidex.claims import isolated
+    if not current_app.config.get("ISOLATED_ANALYSIS", True):
+        return service.analyze_claim(case, cx.registry)
+    try:
+        return isolated.analyze(case, cx.registry)
+    except isolated.AnalysisFailed as ex:
+        current_app.logger.warning("Análisis fallido en %s: %s", case.root.name, ex)
+        if notify:
+            flash(f"{ex} El caso conserva su análisis anterior; si un archivo lo provoca, quítelo del análisis "
+                  "y vuelva a analizar.", "bad")
+        return None
+
+
 def save_checked(fs, folder: Path, purpose: str, default: str = "archivo") -> tuple[Path | None, str | None]:
     """Guarda un archivo subido solo si pasa la revisión de contenido. Devuelve (ruta, None) o (None, motivo)."""
     if not fs or not fs.filename:

@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 
-from flask import current_app, Blueprint, render_template, request
+from flask import Blueprint, render_template, request
 
 from evidex.claims import service
-from evidex.web.common import cx, load_settings, portal_case
+from evidex.web.common import cx, load_settings, portal_case, run_claim_analysis
 
 bp = Blueprint("portal", __name__)
 
@@ -84,10 +84,7 @@ def portal_finish(token):
         capture.finish(case, data)
     except ValueError as ex:
         return {"error": str(ex)}, 400
-    try:
-        service.analyze_claim(case, cx.registry)
-    except Exception:
-        current_app.logger.exception('Portal analysis failed for %s', case.root.name)
+    if run_claim_analysis(case, notify=False) is None:
         return {"ok": True, "analysis_status": "failed", "warning": "Archivos recibidos; el analista debe reintentar el análisis."}
     return {"ok": True, "analysis_status": "completed"}
 
@@ -107,9 +104,6 @@ def capture_upload(token):
     except ValueError as ex:
         return {"error": str(ex)}, 400
     if len(data["received"]) >= len(data["shots"]):
-        try:
-            service.analyze_claim(case, cx.registry)
-        except Exception:
-            current_app.logger.exception('Capture analysis failed for %s', case.root.name)
+        if run_claim_analysis(case, notify=False) is None:
             return {"ok": True, "analysis_status": "failed", "hora": rec["server_time"][11:16]}
     return {"ok": True, "hora": rec["server_time"][11:16]}

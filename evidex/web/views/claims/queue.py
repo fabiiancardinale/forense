@@ -9,7 +9,7 @@ from flask import flash, g, redirect, render_template, request, url_for
 
 from evidex.claims import assignment, service
 from evidex.portal.links import DEFAULT_DOCS, DOC_TYPES
-from evidex.web.common import (FORM_FIELDS, actor_name, analysts, claim_list, current_user, cx, has_perm, level_counts,
+from evidex.web.common import (FORM_FIELDS, run_claim_analysis, actor_name, analysts, claim_list, current_user, cx, has_perm, level_counts,
                                 save_uploads, sees_all_claims)
 from evidex.web.views.claims import bp
 
@@ -77,10 +77,10 @@ def new_claim():
         from evidex.portal import links
         links.create_link(case, actor=actor_name() or "analista", docs=f.getlist("docs"),
                           custom=f.get("docs_custom", "").split(";"))
-    r = service.analyze_claim(case, cx.registry)
+    r = run_claim_analysis(case) or {}
     if send_link:
         flash("Siniestro registrado. Envíe ahora el enlace al asegurado desde la pestaña Asegurado.", "ok")
-    else:
+    elif r:
         flash(f"Siniestro creado y analizado: {r['photos']} foto(s), {r['documents']} documento(s), "
               f"{r['findings']} hallazgo(s).", "ok")
     if r.get("reanalyzed"):

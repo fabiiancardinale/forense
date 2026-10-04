@@ -2,7 +2,15 @@
 
 ## Alcance
 
-El flujo predeterminado es login → `/analizar` → cola persistente → proceso de análisis → informe privado. Los módulos históricos de siniestros, captura pública, importación y peritajes se conservan detrás de `--legacy`; no forman parte del perímetro endurecido del MVP. No activarlos en un servicio público sin una revisión adicional.
+`python -m evidex.web` abre Evidex completo: análisis de archivos, siniestros, portal del asegurado, investigaciones, cartera y equipo, todos detrás del mismo login, CSRF y cabeceras. `--solo-analisis` deja solo login → `/analizar` → cola persistente → proceso de análisis → informe privado. `--legacy` se acepta por compatibilidad y ya no cambia nada.
+
+Refuerzos de los módulos de siniestros (antes detrás de `--legacy`):
+
+- Toda carga (evidencia del caso, portal, documentos de investigación, informe del perito, historial) se revisa en un proceso desechable con tiempo, memoria y red limitados (`evidex/core/upload_guard.py`): formato real según el contenido, tamaño, páginas y píxeles; ZIP sin rutas peligrosas, contraseña ni bomba de compresión; planillas que abren; texto legible.
+- El análisis de un siniestro corre desde la web en un proceso aparte con tiempo máximo de 300 s y 4 GB (`evidex/claims/isolated.py`), sin red salvo que estén configurados los servicios externos de fotos. Si falla, el caso conserva su análisis anterior y se avisa al usuario.
+- Portal del asegurado: límite de solicitudes por dirección (300 por 10 minutos) y bloqueo tras 20 enlaces inexistentes; detrás del túnel se usa la IP real que informa Cloudflare.
+- Exportación a Excel: los textos que empiezan con "=" se guardan como texto, nunca como fórmula.
+- Política de referencia `same-origin` (con `no-referrer` el navegador envía `Origin: null` en los formularios y la revisión de origen rechazaba el login).
 
 No se emite un certificado «Original». Los estados distinguen cambio recuperable entre revisiones PDF, indicios heurísticos, ausencia de indicios y análisis no concluyente. La etiqueta y el estado de procesamiento son independientes: un archivo puede contener un hallazgo útil y tener comprobaciones pendientes. Generación completa por IA, edición localizada, procedencia firmada y fraude son conceptos diferentes.
 
@@ -18,7 +26,7 @@ python -m evidex.web --dir casos
 
 El lanzador local inicia un worker; si se administra aparte, iniciar la web con `--sin-worker` y ejecutar `python -m evidex.inspection.worker --dir casos`. La carpeta debe coincidir y debe estar en disco local, no NFS/Dropbox. `--once` procesa como máximo un trabajo para operación y pruebas. Una interrupción se hace visible cuando otro worker recupera la cola; no se repiten automáticamente solicitudes potencialmente facturables.
 
-La inicialización administrativa y la recuperación (`--reset`) requieren acceso local al servidor. La corrupción del registro bloquea acceso: restaurar el respaldo, no borrar archivos para «arreglar» el login. Conservar usuarios, marcador de inicialización, bases SQLite y clave de sesión al migrar; las sesiones anteriores a esta versión requieren reingreso. Para la demostración histórica explícita: `python -m evidex.web --demo --legacy`, solo localhost.
+La inicialización administrativa y la recuperación (`--reset`) requieren acceso local al servidor. La corrupción del registro bloquea acceso: restaurar el respaldo, no borrar archivos para «arreglar» el login. Conservar usuarios, marcador de inicialización, bases SQLite y clave de sesión al migrar; las sesiones anteriores a esta versión requieren reingreso. Para la demostración sin usuarios: `python -m evidex.web --demo`, solo localhost.
 
 ## Controles implementados
 

@@ -25,13 +25,15 @@ def main(argv=None):
                    help="permitir que celulares de la misma red abran los enlaces de captura (HTTPS con certificado propio)")
     p.add_argument("--publico", action="store_true",
                    help="abrir un túnel https (cloudflared) para que el asegurado abra el enlace desde cualquier celular")
-    p.add_argument("--legacy", action="store_true", help="habilitar módulos históricos de siniestros y portal")
+    p.add_argument("--solo-analisis", action="store_true",
+                   help="mostrar solo «Analizar archivos» (sin siniestros, portal, investigaciones ni cartera)")
+    p.add_argument("--legacy", action="store_true", help=argparse.SUPPRESS)   # compatibilidad: ya viene activo
     p.add_argument("--demo", action="store_true", help="habilitar explícitamente demo sin usuarios, solo local")
     p.add_argument("--sin-worker", action="store_true", help="worker administrado por separado")
     a = p.parse_args(argv)
     if a.demo and (a.red or a.publico):
         p.error("La demo anónima solo se permite en localhost.")
-    app = create_app(Path(a.dir), {"DEMO_MODE": a.demo, "LEGACY_MODULES": a.legacy})
+    app = create_app(Path(a.dir), {"DEMO_MODE": a.demo, "LEGACY_MODULES": not a.solo_analisis})
     url = f"http://127.0.0.1:{a.puerto}"
     if a.red:
         from evidex.portal.links import lan_ip

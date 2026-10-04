@@ -24,7 +24,8 @@ from evidex.claims.report import ACTIONS
 from evidex.core import export
 from evidex.core.case import Case
 from evidex.core.ledger import verify_chain, verify_seal
-from evidex.web.common import (actor_name, analysts, cx, has_perm, load_claim, load_settings, log_access, summarize)
+from evidex.web.common import (actor_name, analysts, cx, has_perm, load_claim, load_settings, log_access,
+                               run_claim_analysis, summarize)
 from evidex.web.views.claims import bp
 
 TABS = [("resumen", "Resumen"), ("fotos", "Fotos"), ("documentos", "Documentos"), ("peritaje", "Peritaje"),
@@ -45,7 +46,7 @@ def _refresh_if_needed(case: Case) -> None:
     except OSError:
         seen = ""
     if not (case.root / "informe.html").exists() or not (case.root / service.SNAPSHOT).exists() or seen != want:
-        service.analyze_claim(case, cx.registry)
+        run_claim_analysis(case)     # si falla, avisa y no reintenta solo en cada visita: se usa "Analizar"
         mark.write_text(want)
 
 
@@ -216,7 +217,9 @@ def report(cid):
 
 @bp.post("/caso/<cid>/analizar")
 def reanalyze(cid):
-    r = service.analyze_claim(load_claim(cid), cx.registry)
+    r = run_claim_analysis(load_claim(cid))
+    if r is None:
+        return redirect(url_for("claims.case_view", cid=cid, tab=request.form.get("tab") or None))
     flash(f"Análisis actualizado: {r['findings']} hallazgo(s). {r['recommendation']}.", "info")
     if r.get("reanalyzed"):
         flash("También se reanalizaron los siniestros vinculados: " + ", ".join(r["reanalyzed"]) + ".", "info")

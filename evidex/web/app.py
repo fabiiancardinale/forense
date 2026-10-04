@@ -5,7 +5,8 @@ import os
 import secrets
 from datetime import timedelta
 from evidex.core.storage import locked, atomic_bytes
-from evidex.web.security import csrf_token, demo_open, protect_mutations, security_headers
+from evidex.web.security import (csrf_token, demo_open, portal_count_miss, portal_rate_limit, protect_mutations,
+                                 security_headers)
 from pathlib import Path
 
 from flask import Flask, abort, current_app, g, redirect, render_template, request, session, url_for
@@ -65,6 +66,8 @@ def create_app(workdir: Path, config: dict | None = None) -> Flask:
             return redirect(url_for('inspection.index'))
 
     app.before_request(network_guard)
+    app.before_request(portal_rate_limit)
+    app.after_request(portal_count_miss)
     app.before_request(protect_mutations)
     app.after_request(security_headers)
 

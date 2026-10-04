@@ -10,7 +10,7 @@ from flask import abort, flash, redirect, request, send_file, url_for
 
 from evidex.claims import service
 from evidex.core.case import sha256_file
-from evidex.web.common import actor_name, cx, load_claim, log_access, save_uploads, send_evidence
+from evidex.web.common import actor_name, load_claim, log_access, run_claim_analysis, save_uploads, send_evidence
 from evidex.web.views.claims import bp
 
 DIGEST = re.compile(r"[0-9a-f]{64}")
@@ -34,7 +34,7 @@ def add_photos(cid):
     if rejected:
         flash("No se agregaron: " + ", ".join(rejected), "bad")
     if added:
-        service.analyze_claim(case, cx.registry)
+        run_claim_analysis(case)
         flash(f"{added} archivo(s) agregado(s) y caso reanalizado.", "ok")
     elif photos:
         flash("Esos archivos ya estaban en el caso.", "info")
@@ -50,7 +50,7 @@ def evidence_exclude(cid, digest):
     elif digest not in case.excluded():
         case.exclude_evidence(digest, actor_name() or "analista", motivo)
         log_access("quitar_archivo", digest[:12])
-        service.analyze_claim(case, cx.registry)
+        run_claim_analysis(case)
         flash("Archivo quitado del análisis y caso reanalizado. Sigue guardado en la cadena de custodia.", "ok")
     return _back(cid)
 
@@ -60,7 +60,7 @@ def evidence_restore(cid, digest):
     case = load_claim(cid)
     if digest in case.excluded():
         case.restore_evidence(digest, actor_name() or "analista")
-        service.analyze_claim(case, cx.registry)
+        run_claim_analysis(case)
         flash("Archivo restaurado y caso reanalizado.", "ok")
     return _back(cid)
 

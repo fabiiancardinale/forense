@@ -48,3 +48,11 @@ def history(tmp_path_factory):
     subprocess.run([sys.executable, str(ROOT / "demo/make_history_demo.py"), str(csv_path)], check=True, capture_output=True)
     work = d / "casos"
     return work, csv_path, importer.import_history(work, csv_path, actor="prueba")
+
+
+@pytest.fixture(autouse=True)
+def _portal_limits_reset():
+    """Cada prueba parte sin solicitudes contadas en el límite del portal."""
+    from evidex.web.security import portal_limits_reset
+    portal_limits_reset()
+    yield

@@ -14,15 +14,24 @@ TEXT = {"bad": "B42318", "warn": "B54708", "ok": "067647"}
 MONEY = '"$"#,##0'
 
 
+def _put(ws, r: int, c: int, v):
+    """Escribe un valor como dato, nunca como fórmula. Los textos vienen del asegurado y de terceros: un
+    relato que empieza con "=HYPERLINK(...)" se guardaría como fórmula y se ejecutaría al abrir la planilla."""
+    cell = ws.cell(r, c, v)
+    if isinstance(v, str) and v.startswith("="):
+        cell.data_type = "s"
+    return cell
+
+
 def _sheet(wb, title: str, headers: list[str], rows: list[list], widths: list[int], money_cols=(), level_col=None,
            note: str = ""):
     ws = wb.create_sheet(title)
     start = 1
     if note:
-        ws.cell(1, 1, note).font = Font(italic=True, color="667588")
+        _put(ws, 1, 1, note).font = Font(italic=True, color="667588")
         start = 3
     for c, h in enumerate(headers, 1):
-        cell = ws.cell(start, c, h)
+        cell = _put(ws, start, c, h)
         cell.font = Font(bold=True, color="FFFFFF")
         cell.fill = PatternFill("solid", fgColor=NAVY)
         cell.alignment = Alignment(vertical="center", wrap_text=True)
@@ -30,7 +39,7 @@ def _sheet(wb, title: str, headers: list[str], rows: list[list], widths: list[in
         level = row[-1] if level_col is not None else None
         values = row[:-1] if level_col is not None else row
         for c, v in enumerate(values, 1):
-            cell = ws.cell(r, c, v)
+            cell = _put(ws, r, c, v)
             if c in money_cols and isinstance(v, (int, float)):
                 cell.number_format = MONEY
             if level_col == c and level in FILL:
