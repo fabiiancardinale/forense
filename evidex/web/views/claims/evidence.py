@@ -34,8 +34,9 @@ def add_photos(cid):
     if rejected:
         flash("No se agregaron: " + ", ".join(rejected), "bad")
     if added:
-        run_claim_analysis(case)
-        flash(f"{added} archivo(s) agregado(s) y caso reanalizado.", "ok")
+        r = run_claim_analysis(case)
+        flash(f"{added} archivo(s) agregado(s)" + ("; analizando el caso." if r and r.get("background") else
+                                                   " y caso reanalizado."), "ok")
     elif photos:
         flash("Esos archivos ya estaban en el caso.", "info")
     return _back(cid)
@@ -50,8 +51,9 @@ def evidence_exclude(cid, digest):
     elif digest not in case.excluded():
         case.exclude_evidence(digest, actor_name() or "analista", motivo)
         log_access("quitar_archivo", digest[:12])
-        run_claim_analysis(case)
-        flash("Archivo quitado del análisis y caso reanalizado. Sigue guardado en la cadena de custodia.", "ok")
+        r = run_claim_analysis(case)
+        flash("Archivo quitado del análisis" + ("; analizando el caso." if r and r.get("background") else
+                                                " y caso reanalizado.") + " Sigue guardado en la cadena de custodia.", "ok")
     return _back(cid)
 
 
@@ -60,8 +62,8 @@ def evidence_restore(cid, digest):
     case = load_claim(cid)
     if digest in case.excluded():
         case.restore_evidence(digest, actor_name() or "analista")
-        run_claim_analysis(case)
-        flash("Archivo restaurado y caso reanalizado.", "ok")
+        r = run_claim_analysis(case)
+        flash("Archivo restaurado" + ("; analizando el caso." if r and r.get("background") else " y caso reanalizado."), "ok")
     return _back(cid)
 
 

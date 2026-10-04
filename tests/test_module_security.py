@@ -152,3 +152,33 @@ def test_temporary_address_warns_and_detects_changed_link(tmp_path):
     c.post(f"/caso/{case.root.name}/captura/enviado")                         # lo reenvió
     assert "ya no funciona" not in c.get(f"/caso/{case.root.name}?tab=asegurado").get_data(as_text=True)
     assert capture.share_message("X", "alberto pérez", "https://a/c/t", "2026-10-08T10:00:00").startswith("Hola Alberto")
+
+
+def test_case_opens_immediately_and_analyzes_in_background(tmp_path, monkeypatch):
+    import time
+    from evidex.web import background, create_app
+    from evidex.claims.service import find_case
+    service.load_demo(tmp_path)
+    case = find_case(tmp_path, LIMPIO)
+    (case.root / "informe.evidencias").write_text("0|viejo")                 # como después de actualizar Evidex
+    app = create_app(tmp_path, {"DEMO_MODE": True, "CSRF_ENABLED": False, "LEGACY_MODULES": True,
+                                "BACKGROUND_ANALYSIS": True})
+    c = app.test_client()
+    t = time.monotonic()
+    page = c.get(f"/caso/{case.root.name}").get_data(as_text=True)
+    assert time.monotonic() - t < 2 and "Analizando las pruebas" in page     # no espera al análisis
+    assert c.get(f"/caso/{case.root.name}/analisis").get_json()["running"]
+    background.wait(case, 120)
+    assert c.get(f"/caso/{case.root.name}/analisis").get_json() == {
+        "running": False, "state": "done", "finished": background.status(case)["finished"]}
+    assert "Analizando las pruebas" not in c.get(f"/caso/{case.root.name}").get_data(as_text=True)
+
+    # si falla, se avisa y no se reintenta solo en cada visita
+    def boom(*a, **kw):
+        raise isolated.AnalysisFailed("El análisis superó el tiempo máximo y se detuvo.")
+    monkeypatch.setattr(isolated, "analyze", boom)
+    (case.root / "informe.evidencias").write_text("0|viejo")
+    c.get(f"/caso/{case.root.name}")
+    background.wait(case, 30)
+    page = c.get(f"/caso/{case.root.name}").get_data(as_text=True)
+    assert "El último análisis no terminó" in page and not background.is_running(case)

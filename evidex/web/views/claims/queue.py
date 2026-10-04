@@ -80,6 +80,8 @@ def new_claim():
     r = run_claim_analysis(case) or {}
     if send_link:
         flash("Siniestro registrado. Envíe ahora el enlace al asegurado desde la pestaña Asegurado.", "ok")
+    elif r.get("background"):
+        flash("Siniestro creado. Analizando las pruebas: la página se actualiza sola al terminar.", "ok")
     elif r:
         flash(f"Siniestro creado y analizado: {r['photos']} foto(s), {r['documents']} documento(s), "
               f"{r['findings']} hallazgo(s).", "ok")

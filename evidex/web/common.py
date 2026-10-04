@@ -149,17 +149,51 @@ def _work_state(case: Case) -> dict:
 
 
 
+ANALYSIS_MARK = "informe.evidencias"
+
+
+def analysis_mark(case: Case) -> str:
+    """Huella de lo que se analizó: cantidad de cambios de evidencia y versión de las pruebas de Evidex."""
+    n_ev = sum(1 for e in case.ledger.entries()
+               if e["action"] in ("evidence_added", "evidence_excluded", "evidence_restored"))
+    return f"{n_ev}|{service.ANALYSIS_VERSION}"
+
+
+def needs_analysis(case: Case) -> bool:
+    """Falta el informe, o cambió la evidencia, o Evidex trae pruebas nuevas desde el último análisis."""
+    try:
+        seen = (case.root / ANALYSIS_MARK).read_text().strip()
+    except OSError:
+        seen = ""
+    return (not (case.root / "informe.html").exists() or not (case.root / service.SNAPSHOT).exists()
+            or seen != analysis_mark(case))
+
+
 def run_claim_analysis(case: Case, notify: bool = True) -> dict | None:
-    """Analiza el siniestro desde la web: en un proceso aparte con tiempo máximo (ISOLATED_ANALYSIS).
-    Si no termina, avisa al usuario y devuelve None; el caso conserva su análisis anterior."""
+    """Analiza el siniestro desde la web, en un proceso aparte con tiempo máximo (ISOLATED_ANALYSIS).
+
+    Con BACKGROUND_ANALYSIS (lo que usa `python -m evidex.web`) el análisis corre en segundo plano y la
+    función vuelve al instante con {"background": True}: la página del caso se actualiza sola al terminar.
+    Si el análisis falla, el caso conserva su análisis anterior y se avisa al usuario."""
     from flask import flash
     from evidex.claims import isolated
-    if not current_app.config.get("ISOLATED_ANALYSIS", True):
-        return service.analyze_claim(case, cx.registry)
+    from evidex.web import background
+    mark, registry = analysis_mark(case), cx.registry
+    isolate = current_app.config.get("ISOLATED_ANALYSIS", True)
+
+    def run() -> dict:
+        r = isolated.analyze(case, registry) if isolate else service.analyze_claim(case, registry)
+        (case.root / ANALYSIS_MARK).write_text(mark)
+        return r
+
+    if current_app.config.get("BACKGROUND_ANALYSIS"):
+        background.start(case, run, info={"mark": mark})
+        return {"background": True}
     try:
-        return isolated.analyze(case, cx.registry)
+        return run()
     except isolated.AnalysisFailed as ex:
         current_app.logger.warning("Análisis fallido en %s: %s", case.root.name, ex)
+        (case.root / ANALYSIS_MARK).write_text(mark)      # no reintentar solo en cada visita: se usa "Reanalizar"
         if notify:
             flash(f"{ex} El caso conserva su análisis anterior; si un archivo lo provoca, quítelo del análisis "
                   "y vuelva a analizar.", "bad")

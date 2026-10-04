@@ -33,7 +33,8 @@ def main(argv=None):
     a = p.parse_args(argv)
     if a.demo and (a.red or a.publico):
         p.error("La demo anónima solo se permite en localhost.")
-    app = create_app(Path(a.dir), {"DEMO_MODE": a.demo, "LEGACY_MODULES": not a.solo_analisis})
+    app = create_app(Path(a.dir), {"DEMO_MODE": a.demo, "LEGACY_MODULES": not a.solo_analisis,
+                                     "BACKGROUND_ANALYSIS": True})
     url = f"http://127.0.0.1:{a.puerto}"
     if a.red:
         from evidex.portal.links import lan_ip

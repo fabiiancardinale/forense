@@ -337,10 +337,7 @@ def photo_set_findings(photos: list["Photo"]) -> list[Finding]:
     crops = _crop_pairs(ok)
     for a, b, rel in crops:
         base, part = (a, b) if rel["base"] == "a" else (b, a)
-        try:
-            change = derived.changed_region(base.path, part.path, rel)
-        except Exception:
-            change = None
+        change = rel.get("change")
         if change:
             seen.add((a.digest, b.digest))
             how = "es la foto" if rel["same"] else "es un recorte de la foto"
@@ -402,19 +399,54 @@ def photo_set_findings(photos: list["Photo"]) -> list[Finding]:
 CROP_MAX_PHOTOS = 20   # con más fotos solo se comparan los pares parecidos (cada par toma ~0,1 s)
 
 
+PAIRS_CACHE = "analisis_pares.json"
+PAIRS_VERSION = 1          # súbalo si cambia cómo se comparan las fotos
+
+
+def _pairs_cache(files: list["Photo"]) -> tuple[Path | None, dict]:
+    """Comparaciones ya hechas entre fotos del caso: no cambian mientras no cambien las fotos."""
+    folder = Path(files[0].path).parent if files else None
+    if folder is None or folder.name != "evidence":             # solo dentro de un caso
+        return None, {}
+    path = folder.parent / PAIRS_CACHE
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return path, data.get("pairs", {}) if data.get("version") == PAIRS_VERSION else {}
+    except (OSError, ValueError):
+        return path, {}
+
+
 def _crop_pairs(photos: list["Photo"]) -> list[tuple]:
-    """Pares de fotos (a, b, relación) que son la misma toma: recortada o con el mismo encuadre."""
+    """Pares de fotos (a, b, relación) que son la misma toma: recortada o con el mismo encuadre.
+    La relación incluye la zona cambiada entre las dos versiones ("change"), si la hay."""
     files = [p for p in photos if p.path and Path(p.path).exists()]
-    out = []
+    path, cache = _pairs_cache(files)
+    dirty, out = False, []
     for i, a in enumerate(files):
         for b in files[i + 1:]:
             if a.digest == b.digest:
                 continue
             if len(files) > CROP_MAX_PHOTOS and hamming(a.meta["dhash"], b.meta["dhash"]) > 20:
                 continue
-            rel = derived.relation(a.path, b.path)
+            key = f"{a.digest}:{b.digest}"
+            if key in cache:
+                rel = cache[key]
+            else:
+                rel = derived.relation(a.path, b.path)
+                if rel:
+                    base, part = (a, b) if rel["base"] == "a" else (b, a)
+                    try:
+                        rel["change"] = derived.changed_region(base.path, part.path, rel)
+                    except Exception:
+                        rel["change"] = None
+                cache[key], dirty = rel, True
             if rel:
                 out.append((a, b, rel))
+    if dirty and path is not None:
+        try:
+            path.write_text(json.dumps({"version": PAIRS_VERSION, "pairs": cache}), encoding="utf-8")
+        except OSError:
+            pass
     return out
 
 

@@ -84,9 +84,10 @@ def portal_finish(token):
         capture.finish(case, data)
     except ValueError as ex:
         return {"error": str(ex)}, 400
-    if run_claim_analysis(case, notify=False) is None:
+    r = run_claim_analysis(case, notify=False)
+    if r is None:
         return {"ok": True, "analysis_status": "failed", "warning": "Archivos recibidos; el analista debe reintentar el análisis."}
-    return {"ok": True, "analysis_status": "completed"}
+    return {"ok": True, "analysis_status": "queued" if r.get("background") else "completed"}
 
 
 @bp.post("/c/<token>/foto")

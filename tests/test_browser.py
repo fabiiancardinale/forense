@@ -20,7 +20,7 @@ PW = "una-clave-de-prueba-larga"
 def server(tmp_path):
     from werkzeug.serving import make_server
     from evidex.web import create_app
-    app = create_app(tmp_path / "casos", {"LEGACY_MODULES": True})
+    app = create_app(tmp_path / "casos", {"LEGACY_MODULES": True, "BACKGROUND_ANALYSIS": True})  # como iniciar_evidex
     assert app.extensions["evidex"]["store"].add("fabian", "Fabián", "administrador", PW) is None
     srv = make_server("127.0.0.1", 0, app, threaded=True)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
@@ -86,13 +86,17 @@ def test_create_claim_with_photo_and_open_every_tab(page, tmp_path):
     pg.click("button:has-text('Registrar siniestro')")
     pg.wait_for_load_state("networkidle")
     assert "/caso/SIN-2026-7001" in pg.url, pg.url
+    # la página abre al instante y se recarga sola cuando termina el análisis en segundo plano
+    pg.wait_for_selector("#analyzing", state="detached", timeout=90000)
+    assert "Foto" in pg.content()
     for tab in ("resumen", "fotos", "documentos", "peritaje", "asegurado", "informe", "historial"):
         resp = pg.goto(f"{base}/caso/SIN-2026-7001?tab={tab}")
         assert resp.status == 200, tab
     pg.goto(f"{base}/caso/SIN-2026-7001?tab=resumen")
     pg.click("form[action$='/analizar'] button")       # volver a analizar (formulario con CSRF real)
     pg.wait_for_load_state("networkidle")
-    assert "Análisis actualizado" in pg.content()
+    assert "Analizando el caso" in pg.content()
+    pg.wait_for_selector("#analyzing", state="detached", timeout=90000)
     assert not [e for e in errors if "Content Security Policy" in e or "Refused" in e]
 
 

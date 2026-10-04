@@ -24,8 +24,8 @@ from evidex.claims.report import ACTIONS
 from evidex.core import export
 from evidex.core.case import Case
 from evidex.core.ledger import verify_chain, verify_seal
-from evidex.web.common import (actor_name, analysts, cx, has_perm, load_claim, load_settings, log_access,
-                               run_claim_analysis, summarize)
+from evidex.web.common import (actor_name, analysis_mark, analysts, cx, has_perm, load_claim, load_settings,
+                               log_access, needs_analysis, run_claim_analysis, summarize)
 from evidex.web.views.claims import bp
 
 TABS = [("resumen", "Resumen"), ("fotos", "Fotos"), ("documentos", "Documentos"), ("peritaje", "Peritaje"),
@@ -35,19 +35,15 @@ KIND_LABEL = {"foto": "Foto", "documento": "Documento", "chat": "Chat de WhatsAp
 
 
 def _refresh_if_needed(case: Case) -> None:
-    """Reanaliza si no hay informe o si cambió la evidencia (llegó algo del portal, se quitó un archivo)."""
-    n_ev = sum(1 for e in case.ledger.entries()
-               if e["action"] in ("evidence_added", "evidence_excluded", "evidence_restored"))
-    mark = case.root / "informe.evidencias"
-    # también se reanaliza cuando Evidex se actualiza con pruebas nuevas (cambia ANALYSIS_VERSION)
-    want = f"{n_ev}|{service.ANALYSIS_VERSION}"
-    try:
-        seen = mark.read_text().strip()
-    except OSError:
-        seen = ""
-    if not (case.root / "informe.html").exists() or not (case.root / service.SNAPSHOT).exists() or seen != want:
-        run_claim_analysis(case)     # si falla, avisa y no reintenta solo en cada visita: se usa "Analizar"
-        mark.write_text(want)
+    """Reanaliza si no hay informe, si cambió la evidencia (llegó algo del portal, se quitó un archivo) o si
+    Evidex trae pruebas nuevas. En segundo plano, la página abre igual con el análisis anterior."""
+    from evidex.web import background
+    if background.is_running(case) or not needs_analysis(case):
+        return
+    st = background.status(case)
+    if st.get("state") == "failed" and st.get("mark") == analysis_mark(case):
+        return                       # ya falló con esta misma evidencia: no reintentar solo, se usa "Reanalizar"
+    run_claim_analysis(case)
 
 
 def evidence_items(case: Case, snap: dict) -> list[dict]:
@@ -89,7 +85,9 @@ def case_view(cid):
     log_access("ver_caso", c["numero"])
     snap = service.snapshot(case)
     items = evidence_items(case, snap)
+    from evidex.web import background
     ctx = {"c": c, "tab": tab, "tabs": TABS, "active": "index",
+           "analyzing": background.is_running(case), "analysis_state": background.status(case),
            "n_photos": sum(1 for i in items if i["kind"] == "foto" and not i["excluded"]),
            "n_docs": sum(1 for i in items if i["kind"] != "foto" and not i["excluded"]),
            "n_findings": len(snap["findings"])}
@@ -216,10 +214,21 @@ def report(cid):
     return send_file(case.root / "informe.html", mimetype="text/html")
 
 
+@bp.get("/caso/<cid>/analisis")
+def analysis_status(cid):
+    """Para que la página del caso sepa cuándo terminó el análisis en segundo plano."""
+    from evidex.web import background
+    case = load_claim(cid)
+    st = background.status(case)
+    return {"running": background.is_running(case), "state": st.get("state"), "finished": st.get("finished")}
+
+
 @bp.post("/caso/<cid>/analizar")
 def reanalyze(cid):
     r = run_claim_analysis(load_claim(cid))
-    if r is None:
+    if r is None or r.get("background"):
+        if r:
+            flash("Analizando el caso. Puede seguir trabajando: la página se actualiza sola al terminar.", "info")
         return redirect(url_for("claims.case_view", cid=cid, tab=request.form.get("tab") or None))
     flash(f"Análisis actualizado: {r['findings']} hallazgo(s). {r['recommendation']}.", "info")
     if r.get("reanalyzed"):

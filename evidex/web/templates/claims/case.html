@@ -17,5 +17,12 @@
 <a href="{{ url_for('claims.case_view', cid=c.id, tab=k if k != 'resumen' else None) }}" class="{{ 'on' if tab == k }}"{{ ' aria-current=page' if tab == k }}>{{ label }}
 {%- if k == 'fotos' %} <span class="c">{{ n_photos }}</span>{% elif k == 'documentos' %} <span class="c">{{ n_docs }}</span>{% elif k == 'resumen' and n_findings %} <span class="c">{{ n_findings }}</span>{% endif %}</a>{% endfor %}</nav>{% endblock %}
 {% block body %}
+{% if analyzing %}<div class="flash info" id="analyzing" data-status-url="{{ url_for('claims.analysis_status', cid=c.id) }}">
+<b>Analizando las pruebas…</b> Puede seguir trabajando: esta página muestra el análisis anterior y se actualiza sola al terminar.</div>
+<script nonce="{{ csp_nonce }}">
+(()=>{const b=document.getElementById('analyzing');const tick=async()=>{try{const r=await fetch(b.dataset.statusUrl,{headers:{Accept:'application/json'}});const j=await r.json();if(!j.running){location.reload();return}}catch(e){}setTimeout(tick,2500)};setTimeout(tick,2500)})();
+</script>
+{% elif analysis_state.state == 'failed' %}<div class="flash bad"><b>El último análisis no terminó.</b> {{ analysis_state.error }}
+El caso muestra el análisis anterior. Si un archivo lo provoca, quítelo del análisis en Fotos o Documentos y use Reanalizar.</div>{% endif %}
 {% include "claims/case/" ~ tab ~ ".html" %}
 {% endblock %}
