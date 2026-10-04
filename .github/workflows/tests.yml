@@ -31,3 +31,15 @@ jobs:
           cache: pip
       - run: python -m pip install -r requirements-dev.txt -r requirements-optional.txt
       - run: python -m pytest tests/test_hardening.py tests/test_forensics.py tests/test_image_fraud.py -q
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -r requirements-dev.txt playwright
+      - run: python -m playwright install --with-deps chromium
+      - run: python -m pytest tests/test_browser.py -q
