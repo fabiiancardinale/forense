@@ -72,6 +72,11 @@ No es "taller externo = sospechoso": se mira cada taller, en convenio o no, sobr
 - [ ] Coherencia entre las fotos del siniestro: color, modelo y patente del auto (media).
 - [ ] Huella del sensor: comprobar que varias fotos vienen del mismo teléfono aunque no tengan metadatos (grande).
 - [ ] Revisión de videos (choque, cámara de tablero) (grande).
+- [ ] **Código al azar en la foto** (rápida): el portal muestra un código (por ejemplo "K7P2") y el asegurado lo escribe en un papel junto al daño. Prueba que la foto se tomó en ese momento; una foto antigua o editada no lo trae.
+- [ ] **Video corto alrededor del auto** (media): en la captura segura, 10 segundos rodeando el vehículo con la patente visible. Un video es mucho más difícil de editar con IA que una foto y confirma que el daño es de ese auto.
+- [ ] **Mismo teléfono en el portal para distintos asegurados** (rápida): huella del navegador y red desde donde se suben las fotos; si coinciden entre asegurados distintos, puede ser la misma persona o el mismo taller armando los casos.
+- [ ] **Odómetro** (media): leer el kilometraje en la foto del tablero y compararlo con siniestros o revisiones técnicas anteriores del mismo auto.
+- [ ] **Fraude interno** (media): analistas o peritos que cierran como legítimos, una y otra vez, casos con alertas altas, o que siempre derivan al mismo taller.
 
 ## Para el analista y el jefe
 - [ ] Notificaciones por correo o WhatsApp: el asegurado subió algo, el perito entregó, un caso se atrasó (media).
