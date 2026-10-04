@@ -15,7 +15,7 @@ python -m evidex.accounts.setup --dir casos
 python -m evidex.web --dir casos
 ```
 
-En Windows también puede usar `iniciar_evidex.bat`. Sin usuarios no hay acceso anónimo: se inicializa el administrador por consola. La demo sin usuarios requiere `--demo` explícitamente y solo funciona localmente.
+En Windows también puede usar `iniciar_evidex.bat` (solo en este computador), `iniciar_publico.bat` (con enlace público para el portal del asegurado) o `iniciar_captura.bat` (celulares en la misma red wifi); los tres usan `preparar.bat`, que instala lo mismo, incluidos los extras de `requirements-optional.txt`. Sin usuarios no hay acceso anónimo: se inicializa el administrador por consola. La demo sin usuarios requiere `--demo` explícitamente y solo funciona localmente.
 
 **No se certifica «Original» por ausencia de indicios.** Se distinguen alteración detectada entre revisiones, indicios de alteración, sin indicios detectados y no concluyente. La detección/localización de IA no está validada contra un corpus real del negocio.
 
