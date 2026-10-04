@@ -124,7 +124,7 @@ def crop_of(big_path, small_path) -> dict | None:
         return None
     cut = {"izquierda": x / W, "arriba": y / H, "derecha": max(0.0, (W - x - w) / W), "abajo": max(0.0, (H - y - h) / H)}
     cut = {s: round(float(v), 3) for s, v in cut.items() if v >= 0.02}
-    return {"score": round(float(r), 3), "cover": round(float(cover), 3), "same": cover >= SAME_COVER or not cut,
+    return {"score": round(float(r), 3), "cover": round(float(cover), 3), "same": bool(cover >= SAME_COVER or not cut),
             "box": [round(float(v), 3) for v in (x / W, y / H, (x + w) / W, (y + h) / H)], "cut": cut}
 
 

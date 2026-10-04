@@ -457,8 +457,16 @@ def photo_set_findings(photos: list["Photo"]) -> list[Finding]:
 CROP_MAX_PHOTOS = 20   # con más fotos solo se comparan los pares parecidos (cada par toma ~0,1 s)
 
 
+CONTENT_VERSION = 2        # súbalo si cambia el análisis de píxeles o de C2PA: se recalcula la caché por foto
 PAIRS_CACHE = "analisis_pares.json"
 PAIRS_VERSION = 1          # súbalo si cambia cómo se comparan las fotos
+
+
+def _plain(v):
+    """Números y booleanos de numpy como tipos normales, para guardarlos en JSON."""
+    if hasattr(v, "item"):
+        return v.item()
+    raise TypeError(type(v).__name__)
 
 
 def _pairs_cache(files: list["Photo"]) -> tuple[Path | None, dict]:
@@ -502,9 +510,9 @@ def _crop_pairs(photos: list["Photo"]) -> list[tuple]:
                 out.append((a, b, rel))
     if dirty and path is not None:
         try:
-            path.write_text(json.dumps({"version": PAIRS_VERSION, "pairs": cache}), encoding="utf-8")
-        except OSError:
-            pass
+            path.write_text(json.dumps({"version": PAIRS_VERSION, "pairs": cache}, default=_plain), encoding="utf-8")
+        except (OSError, TypeError, ValueError):
+            pass                        # la caché es solo para ir más rápido: si falla, el análisis sigue igual
     return out
 
 
@@ -707,11 +715,12 @@ def load_case(case, timeline) -> tuple[dict, str, list[Photo]]:
             try:
                 meta = photo_metadata(path, name, content=False)
                 meta["received"] = e["ts"]
-                if e["subject"] not in cache:
+                if (cache.get(e["subject"]) or {}).get("_v") != CONTENT_VERSION:   # sin calcular o de una versión anterior
                     try:
                         cache[e["subject"]] = image_content.analyze_image(path)
                     except Exception as ex:
                         cache[e["subject"]] = {"error": type(ex).__name__}
+                    cache[e["subject"]]["_v"] = CONTENT_VERSION
                     dirty = True
                 if "ocr" not in cache[e["subject"]] and ocr.available():
                     try:

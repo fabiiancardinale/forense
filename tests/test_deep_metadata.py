@@ -124,3 +124,21 @@ def test_case_shows_explanations_and_full_metadata_page(tmp_path):
     assert "Samsung: datos propios del teléfono" in md and "Galaxy AI" in md and "EXIF (todas las carpetas)" in md
     resumen = c.get("/caso/SIN-M1").get_data(as_text=True)
     assert "por qué es alta" in resumen.lower()
+
+
+def test_case_with_cropped_pair_saves_cache_and_reanalyzes(tmp_path):
+    """Regresión: la caché de pares de fotos fallaba al guardar booleanos de numpy (TypeError) y el análisis no terminaba."""
+    from helpers import web_client
+    c = web_client(tmp_path)
+    full = textured_image(8, 1200, 1600)
+    a, b = io.BytesIO(), io.BytesIO()
+    full.save(a, "JPEG", quality=92)
+    full.crop((0, 0, 1200, 1400)).resize((1371, 1600)).save(b, "JPEG", quality=80)
+    r = c.post("/nuevo", data={"numero": "SIN-P1", "fecha_siniestro": "2026-10-04T10:00",
+                                "fotos": [(io.BytesIO(a.getvalue()), "completa.jpg"), (io.BytesIO(b.getvalue()), "recorte.jpg")]},
+               content_type="multipart/form-data")
+    assert r.status_code == 302
+    cache = tmp_path / "casos" / "SIN-P1" / "analisis_pares.json"
+    assert cache.exists() and json.loads(cache.read_text())["pairs"]
+    page = c.post("/caso/SIN-P1/analizar", follow_redirects=True).get_data(as_text=True)
+    assert "Análisis actualizado" in page and "recorte" in page.lower()
