@@ -1,0 +1,156 @@
+"""Entrena el detector de ediciones con IA y lo exporta para Evidex.
+
+  python training/entrenar.py --manifiesto manifiesto.csv --salida modelos/ --epocas 15 --preentrenado
+
+Deja en --salida:
+  evidex_ia.onnx         el modelo que carga Evidex (onnxruntime, sin torch en el servidor)
+  evidex_ia.safetensors  los pesos, para seguir entrenando (no se usa pickle: un pickle puede ejecutar código)
+  evidex_ia.json         ficha del modelo: conjuntos y licencias, umbral, métricas de validación, fecha
+
+El umbral se elige en validación para que como máximo el --fpr de las ORIGINALES dé alerta (5 % por defecto).
+Necesita GPU para un entrenamiento real (Kaggle/Colab gratis sirven); en CPU solo para probar que corre.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import sys
+import time
+from collections import Counter
+from datetime import datetime, timezone
+from pathlib import Path
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+from torch.utils.data import DataLoader
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from datos import Conjunto, dividir, leer           # noqa: E402
+from modelo import ConPuntaje, EvidexNet, puntaje  # noqa: E402
+
+FORMATO = 1          # si cambia la entrada/salida del ONNX, sube y Evidex lo revisa
+
+
+def perdida(logits, mask, etiqueta):
+    m = F.interpolate(mask, size=logits.shape[-2:], mode="nearest")
+    bce = F.binary_cross_entropy_with_logits(logits, m)
+    p = torch.sigmoid(logits)
+    dice = 1 - (2 * (p * m).sum((1, 2, 3)) + 1) / (p.sum((1, 2, 3)) + m.sum((1, 2, 3)) + 1)
+    dice = (dice * etiqueta).sum() / etiqueta.sum().clamp(min=1)       # dice solo en editadas
+    s = puntaje(logits).clamp(1e-4, 1 - 1e-4)
+    img = F.binary_cross_entropy(s, etiqueta)
+    return bce + dice + img
+
+
+@torch.no_grad()
+def evaluar(red, carga, disp):
+    red.eval()
+    ps, ys, ious = [], [], []
+    for x, m, y in carga:
+        logits = red(x.to(disp))
+        ps += puntaje(logits).cpu().tolist()
+        ys += y.tolist()
+        pm = (torch.sigmoid(logits) > .5).float().cpu()
+        mm = F.interpolate(m, size=pm.shape[-2:], mode="nearest")
+        for a, b, yy in zip(pm, mm, y):
+            if yy > 0:
+                inter, union = (a * b).sum().item(), ((a + b) > 0).sum().item()
+                ious.append(inter / union if union else 1.0)
+    return np.array(ps), np.array(ys), float(np.mean(ious)) if ious else None
+
+
+def umbral_para(ps, ys, fpr):
+    orig = np.sort(ps[ys == 0])
+    if len(orig) == 0:
+        return .5
+    k = int(np.floor(len(orig) * (1 - fpr)))
+    return float(orig[min(k, len(orig) - 1)]) + 1e-6
+
+
+def metricas(ps, ys, umbral):
+    ed, ori = ps[ys == 1], ps[ys == 0]
+    return {"deteccion_editadas": float((ed >= umbral).mean()) if len(ed) else None,
+            "falsas_alarmas_originales": float((ori >= umbral).mean()) if len(ori) else None,
+            "n_editadas": int(len(ed)), "n_originales": int(len(ori))}
+
+
+def exportar(red, lado, destino: Path):
+    red = red.cpu().eval()
+    x = torch.zeros(1, 3, lado, lado)
+    torch.onnx.export(ConPuntaje(red), (x,), str(destino), input_names=["imagen"],
+                      output_names=["mapa", "puntaje"], opset_version=17, dynamo=False,
+                      dynamic_axes={"imagen": {0: "n"}, "mapa": {0: "n"}, "puntaje": {0: "n"}})
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--manifiesto", type=Path, required=True)
+    ap.add_argument("--salida", type=Path, default=Path("modelos"))
+    ap.add_argument("--encoder", default="efficientnet_b0")
+    ap.add_argument("--preentrenado", action="store_true", help="partir de pesos ImageNet de timm")
+    ap.add_argument("--lado", type=int, default=512)
+    ap.add_argument("--epocas", type=int, default=15)
+    ap.add_argument("--lote", type=int, default=12)
+    ap.add_argument("--lr", type=float, default=3e-4)
+    ap.add_argument("--fpr", type=float, default=.05, help="falsas alarmas máximas en originales (validación)")
+    ap.add_argument("--limite", type=int, default=0, help="usar solo N imágenes (prueba rápida)")
+    ap.add_argument("--trabajadores", type=int, default=2)
+    a = ap.parse_args(argv)
+
+    filas = leer(a.manifiesto)
+    if a.limite:
+        filas = filas[:a.limite // 2] + filas[-(a.limite - a.limite // 2):]
+    entren, val = dividir(filas)
+    disp = "cuda" if torch.cuda.is_available() else "cpu"
+    red = EvidexNet(a.encoder, a.preentrenado).to(disp)
+    opt = torch.optim.AdamW(red.parameters(), lr=a.lr, weight_decay=1e-4)
+    sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=max(1, a.epocas))
+    ds = Conjunto(entren, a.lado, aumentar=True)
+    dv = DataLoader(Conjunto(val, a.lado, aumentar=False), batch_size=a.lote, num_workers=a.trabajadores)
+    mejor, hist = None, []
+    a.salida.mkdir(parents=True, exist_ok=True)
+    for ep in range(a.epocas):
+        ds.epoca = ep
+        red.train()
+        t, tot = time.time(), 0.0
+        for x, m, y in DataLoader(ds, batch_size=a.lote, shuffle=True, num_workers=a.trabajadores, drop_last=True):
+            loss = perdida(red(x.to(disp)), m.to(disp), y.to(disp))
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
+            tot += loss.item()
+        sched.step()
+        ps, ys, iou = evaluar(red, dv, disp)
+        u = umbral_para(ps, ys, a.fpr)
+        met = {**metricas(ps, ys, u), "iou_zona": iou, "umbral": u}
+        hist.append({"epoca": ep + 1, "perdida": tot, **met})
+        print(json.dumps(hist[-1], ensure_ascii=False), f"({time.time() - t:.0f}s)", flush=True)
+        if mejor is None or (met["deteccion_editadas"] or 0) > (mejor["deteccion_editadas"] or 0):
+            mejor = met
+            from safetensors.torch import save_file
+            save_file({k: v.contiguous().cpu() for k, v in red.state_dict().items()},
+                      str(a.salida / "evidex_ia.safetensors"))
+
+    from safetensors.torch import load_file
+    red.load_state_dict(load_file(str(a.salida / "evidex_ia.safetensors")))
+    exportar(red, a.lado, a.salida / "evidex_ia.onnx")
+    conjuntos = Counter((f["conjunto"].split("/")[0], f["licencia"]) for f in filas)
+    ficha = {
+        "formato": FORMATO, "nombre": "Evidex IA (zonas editadas con IA)", "encoder": a.encoder,
+        "preentrenado": "ImageNet (timm)" if a.preentrenado else None, "lado": a.lado,
+        "normalizacion": "imagenet", "umbral": mejor["umbral"], "fpr_objetivo": a.fpr,
+        "validacion": mejor, "historial": hist,
+        "conjuntos": [{"nombre": n, "licencia": l, "imagenes": c} for (n, l), c in sorted(conjuntos.items())],
+        "aumentos": "como WhatsApp: reducción 640-2048 px, JPEG 50-92 (a veces doble), recorte leve, espejo",
+        "fecha": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "sha256_onnx": hashlib.sha256((a.salida / "evidex_ia.onnx").read_bytes()).hexdigest(),
+        "advertencia": "Indicio para revisar, no prueba. Validar con fotos reales de siniestros antes de usar.",
+    }
+    (a.salida / "evidex_ia.json").write_text(json.dumps(ficha, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"Listo: {a.salida / 'evidex_ia.onnx'}  umbral={mejor['umbral']:.3f}  validación={mejor}")
+
+
+if __name__ == "__main__":
+    main()

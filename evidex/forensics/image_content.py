@@ -435,6 +435,13 @@ def analyze_image(path) -> dict:
     c = c2pa_status(path)
     if c is not None:
         out["c2pa"] = c
+    from evidex.forensics import learned
+    try:
+        lr = learned.check(path)                      # {} si no hay modelo instalado
+    except Exception as ex:
+        lr = {"error": type(ex).__name__}
+    if lr:
+        out["learned"] = lr
     return out
 
 
@@ -445,6 +452,8 @@ def overlay(path, content: dict, maxside: int = 900) -> bytes | None:
         boxes.append((content["ghost"]["region"]["bbox"], (220, 38, 38), "posible pegado"))
     if (content.get("noise") or {}).get("region"):
         boxes.append((content["noise"]["region"]["bbox"], (124, 58, 237), "grano distinto"))
+    if (content.get("learned") or {}).get("region"):
+        boxes.append((content["learned"]["region"]["bbox"], (14, 116, 144), "revisar esta zona (modelo)"))
     cl = content.get("clone") or {}
     if cl.get("src"):
         boxes += [(cl["src"], (234, 140, 0), "region similar A"), (cl["dst"], (234, 140, 0), "region similar B")]

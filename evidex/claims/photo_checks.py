@@ -43,6 +43,8 @@ CHECKS = [
      lambda m: None if m.get("format") in ("JPEG", "MPO") else "solo para fotos JPEG"),
     ("Píxeles", "Partes clonadas dentro de la foto", ("cloned_region",), None),
     ("Píxeles", "Grano del sensor parejo", ("noise_inconsistent",), None),
+    ("Píxeles", "Sin zonas que el modelo reconozca como editadas con IA", ("ai_model_region",),
+     lambda m: None if (m.get("content") or {}).get("learned") else "no hay un modelo instalado"),
     ("Píxeles", "Luz del cielo contra la hora", ("daylight_at_night",),
      lambda m: None if (m.get("content") or {}).get("sky_day") else "no se ve cielo de día"),
     ("Contexto", "Fecha de la foto contra la del siniestro", ("taken_before", "taken_late", "photo_before_policy"),

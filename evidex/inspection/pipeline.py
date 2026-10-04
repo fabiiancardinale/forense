@@ -75,7 +75,8 @@ def image_analysis(path, name, output, config, result):
     # el propio archivo declara la IA (lo anota el teléfono o la app): no es una estimación
     declared = {'ai_edited', 'ai_watermark_removed', 'ai_generated', 'ai_label_visible'}
     result['findings'] = [{'rule':f.rule,'title':f.title,'detail':f.summary,'severity':f.severity,
-                           'evidence_type':'metadata' if f.rule in declared else 'heuristic',
+                           'evidence_type':'metadata' if f.rule in declared else 'model' if f.rule == 'ai_model_region'
+                                            else 'heuristic',
                            'confirmed_change':f.rule in ('ai_edited', 'ai_watermark_removed'),
                            **explain(f.rule, f.severity)}
                           for f in findings if f.rule not in ignore]
@@ -107,7 +108,17 @@ def image_analysis(path, name, output, config, result):
                     'confirmed_change':False,'evidence_type':'model'})
     else:
         detector(result,'IA global','not_run','No se habilitó un detector de IA con autorización para este archivo.')
-    detector(result,'localización aprendida','not_run','No hay un modelo de localización validado y con licencia incorporado.',required=False)
+    from evidex.forensics import learned
+    ls = learned.status()
+    lr = content.get('learned') or {}
+    if ls['available'] and not lr.get('error'):
+        detector(result, 'localización aprendida', 'completed',
+                 f"Modelo {ls['id']}: puntaje {lr.get('score', 0):.2f} (alerta desde {ls['threshold']:.2f}). "
+                 'Estimación entrenada; no es prueba.', required=False)
+        result['learned'] = lr
+    else:
+        detector(result, 'localización aprendida', 'error' if lr.get('error') else 'not_run',
+                 lr.get('error') or f"No hay un modelo instalado ({ls.get('reason', '')}).", required=False)
     result['limitations'].append('Las regiones marcadas son indicios de heurísticas; no reconstruyen el contenido anterior.')
 
 

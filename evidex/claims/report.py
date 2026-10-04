@@ -246,6 +246,7 @@ RULE_NAMES = {
     "taken_before": "Foto anterior al siniestro", "taken_late": "Foto muy posterior", "gps_mismatch": "Ubicación no coincide",
     "unreadable": "Foto ilegible", "pasted_region": "Zona pegada", "cloned_region": "Zona clonada",
     "recompressed": "Foto guardada de nuevo", "noise_inconsistent": "Grano distinto en una zona",
+    "ai_model_region": "Posible zona editada con IA (modelo)",
     "resized_after_capture": "Foto recortada o achicada", "makernote_missing": "Metadatos de iPhone incompletos",
     "ai_dimensions": "Tamaño típico de IA", "edit_filename": "Nombre de archivo de edición",
     "saved_before_taken": "Fecha de la foto cambiada", "same_device_other_claim": "Mismo teléfono en otro siniestro",

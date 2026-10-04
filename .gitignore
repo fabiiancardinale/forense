@@ -3,3 +3,5 @@ __pycache__/
 casos/
 .pytest_cache/
 cloudflared.exe
+modelos/*.onnx
+modelos/*.safetensors

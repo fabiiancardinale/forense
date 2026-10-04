@@ -26,9 +26,12 @@ Ningún método solo detecta todo: se combinan las tres capas.
 **Capa 3: modelo forense propio** (grande)
 - [ ] Probar modelos de licencia libre con fotos reales: IML-ViT (MIT, ubica la zona editada) y SPAI (Apache 2.0, imágenes generadas completas). Revisar que los pesos también permitan uso comercial.
 - [ ] No usar TruFor: su licencia prohíbe el uso comercial (se probó solo como referencia: marcó la foto con el logo borrado con 0,55 contra 0,09-0,25 de fotos normales).
-- [ ] Integrarlo como "análisis profundo" con mapa de calor, primero solo como apoyo ("revisar esta zona"), en segundo plano.
+- [ ] **Correr el entrenamiento en Kaggle** (media): 3.000 imágenes por carpeta de TGIF + fotos propias, 15 épocas; medir con `scripts/benchmark.py --whatsapp` contra la línea base.
+- [ ] **Segundo modelo para imágenes 100% generadas** (media): Community Forensics (CC BY 4.0), misma ficha y mismo banco de pruebas.
+- [ ] **Banco de pruebas en la pantalla** (media): subir una carpeta de originales y editadas y ver los números sin usar la consola.
+- [x] Integrarlo como "análisis profundo" con mapa de calor, primero solo como apoyo ("revisar esta zona"), en segundo plano.
 - [ ] Ajustarlo con fotos propias en GPU gratuita (Kaggle o Colab). Meta medida: 9 de cada 10 ediciones con menos de 2 falsas alarmas por 100 fotos normales.
-- [ ] Guardar los pesos en safetensors (no pickle: puede ejecutar código y se rompe entre versiones) y correrlo con ONNX + onnxruntime, sin instalar PyTorch. Cargar una vez al iniciar; el archivo se descarga al instalar con su huella digital, fuera de GitHub; cada versión nueva reanaliza los casos.
+- [x] Guardar los pesos en safetensors (no pickle: puede ejecutar código y se rompe entre versiones) y correrlo con ONNX + onnxruntime, sin instalar PyTorch. Cargar una vez al iniciar; el archivo se descarga al instalar con su huella digital, fuera de GitHub; cada versión nueva reanaliza los casos.
 - [ ] Opción: huella del ruido propia (idea de Noiseprint del artículo de TruFor, con código y datos propios), entrenada solo con fotos sin editar.
 
 **Datasets con licencia que permite uso comercial** (revisar la letra chica con un abogado antes de vender)
@@ -36,13 +39,14 @@ Ningún método solo detecta todo: se combinan las tres capas.
 - [ ] **Community Forensics** (CVPR 2025, CC BY 4.0, versión base, no la "Small" que es no comercial): imágenes reales y generadas por miles de modelos. Para el detector de imágenes 100% inventadas con IA.
 - [ ] **Fotos de daños de autos** (Roboflow Universe, revisar licencia de cada uno; muchos CC BY 4.0): fotos base para el generador propio (borrar o agregar daños con IA).
 - Descartados: CASIA v2, DEFACTO, DocTamper (solo investigación o no comercial), Semi-Truths (licencia no especificada), InfImagine (comercial solo con permiso escrito). Sirven solo para pruebas internas si su licencia lo permite.
+- [x] Código del plan listo (`training/`: descarga parcial de TGIF, manifiesto con licencias que rechaza las no comerciales, aumentos tipo WhatsApp, entrenamiento, exportación ONNX + ficha). Falta correrlo en GPU (Kaggle/Colab).
 - [ ] **Plan de entrenamiento:** 1) TGIF2 pasado por compresión tipo WhatsApp para aprender a ubicar zonas editadas; 2) ajuste con fotos de autos editadas automáticamente y con las fotos propias (Galaxy AI, Google, iPhone); 3) detector aparte con Community Forensics; 4) medir siempre con fotos propias que no se usan para entrenar. Guardar el modelo en safetensors/ONNX con la lista de datasets y licencias usadas (BCI lo va a preguntar).
-- [ ] **Medición del punto de partida** (rápida): 200 fotos editadas con IA y pasadas por WhatsApp (TGIF2 + propias) y 200 normales por Evidex de hoy; repetir con el modelo entrenado. El número para BCI: "de 100 fotos editadas con IA mandadas por WhatsApp, Evidex detecta X, con Y falsas alarmas por cada 100 normales".
+- [x] **Medición del punto de partida** (rápida, hecha con TGIF: sin la firma de la app, Evidex de hoy detecta 2-7 de cada 100 editadas pasadas por WhatsApp; ver training/README.md; falta repetirla con fotos propias): 200 fotos editadas con IA y pasadas por WhatsApp (TGIF2 + propias) y 200 normales por Evidex de hoy; repetir con el modelo entrenado. El número para BCI: "de 100 fotos editadas con IA mandadas por WhatsApp, Evidex detecta X, con Y falsas alarmas por cada 100 normales".
 - Qué mejora: la foto editada con IA que llega sola por WhatsApp (hoy casi no se detecta) y las imágenes inventadas sin marcas. Qué no cambia: lo que ya detectan los metadatos, fotos repetidas, documentos y redes. Límites: la compresión de WhatsApp borra huellas, las IA nuevas obligan a reentrenar y habrá falsas alarmas (mostrar como "revisar esta zona").
 
 **Heredar la marca de IA a las copias** (rápida)
-- [ ] Si una foto es copia, recorte o versión achicada de otra del caso con marcas de IA, alerta alta "Copia de una foto editada con IA".
-- [ ] Lo mismo entre siniestros: guardar en el registro si la foto tenía marcas de IA.
+- [x] Si una foto es copia, recorte o versión achicada de otra del caso con marcas de IA, alerta alta "Copia de una foto editada con IA".
+- [x] Lo mismo entre siniestros: guardar en el registro si la foto tenía marcas de IA.
 
 **Banco de pruebas** (media)
 - [ ] Sección en Evidex: se sube una carpeta con pares original/editada, Evidex los empareja, marca la zona cambiada (sirve de etiqueta para entrenar) y mide cada prueba.

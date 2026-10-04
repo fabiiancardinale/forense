@@ -474,6 +474,13 @@ CROP_MAX_PHOTOS = 20   # con más fotos solo se comparan los pares parecidos (ca
 
 
 CONTENT_VERSION = 2        # súbalo si cambia el análisis de píxeles o de C2PA: se recalcula la caché por foto
+
+
+def content_version():
+    """Versión del análisis por foto; incluye el modelo aprendido instalado (si cambia, se recalcula)."""
+    from evidex.forensics import learned
+    mid = learned.model_id()
+    return f"{CONTENT_VERSION}+{mid}" if mid else CONTENT_VERSION
 PAIRS_CACHE = "analisis_pares.json"
 PAIRS_VERSION = 1          # súbalo si cambia cómo se comparan las fotos
 
@@ -589,6 +596,14 @@ def content_findings(p: "Photo", decl: dict, place, cite) -> list[Finding]:
                            f"de sensor que el resto de la imagen (unas {nz['ratio']} veces). Toda la foto sale del mismo "
                            "sensor, así que una zona con otro grano puede venir de otra imagen o estar retocada.",
                            cite, p.ts))
+    lr = c.get("learned") or {}
+    if lr.get("flag") and not (p.meta.get("deep") or {}).get("ai"):
+        out.append(Finding("ai_model_region", "media", f"Posible zona editada con IA ({p.name})",
+                           f"El modelo de Evidex entrenado para reconocer ediciones con IA marcó {p.name} "
+                           f"(puntaje {lr['score']:.2f}; alerta desde {lr['threshold']:.2f})"
+                           + (", en la zona marcada en azul en la revisión de la foto" if lr.get("region") else "")
+                           + ". Funciona aunque la foto haya pasado por WhatsApp, pero es una estimación: "
+                           "revise esa zona.", cite, p.ts))
     cl = c.get("clone") or {}
     if cl.get("src"):
         out.append(Finding("cloned_region", "alta", f"Parte de la imagen duplicada ({p.name})",
@@ -755,12 +770,12 @@ def load_case(case, timeline) -> tuple[dict, str, list[Photo]]:
             try:
                 meta = photo_metadata(path, name, content=False)
                 meta["received"] = e["ts"]
-                if (cache.get(e["subject"]) or {}).get("_v") != CONTENT_VERSION:   # sin calcular o de una versión anterior
+                if (cache.get(e["subject"]) or {}).get("_v") != content_version():   # sin calcular, versión o modelo distinto
                     try:
                         cache[e["subject"]] = image_content.analyze_image(path)
                     except Exception as ex:
                         cache[e["subject"]] = {"error": type(ex).__name__}
-                    cache[e["subject"]]["_v"] = CONTENT_VERSION
+                    cache[e["subject"]]["_v"] = content_version()
                     dirty = True
                 if "ocr" not in cache[e["subject"]] and ocr.available():
                     try:

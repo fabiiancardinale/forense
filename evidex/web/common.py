@@ -156,7 +156,9 @@ def analysis_mark(case: Case) -> str:
     """Huella de lo que se analizó: cantidad de cambios de evidencia y versión de las pruebas de Evidex."""
     n_ev = sum(1 for e in case.ledger.entries()
                if e["action"] in ("evidence_added", "evidence_excluded", "evidence_restored"))
-    return f"{n_ev}|{service.ANALYSIS_VERSION}"
+    from evidex.forensics import learned
+    mid = learned.model_id()                      # instalar o cambiar el modelo aprendido pide reanalizar
+    return f"{n_ev}|{service.ANALYSIS_VERSION}" + (f"|{mid}" if mid else "")
 
 
 def needs_analysis(case: Case) -> bool:

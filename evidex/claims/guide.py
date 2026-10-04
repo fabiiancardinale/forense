@@ -93,6 +93,12 @@ GUIDE: dict[str, tuple[str, str]] = {
         "se lee otra patente.",
         "Mire la foto: si es el otro auto del choque o uno que pasaba, no hay problema. Si es la foto que debía mostrar "
         "el vehículo asegurado, es una foto de otro auto y corresponde investigar."),
+    "ai_model_region": (
+        "El modelo de Evidex se entrenó con miles de fotos originales y editadas con IA (pasadas por una compresión "
+        "como la de WhatsApp) y aprendió a reconocer las huellas que deja la IA en los píxeles. A diferencia de los "
+        "metadatos, esto no se borra al reenviar la foto. Es una estimación: puede equivocarse.",
+        "Mire la zona marcada en azul en Revisar foto. Si coincide con el daño, pida la foto original desde el "
+        "teléfono (portal de captura) o una inspección presencial."),
     "noise_inconsistent": (
         "Toda la foto sale del mismo sensor, así que el \"grano\" de la imagen debería ser parejo (según la luz). "
         "Una zona con un grano claramente distinto puede haberse pegado desde otra foto o retocado. Es una señal de "
@@ -294,6 +300,8 @@ WHY = {
     # píxeles
     "pasted_region": "Alta porque una zona con otra huella de compresión indica que se pegó desde otra imagen.",
     "cloned_region": "Alta porque una parte copiada dentro de la misma foto es una manipulación del contenido.",
+    "ai_model_region": "Media porque es una estimación de un modelo entrenado: sirve para revisar, no prueba la edición "
+                       "por sí sola.",
     "noise_inconsistent": "Media porque el grano distinto puede venir de una zona pegada, pero también de luz muy dispareja.",
     "daylight_at_night": "Media porque indica que la fecha de la foto no es la real, aunque no prueba el fraude.",
     "c2pa_invalid": "Alta porque la imagen cambió después de que el teléfono o la app la firmó.",
