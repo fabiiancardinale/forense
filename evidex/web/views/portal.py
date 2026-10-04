@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 
-from flask import Blueprint, render_template, request
+from flask import current_app, Blueprint, render_template, request
 
 from evidex.claims import service
 from evidex.web.common import cx, load_settings, portal_case
@@ -87,8 +87,9 @@ def portal_finish(token):
     try:
         service.analyze_claim(case, cx.registry)
     except Exception:
-        pass
-    return {"ok": True}
+        current_app.logger.exception('Portal analysis failed for %s', case.root.name)
+        return {"ok": True, "analysis_status": "failed", "warning": "Archivos recibidos; el analista debe reintentar el análisis."}
+    return {"ok": True, "analysis_status": "completed"}
 
 
 @bp.post("/c/<token>/foto")
@@ -109,5 +110,6 @@ def capture_upload(token):
         try:
             service.analyze_claim(case, cx.registry)
         except Exception:
-            pass
+            current_app.logger.exception('Capture analysis failed for %s', case.root.name)
+            return {"ok": True, "analysis_status": "failed", "hora": rec["server_time"][11:16]}
     return {"ok": True, "hora": rec["server_time"][11:16]}

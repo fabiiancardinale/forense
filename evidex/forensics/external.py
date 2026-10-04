@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import base64
 import json
+import math
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -56,12 +57,20 @@ def ai_check(path: Path, cfg: dict) -> dict:
         r = _post(SIGHTENGINE_URL, body, {"Content-Type": ctype})
     except (urllib.error.URLError, TimeoutError, ValueError) as ex:
         return {"error": f"sin respuesta del servicio ({type(ex).__name__})"}
+    if not isinstance(r, dict):
+        return {"error": "respuesta inválida"}
     if r.get("status") != "success":
-        return {"error": (r.get("error") or {}).get("message", "respuesta inválida")}
-    t = r.get("type") or {}
+        return {"error": "El proveedor rechazó la solicitud o devolvió una respuesta inválida."}
+    t = r.get("type")
+    if not isinstance(t, dict):
+        return {"error": "respuesta sin resultados"}
+    score = t.get("ai_generated")
+    if isinstance(score, bool) or not isinstance(score, (float, int)) or not math.isfinite(score) or not 0 <= score <= 1:
+        return {"error": "score ausente o inválido"}
     gens = t.get("ai_generators") or {}
+    gens = {k: v for k, v in gens.items() if isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) and 0 <= v <= 1} if isinstance(gens, dict) else {}
     top = max(gens.items(), key=lambda kv: kv[1]) if gens else None
-    return {"score": float(t.get("ai_generated", 0)), "generator": top[0] if top and top[1] > 0.5 else None}
+    return {"score": float(score), "generator": top[0] if top and top[1] > 0.5 else None}
 
 
 def web_search(path: Path, cfg: dict) -> dict:
@@ -116,8 +125,8 @@ def findings(photos, results: dict) -> list:
             sev = "alta" if ai["score"] >= 0.8 else "media"
             gen = f", probablemente con {ai['generator']}" if ai.get("generator") else ""
             out.append(Finding("ai_detected", sev, f"Detector de IA: imagen generada o editada ({p.name})",
-                               f"El detector externo estima un {ai['score'] * 100:.0f}% de probabilidad de que la foto {p.name} "
-                               f"haya sido generada o editada con inteligencia artificial{gen}.", [p.ev], p.ts, "Fotos"))
+                               f"El detector externo entrega un score {ai['score']:.3f} para la foto {p.name}; este score no está calibrado como probabilidad del caso. La señal sugiere que "
+                               f"haya sido generada con inteligencia artificial{gen}.", [p.ev], p.ts, "Fotos"))
         web = r.get("web") or {}
         if web.get("full") or web.get("pages"):
             where = web["pages"][0][0] if web.get("pages") else web["full"][0]

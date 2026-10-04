@@ -15,5 +15,7 @@ rem Opcional: fotos HEIC de iPhone
 python -m pip install --disable-pip-version-check -q pillow-heif >nul 2>&1
 echo Si Windows pregunta por el firewall, permita el acceso en redes privadas.
 echo En el celular, el navegador mostrara un aviso de certificado: toque Avanzado y Continuar.
-python -m evidex.web --red
+if not exist "casos\usuarios.json" python -m evidex.accounts.setup --dir casos
+if errorlevel 1 exit /b 1
+python -m evidex.web --legacy --red
 pause

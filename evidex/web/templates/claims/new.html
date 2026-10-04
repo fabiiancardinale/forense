@@ -3,7 +3,7 @@
 {% block heading %}<h1>Nuevo siniestro</h1><p class="sub">Solo el número, la fecha y la evidencia son obligatorios; mientras más datos, más verificaciones puede hacer Evidex. Todo queda bajo cadena de custodia desde este momento.</p>{% endblock %}
 {% block body %}
 {% if error %}<div class="flash bad">{{ error }}</div>{% endif %}
-<form class="card" method="post" enctype="multipart/form-data" data-busy="Analizando…" style="max-width:1100px">
+<form class="card" method="post" enctype="multipart/form-data" data-busy="Analizando…" style="max-width:1100px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <div class="grid">
 <h3 class="sec">Siniestro</h3>
 <div><label>N° de siniestro *</label><input name="numero" required value="{{ f.numero }}" placeholder="SIN-2026-1234"></div>
@@ -59,7 +59,7 @@ Toma las fotos con la cámara en vivo y sube los documentos originales: no se pi
 <div class="toolbar" style="margin-top:18px"><button class="btn pri" type="submit">Registrar siniestro</button>
 <a class="btn" href="{{ url_for('claims.index') }}">Cancelar</a></div>
 </form>
-<script>
+<script nonce="{{ csp_nonce }}">
 const drop=document.getElementById('drop'),inp=document.getElementById('fotos'),th=document.getElementById('thumbs');
 drop.onclick=()=>inp.click();
 const fl=document.getElementById('files'),dt=document.getElementById('droptxt');

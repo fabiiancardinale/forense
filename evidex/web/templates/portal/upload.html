@@ -35,7 +35,7 @@ WhatsApp borra la fecha y el lugar de cada foto. Puede avanzar por partes y volv
 <p class="small" style="text-align:center;margin:8px 0 28px">Plataforma segura de entrega · Evidex by Zelekpress</p>
 </main>
 {% if not error %}
-<script>
+<script nonce="{{ csp_nonce }}">
 const $ = id => document.getElementById(id);
 const base = location.pathname.replace(/\/$/, "");
 const count = {photo: {{ sections[0].files|length }}, doc: {{ sections[1].files|length }}};
@@ -51,7 +51,7 @@ document.querySelectorAll(".sent").forEach(ul => ul.addEventListener("click", as
   const li = b.closest("li");
   if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "¿Quitar? Toque de nuevo"; setTimeout(() => { b.dataset.sure = ""; b.textContent = "Quitar"; }, 4000); return; }
   b.disabled = true; const fd = new FormData(); fd.append("id", li.dataset.id);
-  const r = await fetch(base + "/quitar", {method:"POST", body:fd}); const j = await r.json();
+  const r = await fetch(base + "/quitar", {method:"POST", headers:{"X-CSRF-Token":{{ csrf_token()|tojson }}}, body:fd}); const j = await r.json();
   if (!r.ok) { say(j.error, true); b.disabled = false; return; }
   count[li.dataset.kind]--; li.remove(); bar(); say("Archivo quitado. Si se equivocó, súbalo de nuevo.", false);
 }));
@@ -82,7 +82,7 @@ document.querySelectorAll("button[id^=up-]").forEach(btn => btn.onclick = async 
   btn.disabled = true; btn.textContent = "Subiendo…";
   for (const q of [...queue[kind]]) {
     const fd = new FormData(); fd.append("archivo", q.file, q.file.name); fd.append("kind", kind); fd.append("titulo", q.input.value.trim()); fd.append("modificado", String(q.file.lastModified || ""));
-    try { const r = await fetch(base + "/archivo", {method:"POST", body:fd}); const j = await r.json(); if (!r.ok) throw new Error(j.error || "error");
+    try { const r = await fetch(base + "/archivo", {method:"POST", headers:{"X-CSRF-Token":{{ csrf_token()|tojson }}}, body:fd}); const j = await r.json(); if (!r.ok) throw new Error(j.error || "error");
       const li = document.createElement("li"); li.innerHTML = "✓ "; li.append(j.titulo); const sm = document.createElement("small"); sm.textContent = j.hora; li.append(sm);
       li.dataset.id = j.id; li.dataset.kind = j.tipo; li.append(rmButton());
       $("sent-" + j.tipo).appendChild(li); count[j.tipo]++; q.row.remove(); queue[kind].splice(queue[kind].indexOf(q), 1);
@@ -93,15 +93,15 @@ document.querySelectorAll("button[id^=up-]").forEach(btn => btn.onclick = async 
 });
 $("savestory").onclick = async () => {
   const fd = new FormData(); fd.append("texto", $("story").value);
-  const r = await fetch(base + "/relato", {method:"POST", body:fd}); const j = await r.json();
+  const r = await fetch(base + "/relato", {method:"POST", headers:{"X-CSRF-Token":{{ csrf_token()|tojson }}}, body:fd}); const j = await r.json();
   say(r.ok ? "Relato guardado." : j.error, !r.ok);
 };
 $("finish").onclick = async () => {
   if (queue.photo.length || queue.doc.length) { say("Tiene archivos elegidos sin subir: escríbales un título y presione Subir.", true); return; }
   const falta = [count.photo ? "" : "fotos", count.doc ? "" : "documentos"].filter(Boolean);
   if (falta.length && !confirm("No ha subido " + falta.join(" ni ") + ". ¿Enviar de todas formas?")) return;
-  if ($("story").value.trim().length >= 10) { const fd = new FormData(); fd.append("texto", $("story").value); await fetch(base + "/relato", {method:"POST", body:fd}); }
-  const r = await fetch(base + "/terminar", {method:"POST"}); const j = await r.json();
+  if ($("story").value.trim().length >= 10) { const fd = new FormData(); fd.append("texto", $("story").value); await fetch(base + "/relato", {method:"POST", headers:{"X-CSRF-Token":{{ csrf_token()|tojson }}}, body:fd}); }
+  const r = await fetch(base + "/terminar", {method:"POST", headers:{"X-CSRF-Token":{{ csrf_token()|tojson }}}}); const j = await r.json();
   if (!r.ok) { say(j.error, true); return; }
   document.querySelectorAll("main > :not(#done)").forEach(e => e.hidden = true); $("done").hidden = false; $("bar").style.width = "100%"; $("bartxt").textContent = "Enviado";
   window.scrollTo(0, 0);

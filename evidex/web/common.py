@@ -13,6 +13,7 @@ from flask import abort, current_app, g, request, send_file
 from werkzeug.utils import secure_filename
 
 from evidex.accounts import users as U
+from evidex.web.security import demo_open
 from evidex.claims import assignment, service
 from evidex.core.case import Case
 from evidex.investigations import dossier as INV
@@ -59,7 +60,7 @@ def current_user() -> dict | None:
 def has_perm(perm: str) -> bool:
     """En modo demo (sin usuarios) todo está permitido."""
     u = current_user()
-    return not cx.store.enabled() or (u is not None and U.can(u["role"], perm))
+    return demo_open() or (u is not None and U.can(u["role"], perm))
 
 
 def sees_all_claims() -> bool:

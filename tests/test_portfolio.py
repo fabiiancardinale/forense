@@ -75,7 +75,7 @@ def test_excel_exports(loaded):
     import io as _io
     from openpyxl import load_workbook
     from evidex.web import create_app
-    c = create_app(loaded[0]).test_client()
+    c = create_app(loaded[0], {"DEMO_MODE": True, "CSRF_ENABLED": False, "LEGACY_MODULES": True}).test_client()
     for what, sheet in (("cola", "Cola de trabajo"), ("redes", "Redes"), ("metricas", "Resumen")):
         r = c.get(f"/exportar/{what}.xlsx")
         assert r.status_code == 200 and sheet in load_workbook(_io.BytesIO(r.data)).sheetnames

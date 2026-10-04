@@ -17,7 +17,7 @@
 <div class="r"><a class="btn sm" href="{{ url_for('claims.index') }}">Ver cola completa</a></div></div>
 <div class="panel">{% if priority %}<table class="queue"><colgroup><col style="width:34%"><col style="width:18%"><col style="width:18%"><col></colgroup>
 <thead><tr><th>Siniestro</th><th>Riesgo</th><th class="num">Monto</th><th>Recomendación</th></tr></thead>
-<tbody>{% for c in priority %}<tr class="row" onclick="location.href='{{ url_for('claims.case_view', cid=c.id) }}'">
+<tbody>{% for c in priority %}<tr class="row" data-href="{{ url_for('claims.case_view', cid=c.id) }}">
 <td><a class="strong" href="{{ url_for('claims.case_view', cid=c.id) }}">{{ c.numero }}</a><div class="line2">{{ c.asegurado }}{% if not mine %} · {{ c.owner_name }}{% endif %}</div></td>
 <td><span class="risk {{ c.level }}" style="--w:{{ c.score if c.score is number else 0 }}%"><i></i>{{ c.score }}</span></td>
 <td class="num nowrap">{{ '$' ~ money(c.monto) if c.monto else '—' }}</td>
@@ -27,12 +27,12 @@
 <section class="block"><div class="bh"><div><h2>En curso</h2><p>Lo que depende de otros: el perito o el asegurado</p></div></div>
 <div class="cols2">
 <div class="panel"><div class="ph"><h2>{{ icon('folder', 15) }} En peritaje</h2><span class="r hint">{{ expert|length }}</span></div>
-{% if expert %}<table class="mini">{% for c in expert %}<tr class="row" onclick="location.href='{{ url_for('claims.case_view', cid=c.id, tab='peritaje') }}'">
+{% if expert %}<table class="mini">{% for c in expert %}<tr class="row" data-href="{{ url_for('claims.case_view', cid=c.id, tab='peritaje') }}">
 <td><a class="strong" href="{{ url_for('claims.case_view', cid=c.id, tab='peritaje') }}">{{ c.numero }}</a><div class="line2">{{ c.derivation.empresa }}</div></td>
 <td class="num"><span class="st {{ c.derivation.state }}">{{ c.derivation.state_label }}</span><div class="line2">plazo {{ c.derivation.plazo or '—' }}</div></td></tr>{% endfor %}</table>
 {% else %}<div class="pb hint">Ningún caso derivado.</div>{% endif %}</div>
 <div class="panel"><div class="ph"><h2>{{ icon('link', 15) }} Esperando al asegurado</h2><span class="r hint">{{ waiting|length }}</span></div>
-{% if waiting %}<table class="mini">{% for w in waiting %}<tr class="row" onclick="location.href='{{ url_for('claims.case_view', cid=w.id, tab='asegurado') }}'">
+{% if waiting %}<table class="mini">{% for w in waiting %}<tr class="row" data-href="{{ url_for('claims.case_view', cid=w.id, tab='asegurado') }}">
 <td><a class="strong" href="{{ url_for('claims.case_view', cid=w.id, tab='asegurado') }}">{{ w.numero }}</a><div class="line2">{{ w.asegurado }} · hace {{ w.days }} día(s)</div></td>
 <td class="num">{% if w.expired %}<span class="st p-vencido">Vencido</span>{% elif w.opened %}<span class="st p-abierto">Subiendo</span>{% else %}<span class="st p-enviado">Sin abrir</span>{% endif %}
 <div class="line2">{{ w.done }} de {{ w.total }} pasos</div></td></tr>{% endfor %}</table>
@@ -42,10 +42,10 @@
 {% if can('peritaje') and (expedientes or audits) %}<section class="block"><div class="bh"><div><h2>Investigaciones</h2><p>Expedientes de peritos e informes auditados</p></div>
 <div class="r"><a class="btn sm" href="{{ url_for('investigations.investigations') }}">Ver todo</a></div></div>
 <div class="panel"><table class="mini">
-{% for x in expedientes[:4] %}<tr class="row" onclick="location.href='{{ url_for('investigations.inv_view', cid=x.id) }}'"><td><a class="strong" href="{{ url_for('investigations.inv_view', cid=x.id) }}">{{ x.numero }}</a><div class="line2">Expediente{% if x.empresa %} · {{ x.empresa }}{% endif %}</div></td>
+{% for x in expedientes[:4] %}<tr class="row" data-href="{{ url_for('investigations.inv_view', cid=x.id) }}"><td><a class="strong" href="{{ url_for('investigations.inv_view', cid=x.id) }}">{{ x.numero }}</a><div class="line2">Expediente{% if x.empresa %} · {{ x.empresa }}{% endif %}</div></td>
 <td class="hint">{{ x.answered }} de {{ x.alerts }} alertas respondidas</td>
 <td class="num">{% if x.delivered %}<span class="st entregado">Entregado</span>{% elif x.pending %}<span class="st derivado">{{ x.pending }} pendiente(s)</span>{% else %}<span class="st entregado">Listo</span>{% endif %}</td></tr>{% endfor %}
-{% for x in audits[:3] %}<tr class="row" onclick="location.href='{{ url_for('investigations.audit_view', cid=x.id) }}'"><td><a class="strong" href="{{ url_for('investigations.audit_view', cid=x.id) }}">{{ x.name[:40] }}</a><div class="line2">Auditoría · {{ x.ts }}</div></td>
+{% for x in audits[:3] %}<tr class="row" data-href="{{ url_for('investigations.audit_view', cid=x.id) }}"><td><a class="strong" href="{{ url_for('investigations.audit_view', cid=x.id) }}">{{ x.name[:40] }}</a><div class="line2">Auditoría · {{ x.ts }}</div></td>
 <td></td><td class="num"><span class="badge {{ 'bad' if x.alta else ('warn' if x.media else 'ok') }}">{{ x.alta }} alta · {{ x.media }} media</span></td></tr>{% endfor %}
 </table></div></section>{% endif %}
 </div>
@@ -59,7 +59,7 @@
 <dl class="kv" style="margin-top:14px"><dt>Fraudes confirmados</dt><dd>{{ k.fraude }}</dd><dt>Legítimos</dt><dd>{{ k.legitimo }}</dd><dt>Sin decisión</dt><dd>{{ k.sin_decision }}</dd></dl>
 </div></section>
 {% if can('redes') and comps %}<section class="panel"><div class="ph"><h2>Redes de fraude</h2><a class="r btn sm" href="{{ url_for('portfolio.networks') }}">Ver redes</a></div>
-<table class="mini">{% for c in comps[:4] %}<tr class="row" onclick="location.href='{{ url_for('portfolio.networks') }}'">
+<table class="mini">{% for c in comps[:4] %}<tr class="row" data-href="{{ url_for('portfolio.networks') }}">
 <td><b>{{ 'Red' if c.members|length >= 3 else 'Par' }} de {{ c.members|length }}</b><div class="line2">{{ c.reasons[0][0] if c.reasons else '' }}</div></td>
 <td class="num nowrap"><b>${{ money(c.monto) }}</b></td></tr>{% endfor %}</table></section>{% endif %}
 </aside></div>
@@ -71,7 +71,7 @@
 <div class="step"><b class="n">2</b><div><b>Importar el historial</b><div class="hint">Excel o CSV de siniestros pasados, para buscar redes en toda la cartera.</div></div></div>
 <div class="step"><b class="n">3</b><div><b>Crear un siniestro</b><div class="hint">Con la declaración, las fotos y los documentos del asegurado.</div></div></div></div>
 <div class="toolbar" style="justify-content:center">
-<form method="post" action="{{ url_for('claims.load_demo') }}" data-busy="Cargando…"><button class="btn pri" type="submit">Cargar ejemplo</button></form>
+<form method="post" action="{{ url_for('claims.load_demo') }}" data-busy="Cargando…"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn pri" type="submit">Cargar ejemplo</button></form>
 <a class="btn" href="{{ url_for('portfolio.import_view') }}">Importar historial</a><a class="btn" href="{{ url_for('claims.new_claim') }}">Nuevo siniestro</a></div></div>
 {% endif %}
 {% endblock %}

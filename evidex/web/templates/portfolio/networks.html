@@ -16,7 +16,7 @@ fotos, documentos o relatos compartidos. Ordenados por tamaño y monto reclamado
 <div class="reasons">{% for r, n in c.reasons %}<span>{{ r }} ×{{ n }}</span>{% endfor %}</div>
 {{ c.svg|safe }}<p class="hint" style="margin:0 0 6px">Punto rojo: derivado a investigación · ámbar: revisión · verde: sin alertas. Cada línea es un dato o evidencia compartida.</p>
 </div><div class="scroll"><table><tr><th>Siniestro</th><th>Asegurado</th><th>Fecha</th><th class="num">Monto</th><th>Recomendación</th><th>Decisión</th></tr>
-{% for m in c.members %}{% set i = c.info[m] %}<tr class="row" onclick="location.href='{{ url_for('claims.case_view', cid=i.id) }}'">
+{% for m in c.members %}{% set i = c.info[m] %}<tr class="row" data-href="{{ url_for('claims.case_view', cid=i.id) }}">
 <td style="white-space:nowrap"><a href="{{ url_for('claims.case_view', cid=i.id) }}"><b>{{ m }}</b></a></td><td>{{ i.asegurado }}</td>
 <td class="nowrap">{{ (i.fecha or '')[:10] }}</td><td class="num nowrap">{{ '$' ~ money(i.monto) if i.monto else '—' }}</td>
 <td><span class="badge {{ i.level or 'none' }}">{{ level_text[i.level] }}</span></td><td><span class="dec {{ i.decision or '' }}">{{ i.decision_label or '—' }}</span></td></tr>{% endfor %}
