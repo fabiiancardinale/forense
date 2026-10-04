@@ -55,6 +55,15 @@ No sirve para detectar ediciones en fotos (adivina con buena redacción). Sí pa
 - [ ] Resumen del caso para el jefe.
 - Requiere clave de API en la configuración (nunca en GitHub) y aprobación de BCI, porque las fotos y datos salen a un servidor externo.
 
+## Ideas novedosas (diferenciadoras)
+- [ ] **Los dos autos deben calzar** (grande): el daño del asegurado y el del otro auto tienen que corresponder en altura, forma y pintura transferida (restos del color del otro auto en el golpe). Un golpe a 80 cm del suelo no lo hace el parachoques de un auto bajo; pintura blanca en el golpe no viene de un auto rojo.
+- [ ] **Sombras contra la hora** (media): calcular hacia dónde debía caer la sombra según el sol en ese lugar y hora, y compararlo con las sombras de la foto. Extiende la prueba de "foto de día con hora de noche" a cualquier hora del día.
+- [ ] **Edad del daño** (grande): óxido, polvo o barro dentro de la abolladura, o bordes de pintura gastados, indican un daño de semanas o meses, no del día declarado.
+- [ ] **Auto comprado ya chocado** (media): buscar las fotos del auto y la patente en avisos de venta (Marketplace, Yapo, Chileautos) y remates de vehículos siniestrados. Patrón conocido: comprar barato un auto chocado, asegurarlo y declarar el choque.
+- [ ] **Conflicto de interés con el taller** (media): cruzar el RUT del dueño del taller con el asegurado usando el Registro de Empresas y Sociedades (público): mismo apellido, misma dirección o socios en común.
+- [ ] **Medir el daño en 3D** (grande): con el video alrededor del auto, reconstruir la abolladura en 3D, medir su profundidad y comparar con lo que cobra el presupuesto.
+- [ ] **Avisar en vivo** (media): mientras el asegurado llena el portal, Evidex ya revisa; si algo no cuadra (foto antigua, sin el código al azar), le pide otra foto en ese momento, antes de que el caso llegue al analista.
+
 ## Ranking de talleres (en Cartera, junto a Redes y Métricas)
 No es "taller externo = sospechoso": se mira cada taller, en convenio o no, sobre todos sus casos.
 - Porcentaje de sus siniestros con alertas, comparado con el promedio de los talleres.
