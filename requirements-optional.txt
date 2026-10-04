@@ -1,0 +1,5 @@
+-r requirements.txt
+c2pa-python==0.38.0
+pillow-heif==1.8.0
+pyHanko==0.37.0
+rapidocr_onnxruntime==1.4.4

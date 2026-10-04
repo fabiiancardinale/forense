@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Resultado del análisis{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static',filename='inspection.css') }}">{% endblock %}
+{% block crumbs %}<a href="{{ url_for('inspection.index') }}">Mis análisis</a> / Resultado{% endblock %}
+{% block heading %}<h1>Resultado del análisis</h1><p class="sub result-file">{{ job.name }}</p>{% endblock %}
+{% block actions %}<a class="btn pri" href="{{ url_for('inspection.index') }}">Analizar otro archivo</a>{% endblock %}
+{% block body %}
+<div class="inspection">
+<div class="status-line"><span class="state-pill state-{{ job.status }}" id="job-state">{{ status_labels.get(job.status, 'Estado no disponible') }}</span></div>
+{% if job.status in ['queued','running'] %}
+<section class="card verdict-card" id="analysis-pending" data-status-url="{{ url_for('inspection.status',job_id=job.id) }}" aria-labelledby="pending-title">
+<span class="eyebrow">Archivo recibido</span><h2 id="pending-title">{{ 'Estamos revisando tu archivo' if job.status == 'running' else 'Tu archivo está en espera' }}</h2>
+<p id="pending-description" aria-live="polite">El resultado aparecerá aquí cuando termine. Puedes volver a «Mis análisis» y consultarlo después.</p>
+<progress aria-label="Análisis en curso"></progress>
+<p class="muted subtle waiting" id="poll-message">Esta página se actualiza automáticamente. No necesitas subir el archivo otra vez.</p>
+<button type="button" class="text-link" id="poll-retry" hidden>Volver a comprobar</button>
+<noscript><p>Recarga esta página para consultar el estado actualizado.</p></noscript>
+</section>
+{% endif %}
+{% if job.result %}{% set r=job.result %}{% set verdict=r.verdict or 'inconclusive' %}
+<section class="card verdict-card verdict-{{ verdict }}" aria-labelledby="verdict-title">
+<span class="eyebrow">{{ 'No pudimos completar la revisión' if job.status in ['failed','rejected'] else 'Resultado principal' }}</span>
+<h2 id="verdict-title">{{ verdict_labels.get(verdict, 'No concluyente') }}</h2><p>{{ r.summary }}</p>
+{% if job.status == 'partial' %}<p class="notice">Algunas comprobaciones no se completaron. Los hallazgos disponibles se muestran a continuación.</p>{% endif %}
+<div class="next-step"><strong>Qué puedes hacer</strong><p>{{ 'Prueba con un archivo compatible y legible, dentro de los límites indicados.' if job.status == 'rejected' else 'Reintenta la revisión. Si vuelve a fallar, contacta al administrador.' if job.status == 'failed' else next_steps.get(verdict, next_steps.inconclusive) }}</p></div>
+{% if job.status == 'failed' and job.attempt < 3 %}<form method="post" action="{{ url_for('inspection.retry',job_id=job.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn pri" type="submit">Reintentar análisis</button>{% if job.consent %}<p class="muted subtle">El reintento puede repetir la consulta externa que autorizaste.</p>{% endif %}</form>{% endif %}
+</section>
+{% if r.findings %}<section class="card" style="margin-top:24px"><h2>Qué encontramos</h2>
+{% for f in r.findings %}<article class="finding"><h3>{{ f.title }}</h3><p>{{ f.detail }}</p>
+{% if f.removed or f.added %}<div class="text-diff"><div><strong>En la revisión anterior</strong><ul>{% for line in f.removed or [] %}<li>{{ line }}</li>{% else %}<li>No se recuperó texto eliminado.</li>{% endfor %}</ul></div><div><strong>En la revisión posterior</strong><ul>{% for line in f.added or [] %}<li>{{ line }}</li>{% else %}<li>No se recuperó texto añadido.</li>{% endfor %}</ul></div></div>{% endif %}</article>{% endfor %}
+{% for a in r.artifacts or [] %}<figure><img src="{{ url_for('inspection.artifact',job_id=job.id,name=a.file) }}" alt="Zonas que requieren revisión en la imagen"><figcaption>Las zonas marcadas muestran indicios; no son una prueba definitiva de edición.</figcaption></figure>{% endfor %}</section>{% endif %}
+<details class="card" style="margin-top:24px"><summary>Qué se revisó y qué quedó pendiente</summary>
+{% if r.coverage and r.coverage.pages_total %}<p>Se pudo leer contenido en {{ r.coverage.pages_read }} de {{ r.coverage.pages_total }} páginas.</p>{% endif %}
+<ul class="check-list">{% for d in r.detectors or [] %}<li><div><strong>{{ detector_labels.get(d.name,d.name) }}</strong><p>{{ d.detail }}</p></div><span>{{ status_labels.get(d.status, 'Estado no disponible') }}</span></li>{% endfor %}</ul>
+{% for text in r.limitations or [] %}<p class="muted subtle">{{ text }}</p>{% endfor %}
+</details>
+{% endif %}
+<details class="card" style="margin-top:16px"><summary>Información técnica del archivo</summary><p class="subtle">Huella digital (SHA-256), utilizada para identificar el archivo recibido:</p><pre>{{ job.sha256 }}</pre>{% if job.result %}<pre>{{ job.result|tojson(indent=2) }}</pre>{% endif %}</details>
+<p class="muted subtle">Una edición no demuestra fraude. La ausencia de indicios tampoco certifica originalidad.</p>
+<a href="{{ url_for('inspection.index') }}">Volver a mis análisis</a>
+</div>
+<script defer src="{{ url_for('static',filename='inspection.js') }}"></script>
+{% endblock %}

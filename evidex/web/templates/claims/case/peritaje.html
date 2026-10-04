@@ -25,7 +25,7 @@
 </div></section></div>
 <aside>
 {% if can('editar_siniestros') and not der.delivered %}<section class="panel"><div class="ph"><h2>Anular derivación</h2></div><div class="pb">
-<form method="post" action="{{ url_for('claims.derive_cancel', cid=c.id) }}" style="display:grid;gap:8px">
+<form method="post" action="{{ url_for('claims.derive_cancel', cid=c.id) }}" style="display:grid;gap:8px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <input name="motivo" placeholder="Motivo (por ejemplo: cambiar de empresa)" required aria-label="Motivo">
 <button class="btn sm" type="submit">Anular</button>
 <p class="hint" style="margin:0">El expediente del perito se conserva; después puede derivar a otra empresa.</p></form></div></section>{% endif %}
@@ -39,7 +39,7 @@
 {% elif not firms %}<p style="margin:0">Aún no hay empresas de peritaje registradas. {% if can('admin') %}Agréguelas en <a href="{{ url_for('admin.users_view') }}#empresas">Usuarios y accesos</a>.{% else %}Pida al administrador que las registre.{% endif %}</p>
 {% else %}
 <p class="hint" style="margin:0 0 14px">El perito recibe un expediente con los datos del siniestro y las alertas que elija. Entra a Evidex con su usuario, ve solo los casos derivados a su empresa, carga las entrevistas y entrega su informe final. Usted verá el avance aquí.</p>
-<form method="post" action="{{ url_for('claims.derive', cid=c.id) }}" class="cols2">
+<form method="post" action="{{ url_for('claims.derive', cid=c.id) }}" class="cols2"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <div style="display:grid;gap:10px;align-content:start">
 <div><label for="emp">Empresa de peritaje</label><select id="emp" name="empresa" required><option value="">Elija…</option>{% for f in firms %}<option>{{ f.nombre }}</option>{% endfor %}</select></div>
 {% if peritos %}<div><label for="per">Perito (opcional)</label><select id="per" name="perito"><option value="">Cualquier perito de la empresa</option>{% for p in peritos %}<option value="{{ p.username }}" data-emp="{{ p.empresa }}">{{ p.name }} · {{ p.empresa }}</option>{% endfor %}</select></div>{% endif %}

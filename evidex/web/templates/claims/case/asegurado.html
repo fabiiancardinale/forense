@@ -22,24 +22,24 @@ En producción, configure el dominio de la compañía en Configuración.</div>{%
 <div class="sharebtns">
 {% if wa_url %}<a class="btn pri" href="{{ wa_url }}" target="_blank" rel="noopener">Enviar por WhatsApp</a>{% endif %}
 {% if mail_url %}<a class="btn" href="{{ mail_url }}">Enviar por correo</a>{% endif %}
-<button class="btn" type="button" onclick="navigator.clipboard.writeText(document.getElementById('capmsg').value);this.textContent='Mensaje copiado'">Copiar mensaje</button></div>
+<button class="btn" type="button" data-copy-message>Copiar mensaje</button></div>
 {% if not wa_url %}<p class="hint" style="margin:6px 0 0">Sin teléfono en la declaración: copie el mensaje y envíelo por el medio que use.</p>{% endif %}
 <textarea id="capmsg" readonly rows="4" class="hint" style="margin-top:10px;font-size:12.5px">{{ share_msg }}</textarea>
 <details style="margin-top:8px"><summary class="hint">Enlace, código QR y código</summary>
 <div style="display:flex;gap:12px;align-items:flex-start;margin-top:8px">{% if cap_qr %}<img src="data:image/png;base64,{{ cap_qr }}" alt="Código QR del enlace" style="width:104px;height:104px;border:1px solid var(--line);border-radius:8px;flex:none">{% endif %}
 <dl class="kv"><dt>Código</dt><dd style="letter-spacing:.12em">{{ cap.code }}</dd><dt>Vence</dt><dd>{{ cap.expires[:16]|replace('T',' ') }}</dd></dl></div>
-<input readonly value="{{ cap_url }}" onclick="this.select()" class="mono" style="margin-top:8px" aria-label="Enlace">
+<input readonly value="{{ cap_url }}" data-select class="mono" style="margin-top:8px" aria-label="Enlace">
 </details>
 {% endif %}
 <details style="margin-top:10px"><summary class="hint">{{ 'Pedir más antecedentes (enlace nuevo)' if pr.finished or cap_state else 'Cambiar documentos o renovar el enlace' }}</summary>
-<form method="post" action="{{ url_for('claims.capture_link', cid=c.id) }}" style="margin-top:8px"><input type="hidden" name="docs_sent" value="1">
+<form method="post" action="{{ url_for('claims.capture_link', cid=c.id) }}" style="margin-top:8px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="docs_sent" value="1">
 {% for k, v in doc_types.items() if k != 'otro' %}<label style="font-weight:400;display:flex;gap:6px;margin:3px 0"><input type="checkbox" name="docs" value="{{ k }}" style="width:auto" {{ 'checked' if k in cap.doc_ids }}> {{ v }}</label>{% endfor %}
 <input name="docs_custom" value="{{ (cap.custom or [])|join('; ') }}" placeholder="Otros documentos (separe con punto y coma)" style="font-size:12.5px;margin-top:4px">
 <button class="btn sm" type="submit" style="margin-top:6px">Crear enlace nuevo</button>
 <p class="hint" style="margin:6px 0 0">El enlace anterior deja de funcionar. Lo ya recibido se conserva.</p></form></details>
 {% else %}
 <p class="hint" style="margin:0 0 10px">Envíe al asegurado un enlace donde toma las fotos con la cámara en vivo y sube sus documentos originales, sin pasar por WhatsApp.</p>
-<form method="post" action="{{ url_for('claims.capture_link', cid=c.id) }}"><input type="hidden" name="docs_sent" value="1">
+<form method="post" action="{{ url_for('claims.capture_link', cid=c.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="docs_sent" value="1">
 {% for k, v in doc_types.items() if k != 'otro' %}<label style="font-weight:400;display:flex;gap:6px;margin:3px 0"><input type="checkbox" name="docs" value="{{ k }}" style="width:auto" {{ 'checked' if k in default_docs }}> {{ v }}</label>{% endfor %}
 <input name="docs_custom" placeholder="Otros documentos (separe con punto y coma)" style="font-size:12.5px;margin-top:4px">
 <button class="btn pri" type="submit" style="width:100%;margin-top:8px">{{ icon('link', 15, '#fff') }}Crear enlace para el asegurado</button></form>

@@ -69,22 +69,22 @@ def test_chat_upload_accepted_only_if_real_chat(tmp_path):
 
 def test_users_login_roles_and_access_log(tmp_path):
     from evidex.web import create_app
-    app = create_app(tmp_path / "casos")
+    app = create_app(tmp_path / "casos", {"DEMO_MODE": True, "CSRF_ENABLED": False, "LEGACY_MODULES": True})
     c = app.test_client()
     assert c.get("/").status_code == 200                                  # sin usuarios: modo demo abierto
     r = c.post("/usuarios", data={"usuario": "ana", "nombre": "Ana Pérez", "rol": "liquidador", "clave": "x" * 12},
                follow_redirects=True)
     assert "primer usuario debe ser administrador" in r.get_data(as_text=True)
-    c.post("/usuarios", data={"usuario": "admin", "nombre": "Admin", "rol": "administrador", "clave": "clave-segura-1"})
-    c.post("/usuarios", data={"usuario": "ana", "nombre": "Ana Pérez", "rol": "liquidador", "clave": "clave-segura-2"})
-    c.post("/usuarios", data={"usuario": "ivan", "nombre": "Iván Inv", "rol": "investigador", "clave": "clave-segura-3"})
+    c.post("/usuarios", data={"usuario": "admin", "nombre": "Admin", "rol": "administrador", "clave": "clave-segura-001"})
+    c.post("/usuarios", data={"usuario": "ana", "nombre": "Ana Pérez", "rol": "liquidador", "clave": "clave-segura-002"})
+    c.post("/usuarios", data={"usuario": "ivan", "nombre": "Iván Inv", "rol": "investigador", "clave": "clave-segura-003"})
     users = json.loads((tmp_path / "casos" / "usuarios.json").read_text(encoding="utf-8"))
-    assert "clave-segura-1" not in json.dumps(users) and set(users) == {"admin", "ana", "ivan"}
-    c.get("/salir")
+    assert "clave-segura-001" not in json.dumps(users) and set(users) == {"admin", "ana", "ivan"}
+    c.post("/salir")
     r = c.get("/redes")
     assert r.status_code == 302 and "/ingresar" in r.location                # pide ingresar
     assert c.post("/ingresar", data={"usuario": "ana", "clave": "mala"}).status_code == 401
-    r = c.post("/ingresar", data={"usuario": "ana", "clave": "clave-segura-2", "next": "/redes"})
+    r = c.post("/ingresar", data={"usuario": "ana", "clave": "clave-segura-002", "next": "/redes"})
     assert r.status_code == 302 and r.location.endswith("/redes")
     assert c.get("/redes").status_code == 200
     assert c.get("/metricas").status_code == 403 and c.get("/usuarios").status_code == 403   # rol liquidador
@@ -94,14 +94,14 @@ def test_users_login_roles_and_access_log(tmp_path):
     c.post(f"/caso/{case.root.name}/decision", data={"decision": "legitimo", "actor": "otro nombre"})
     assert service.current_decision(case)["actor"] == "Ana Pérez"           # el autor es el usuario, no lo escrito
     assert c.post("/demo", headers={"Origin": "https://sitio-malicioso.example"}).status_code == 403
-    c.get("/salir")
-    c.post("/ingresar", data={"usuario": "ivan", "clave": "clave-segura-3"})
+    c.post("/salir")
+    c.post("/ingresar", data={"usuario": "ivan", "clave": "clave-segura-003"})
     assert c.get("/investigaciones").status_code == 200 and c.get(f"/caso/{case.root.name}").status_code == 200
     assert c.post(f"/caso/{case.root.name}/decision", data={"decision": "fraude"}).status_code == 403
-    c.get("/salir")
+    c.post("/salir")
     for _ in range(5):
         c.post("/ingresar", data={"usuario": "admin", "clave": "mala"})
-    r = c.post("/ingresar", data={"usuario": "admin", "clave": "clave-segura-1"})
+    r = c.post("/ingresar", data={"usuario": "admin", "clave": "clave-segura-001"})
     assert r.status_code == 401 and "Demasiados intentos" in r.get_data(as_text=True)
     log = (tmp_path / "casos" / "accesos.jsonl").read_text(encoding="utf-8")
     assert '"ver_caso"' in log and '"decision"' in log and '"ingreso_fallido"' in log

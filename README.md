@@ -5,19 +5,21 @@ Prototipo funcional (v1.0). Analiza siniestros de seguros de autos cruzando cinc
 al liquidador una recomendación, un puntaje de riesgo y un informe donde cada afirmación enlaza a su evidencia.
 Incluye además un módulo de respuesta a incidentes informáticos.
 
-## Cómo usarlo
+## MVP endurecido: login y análisis de archivos
 
-En Windows: doble clic en `iniciar_evidex.bat`. Instala lo necesario y abre Evidex en el navegador
-(http://127.0.0.1:8765). Corre solo en este equipo; los casos se guardan en la carpeta `casos`.
-Con la lista vacía, el botón **Cargar ejemplo** crea cinco siniestros ficticios: tres históricos que
-forman una red, uno sospechoso conectado a ellos (SIN-2026-0987) y uno limpio (SIN-2026-0990).
+El inicio predeterminado abre un MVP autenticado para imágenes y PDF, con procesamiento en un worker, acceso por propietario y resultados que distinguen hallazgos de análisis incompletos. Los módulos históricos descritos más abajo se habilitan con `--legacy`.
 
-A mano: `pip install flask cryptography pillow openpyxl pdfplumber numpy qrcode` (opcionales `c2pa-python` y `rapidocr_onnxruntime` para OCR) y luego `python -m evidex.web`.
+```sh
+python -m pip install -r requirements.txt
+python -m evidex.accounts.setup --dir casos
+python -m evidex.web --dir casos
+```
 
-**Usuarios:** mientras no exista ningún usuario, Evidex queda abierto en este equipo (modo demo). En *Usuarios y empresas*
-se crea el primer usuario, que debe ser administrador; desde ese momento se pide usuario y contraseña para todo. Las
-contraseñas se guardan solo como hash; tras 5 intentos fallidos el usuario se bloquea 5 minutos. Cada ingreso, salida, caso
-abierto, decisión, derivación, reasignación y descarga queda en `accesos.jsonl`.
+En Windows también puede usar `iniciar_evidex.bat`. Sin usuarios no hay acceso anónimo: se inicializa el administrador por consola. La demo requiere `--demo --legacy` explícitamente y solo funciona localmente.
+
+**No se certifica «Original» por ausencia de indicios.** Se distinguen alteración detectada entre revisiones, indicios de alteración, sin indicios detectados y no concluyente. La detección/localización de IA no está validada contra un corpus real del negocio.
+
+Consulte [alcance, límites, operación y verificación](docs/MVP_HARDENING.md) antes de un despliegue.
 
 ## Roles y flujo de trabajo
 
@@ -127,7 +129,7 @@ rechazos es orientativa y debe validarse con el área legal.
 |---|---|
 | **Red de siniestros** | Teléfono, correo, cuenta bancaria o dirección compartidos con siniestros de **otros** asegurados; siniestros repetidos del mismo RUT o patente en 12 meses; grupos de 3 o más siniestros conectados por datos, fotos, documentos o relatos (posible red organizada). Cuando un siniestro nuevo se vincula con uno anterior, el anterior se reanaliza. |
 | **Línea de tiempo forense** | Todos los hechos con fecha en una sola secuencia (declaración, póliza, fotos con su GPS, documentos y cada versión, mensajes del chat), indicando de dónde sale cada hora. Marca lo imposible: **traslado imposible** entre dos hechos (más de 130 km/h promedio), **daño fotografiado antes de la póliza**, presupuesto o factura con **fecha impresa anterior al choque**. |
-| **Versiones ocultas de PDF** | Recupera la versión original que queda dentro de un PDF editado (actualizaciones incrementales), muestra qué líneas cambiaron (montos, fechas) y permite descargar cada versión. |
+| **Versiones ocultas de PDF** | Recupera revisiones anteriores que quedan dentro de un PDF (actualizaciones incrementales), muestra qué líneas cambiaron (montos, fechas) y permite descargar cada versión. |
 | **Chats de WhatsApp** | Lee el chat exportado (.txt o .zip). Detecta mensajes que hablan del choque o del seguro **antes** de que ocurriera, frases que acuerdan qué decir ("dile que", "acuérdate que"), mensajes eliminados cerca del siniestro y teléfonos de otros siniestros. Cada mensaje queda citable en el informe. |
 | **Datos chilenos** | RUT con dígito verificador incorrecto (en la declaración o dentro de un presupuesto/factura: un sistema de facturación nunca lo emite mal), patentes con formato inválido o distintas a la del vehículo declarado. |
 | **Lugares en chats** | Reconoce ciudades y comunas de Chile en frases como "voy saliendo de Viña" o "estoy en Rancagua" (no basta con nombrar la ciudad). Si quien escribe es el asegurado, ese lugar entra a la línea de tiempo y se revisa el traslado imposible contra el choque y las fotos. |
@@ -135,7 +137,7 @@ rechazos es orientativa y debe validarse con el área legal.
 | **Servicios externos (opcional)** | Detector de imágenes generadas con IA (Sightengine) y búsqueda inversa en internet (Google Cloud Vision), configurables con sus claves en Configuración. Envían la foto al proveedor: requieren autorización. |
 | **Póliza y siniestro** | Siniestro a pocos días de contratar la póliza o cerca del vencimiento; fuera de vigencia; aumento de cobertura poco antes; aviso tardío o denuncia con fecha anterior; monto reclamado cercano a la suma asegurada; madrugada sin testigos ni parte policial. |
 | **Documentos (PDF)** | Paso por editores de PDF (iLovePDF, Smallpdf, Sejda...); modificaciones posteriores a la creación (versiones guardadas, fechas); presupuestos o facturas creados antes del siniestro; el mismo documento presentado en otro siniestro. |
-| **Contenido de la imagen** (funciona sin metadatos) | Doble compresión JPEG: la foto se abrió y volvió a guardar; **zona pegada** desde otra imagen (sin la huella de compresión del resto), marcada en rojo; **clonado** de una parte de la foto en otro lugar; cielo de día en una foto con hora de noche (altura del sol en ese lugar y hora); firma de autenticidad **C2PA** rota (Pixel 10/11 y otras cámaras firman sus fotos); **grano del sensor** distinto en una zona (pegada de otra foto o retocada), marcada en morado. En *Revisar foto* se ven además el mapa **ELA** y el **mapa de ruido**. |
+| **Contenido de la imagen** (funciona sin metadatos) | Doble compresión JPEG: la foto se abrió y volvió a guardar; **zona pegada** desde otra imagen (sin la huella de compresión del resto), marcada en rojo; **clonado** de una parte de la foto en otro lugar; cielo de día en una foto con hora de noche (altura del sol en ese lugar y hora); firma de autenticidad **C2PA** rota (Pixel 10/11 y otras cámaras firman sus fotos); **grano del sensor** distinto en una zona (pegada de otra foto o retocada), marcada en morado. El nuevo flujo de análisis muestra regiones sospechosas cuando las heurísticas las detectan. |
 | **Fotos** | Marcas de generación por IA; edición con software; sin metadatos; metadatos manipulados (fechas internas distintas, hora GPS que no calza, miniatura de otra imagen, cámara sin datos de exposición, ExifTool); capturas de pantalla; fecha anterior o muy posterior al siniestro; GPS lejos del lugar declarado; foto **recortada o achicada** después de tomarla (la cámara anota el tamaño original); iPhone sin la nota del fabricante (metadatos copiados o escritos a mano); tamaño exacto de generadores de IA; nombre de archivo de edición; en el portal, fecha del archivo anterior a la fecha de la foto. |
 | **Fotos entre siniestros** | Foto idéntica, casi idéntica (recortada, recomprimida) o **espejada** a la de otro siniestro; la misma toma reconocida por el **identificador único** que graban algunas cámaras, aunque la imagen se haya editado; el **mismo teléfono** (número de serie de la cámara) en siniestros de distintos asegurados. |
 | **Fotos del mismo siniestro** | La misma foto presentada dos veces o **espejada** para simular el otro costado; una foto que es **recorte de otra** del caso (y qué bordes se quitaron), con alerta alta si el recorte **sacó la marca «Contenido generado por IA»**; fotos tomadas con varios teléfonos distintos. |
@@ -220,7 +222,7 @@ rejillas); el enlace de captura segura y el código en papel cubren ese caso.
 
 - Ninguna señal prueba fraude por sí sola, y la ausencia de señales no prueba autenticidad. Las alertas priorizan la revisión humana.
 - Los umbrales (días, montos, similitud) son valores iniciales razonables y **deben calibrarse con datos reales** de la aseguradora.
-- Metadatos de fotos y PDF se pueden borrar o falsificar; una edición cuidadosa (o un retoque con IA generativa guardado a la misma calidad) puede no dejar huellas en los píxeles. Una imagen generada por IA sin marcas no se detecta (falta un detector por contenido). No se lee el texto de los PDF (montos, RUT del taller): requiere extracción de texto u OCR.
+- Metadatos de fotos y PDF se pueden borrar o falsificar; una edición cuidadosa (o un retoque con IA generativa guardado a la misma calidad) puede no dejar huellas en los píxeles. Una imagen generada por IA sin marcas no se detecta (falta un detector por contenido). La extracción de texto y el OCR no demuestran autenticidad documental.
 - La red solo ve los siniestros cargados en Evidex; su valor crece con el historial (use Importar).
 - Las métricas del historial de ejemplo (detección 75%, precisión 69%) son de datos inventados para mostrar el funcionamiento;
   las cifras reales solo se conocen con un piloto sobre datos de la aseguradora.

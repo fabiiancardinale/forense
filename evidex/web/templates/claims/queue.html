@@ -14,12 +14,12 @@
 <button type="button" class="chip" data-f="warn">Revisión <span class="c">{{ counts.warn }}</span></button>
 <button type="button" class="chip" data-f="ok">Sin alertas <span class="c">{{ counts.ok }}</span></button></div>
 {% if everyone and team %}<form method="get" class="fsel"><label for="an">Analista</label>
-<select id="an" name="analista" onchange="this.form.submit()"><option value="">Todos</option>{% for a in team %}<option value="{{ a.username }}" {{ 'selected' if who == a.username }}>{{ a.name }}</option>{% endfor %}<option value="-" {{ 'selected' if who == '-' }}>Sin asignar</option></select></form>{% endif %}
+<select id="an" name="analista" data-auto-submit><option value="">Todos</option>{% for a in team %}<option value="{{ a.username }}" {{ 'selected' if who == a.username }}>{{ a.name }}</option>{% endfor %}<option value="-" {{ 'selected' if who == '-' }}>Sin asignar</option></select></form>{% endif %}
 </div>
 <table class="queue" id="t">
 <colgroup><col style="width:25%"><col style="width:12%"><col style="width:17%"><col style="width:12%"><col>{% if everyone %}<col style="width:13%">{% endif %}</colgroup>
 <thead><tr><th>Siniestro</th><th>Ocurrido</th><th>Riesgo</th><th class="num">Monto</th><th>Estado</th>{% if everyone %}<th>Analista</th>{% endif %}</tr></thead>
-<tbody>{% for c in cases %}<tr class="row" data-level="{{ c.level }}" data-pend="{{ 1 if c.level == 'bad' and c.decision in (None, 'en_revision') else 0 }}" onclick="location.href='{{ url_for('claims.case_view', cid=c.id) }}'">
+<tbody>{% for c in cases %}<tr class="row" data-level="{{ c.level }}" data-pend="{{ 1 if c.level == 'bad' and c.decision in (None, 'en_revision') else 0 }}" data-href="{{ url_for('claims.case_view', cid=c.id) }}">
 <td><a class="strong" href="{{ url_for('claims.case_view', cid=c.id) }}">{{ c.numero }}</a>
 <div class="line2">{{ c.asegurado }}{% if c.patente and c.patente != '—' %} · {{ c.patente }}{% endif %}</div></td>
 <td class="nowrap">{{ c.fecha[8:10] }}-{{ c.fecha[5:7] }}-{{ c.fecha[:4] }}<div class="line2">{{ c.fecha[11:] }}</div></td>
@@ -35,7 +35,7 @@
 </table>
 <div class="tablefoot hint" id="shown"></div>
 </section>
-<script>
+<script nonce="{{ csp_nonce }}">
 const q=document.getElementById('q');let lf='';
 function apply(){const v=q.value.toLowerCase();let n=0;document.querySelectorAll('#t tr.row').forEach(r=>{
  const okf=!lf||(lf==='pend'?r.dataset.pend==='1':r.dataset.level===lf);const s=okf&&r.textContent.toLowerCase().includes(v);r.hidden=!s;n+=s});
@@ -48,7 +48,7 @@ document.querySelectorAll('#chips .chip').forEach(c=>c.onclick=()=>{document.que
 <div class="card empty"><h2>Aún no hay siniestros</h2>
 <p>Cree uno con la declaración del asegurado, o cargue un ejemplo para ver cómo funciona.</p>
 <div class="toolbar" style="justify-content:center">{% if can('editar_siniestros') %}<a class="btn pri" href="{{ url_for('claims.new_claim') }}">Nuevo siniestro</a>
-<form method="post" action="{{ url_for('claims.load_demo') }}" data-busy="Cargando…"><button class="btn" type="submit">Cargar ejemplo</button></form>{% endif %}
+<form method="post" action="{{ url_for('claims.load_demo') }}" data-busy="Cargando…"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn" type="submit">Cargar ejemplo</button></form>{% endif %}
 {% if can('cartera') %}<a class="btn" href="{{ url_for('portfolio.import_view') }}">Importar historial</a>{% endif %}</div></div>
 {% endif %}
 {% endblock %}

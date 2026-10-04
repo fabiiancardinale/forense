@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% block title %}Configuración{% endblock %}
 {% block heading %}<h1>Configuración</h1><p class="sub">Datos de su empresa y servicios externos opcionales para revisar fotos.</p>{% endblock %}
 {% block body %}
-<form method="post" class="cols2" style="align-items:start">
+<form method="post" class="cols2" style="align-items:start"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <section class="panel"><div class="ph"><h2>Empresa</h2></div><div class="pb">
 <label for="empresa">Nombre en los informes de investigación</label><input id="empresa" name="empresa" value="{{ cfg.empresa or '' }}" placeholder="Nombre de la consultora o compañía">
 <label for="dp" style="margin-top:12px">Dirección pública del portal del asegurado</label><input id="dp" name="direccion_publica" value="{{ cfg.direccion_publica or '' }}" placeholder="https://siniestros.sucompania.cl" autocomplete="off">

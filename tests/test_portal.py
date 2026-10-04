@@ -14,7 +14,7 @@ def test_secure_capture_flow(tmp_path):
     service.load_demo(tmp_path)
     case = service.find_case(tmp_path, LIMPIO)
     decl = service.declaration(case)
-    app = create_app(tmp_path)
+    app = create_app(tmp_path, {"DEMO_MODE": True, "CSRF_ENABLED": False, "LEGACY_MODULES": True})
     c = app.test_client()
     assert c.post(f"/caso/{case.root.name}/captura").status_code == 302
     data = capture.load(case)
@@ -36,6 +36,8 @@ def test_secure_capture_flow(tmp_path):
     assert cap and cap[0].meta["taken"] == entry["data"]["capture"]["server_time"]
     assert not [f for f in findings if f.rule == "no_metadata" and cap[0].ev in f.evidence]
     # en modo red, desde otro equipo solo se puede abrir el enlace de captura
+    app.extensions["evidex"]["store"].add("admin", "Admin", "administrador", "a-long-admin-password")
+    app.config["DEMO_MODE"] = False
     app.config["LAN"] = True
     assert c.get("/", environ_base={"REMOTE_ADDR": "192.168.1.20"}).status_code == 403
     assert c.get(f"/c/{tok}", environ_base={"REMOTE_ADDR": "192.168.1.20"}).status_code == 200
@@ -139,7 +141,7 @@ def test_public_link_warning_and_guard(tmp_path):
     msg = capture.share_message("SIN-1", "Ana Pérez", "https://abc.trycloudflare.com/c/tok", "2026-10-08T10:00:00")
     assert "\nhttps://abc.trycloudflare.com/c/tok\n" in msg
     from evidex.web import create_app
-    app = create_app(tmp_path / "casos")
+    app = create_app(tmp_path / "casos", {"DEMO_MODE": True, "CSRF_ENABLED": False, "LEGACY_MODULES": True})
     app.config.update(TESTING=True, PUBLIC=True, PUBLIC_BASE="https://abc.trycloudflare.com")
     cl = app.test_client()
     assert cl.get("/", headers={"Cf-Ray": "1"}).status_code == 404          # por el túnel solo se ve el portal
@@ -151,7 +153,7 @@ def test_portal_uploads_show_in_case_and_report(tmp_path):
     import io, json
     from PIL import Image
     from evidex.web import create_app
-    app = create_app(tmp_path / "casos"); app.config["TESTING"] = True
+    app = create_app(tmp_path / "casos", {"DEMO_MODE": True, "CSRF_ENABLED": False, "LEGACY_MODULES": True}); app.config["TESTING"] = True
     cl = app.test_client(); B = "http://127.0.0.1:8765"; H = {"Origin": B}
     cl.post("/demo", base_url=B, headers=H)
     cid = [p.name for p in (tmp_path / "casos").iterdir() if (p / "ledger.jsonl").exists()][0]
@@ -174,7 +176,7 @@ def test_remove_wrong_file_keeps_custody(tmp_path):
     from PIL import Image
     from evidex.web import create_app
     from evidex.core.case import Case
-    app = create_app(tmp_path / "casos"); app.config["TESTING"] = True
+    app = create_app(tmp_path / "casos", {"DEMO_MODE": True, "CSRF_ENABLED": False, "LEGACY_MODULES": True}); app.config["TESTING"] = True
     cl = app.test_client(); B = "http://127.0.0.1:8765"; H = {"Origin": B}
     cl.post("/demo", base_url=B, headers=H)
     cid = [p.name for p in (tmp_path / "casos").iterdir() if (p / "ledger.jsonl").exists()][0]

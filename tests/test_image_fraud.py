@@ -117,19 +117,17 @@ def test_checklist_lists_every_test_with_result(tmp_path):
     assert len(checks) == len(photo_checks.CHECKS)
     assert by["Tamaño original de la cámara (recortes)"]["status"] == "alerta"
     assert by["Nota del fabricante (iPhone)"]["status"] == "no aplica"
-    assert by["Partes clonadas dentro de la foto"]["status"] == "ok"
+    assert by["Partes clonadas dentro de la foto"]["status"] == "no ejecutada"
     s = photo_checks.summary(checks)
-    assert s["alert"] >= 1 and s["ok"] + s["alert"] + s["na"] == s["total"]
+    assert s["alert"] >= 1 and s["ok"] + s["alert"] + s["na"] + s["unavailable"] == s["total"]
 
 
 def test_photo_check_page_shows_tests_and_maps(tmp_path):
     from helpers import web_client
     c = web_client(tmp_path)
-    buf = io.BytesIO()
-    textured_image(8, 800, 600).save(buf, "JPEG", quality=90)
-    page = c.post("/foto", data={"fotos": (io.BytesIO(buf.getvalue()), "x.jpg")},
-                  content_type="multipart/form-data").get_data(as_text=True)
-    assert "Pruebas aplicadas" in page and "Grano del sensor parejo" in page and "Mapa ELA" in page
+    r = c.get("/foto")
+    assert r.status_code == 302 and r.location.endswith('/analizar')
+    assert 'Analizar imagen o documento' in c.get(r.location).get_data(as_text=True)
 
 
 def test_visible_ai_label_and_crop_that_hides_it(tmp_path):

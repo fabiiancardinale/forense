@@ -11,7 +11,7 @@
 <div><dt>Decisión</dt><dd><span class="dec {{ c.decision or '' }}">{{ c.decision_label or 'Pendiente' }}</span></dd></div>
 </dl>{% endblock %}
 {% block actions %}
-{% if can('editar_siniestros') %}<form method="post" action="{{ url_for('claims.reanalyze', cid=c.id) }}" data-busy="Analizando…"><input type="hidden" name="tab" value="{{ tab }}"><button class="btn" type="submit">{{ icon('refresh', 15) }}Reanalizar</button></form>{% endif %}
+{% if can('editar_siniestros') %}<form method="post" action="{{ url_for('claims.reanalyze', cid=c.id) }}" data-busy="Analizando…"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="tab" value="{{ tab }}"><button class="btn" type="submit">{{ icon('refresh', 15) }}Reanalizar</button></form>{% endif %}
 <a class="btn pri" href="{{ url_for('claims.export_zip', cid=c.id) }}">{{ icon('download', 15, '#fff') }}Paquete verificable</a>{% endblock %}
 {% block tabs %}<nav class="tabs" aria-label="Secciones del caso">{% for k, label in tabs %}
 <a href="{{ url_for('claims.case_view', cid=c.id, tab=k if k != 'resumen' else None) }}" class="{{ 'on' if tab == k }}"{{ ' aria-current=page' if tab == k }}>{{ label }}

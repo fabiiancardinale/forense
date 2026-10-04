@@ -17,7 +17,7 @@ def analysis_of(work, numero):
 
 def web_client(tmp_path):
     from evidex.web import create_app
-    app = create_app(tmp_path / "casos")
+    app = create_app(tmp_path / "casos", {"DEMO_MODE": True, "CSRF_ENABLED": False, "LEGACY_MODULES": True})
     app.config["TESTING"] = True
     return app.test_client()
 

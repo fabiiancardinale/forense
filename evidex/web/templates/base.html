@@ -1,12 +1,13 @@
 <!doctype html><html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{% block title %}Evidex{% endblock %} · Evidex by Zelekpress</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}"></head><body>
+
+
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">{% block extra_head %}{% endblock %}</head><body>
 <aside class="side" id="side">
 <a class="brand" href="{{ url_for('panel.dashboard') }}"><span class="mark">{{ icon('shield', 18, '#fff') }}</span><span><b>EVIDEX</b><small>by Zelekpress</small></span></a>
-<nav class="navs">
+<nav class="navs">{% if can("ver_siniestros") %}<a class="{{ 'on' if active == 'analizar' }}" href="{{ url_for('inspection.index') }}">{{ icon('upload') }}Analizar archivos</a>{% endif %}
+{% if legacy_modules %}
 {% set perito = current_user and current_user.role == 'perito' %}
 {% if not perito %}<a href="{{ url_for('panel.dashboard') }}" class="{{ 'on' if active=='dash' }}">{{ icon('grid') }}{{ 'Mis casos' if current_user and not can('ver_todos') else 'Panel' }}</a>{% endif %}
 {% if can('ver_siniestros') %}<div class="grp">Siniestros</div>
@@ -20,23 +21,32 @@
 {% if can('redes') %}<a href="{{ url_for('portfolio.networks') }}" class="{{ 'on' if active=='redes' }}">{{ icon('network') }}Redes de fraude</a>{% endif %}
 {% if can('cartera') %}<a href="{{ url_for('portfolio.metrics_view') }}" class="{{ 'on' if active=='metricas' }}">{{ icon('chart') }}Métricas</a>
 <a href="{{ url_for('portfolio.import_view') }}" class="{{ 'on' if active=='importar' }}">{{ icon('upload') }}Importar historial</a>{% endif %}
+{% endif %}
 {% if can('admin') %}<div class="grp">Sistema</div>
 <a href="{{ url_for('admin.users_view') }}" class="{{ 'on' if active=='usuarios' }}">{{ icon('users') }}Usuarios y empresas</a>
 <a href="{{ url_for('admin.settings') }}" class="{{ 'on' if active=='config' }}">{{ icon('gear') }}Configuración</a>{% endif %}
 </nav>
 {% if current_user %}<div class="sidefoot userbox"><span class="av">{{ current_user.name[:1]|upper }}</span><span><b>{{ current_user.name }}</b><br>{{ roles[current_user.role] }}</span>
-<a href="{{ url_for('auth.logout') }}" title="Cerrar sesión">Salir</a></div>
+<form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">Salir</button></form></div>
 {% elif not auth_on %}<div class="sidefoot demo"><span class="dotw"></span><span>Modo demo, sin usuarios. <a href="{{ url_for('admin.users_view') }}">Crear administrador</a></span></div>{% endif %}
 </aside>
 <div class="wrap">
-<div class="mtop"><button type="button" aria-label="Abrir menú" onclick="document.getElementById('side').classList.toggle('open')">{{ icon('menu', 22) }}</button><b>EVIDEX</b></div>
+<div class="mtop"><button type="button" aria-label="Abrir menú" id="menu-toggle">{{ icon('menu', 22) }}</button><b>EVIDEX</b></div>
 <header class="pagehead"><div class="tt"><div class="crumbs">{% block crumbs %}{% endblock %}</div>{% block heading %}{% endblock %}</div>
 <div class="actions">{% block actions %}{% endblock %}</div>{% block tabs %}{% endblock %}</header>
 <main>
 {% with msgs = get_flashed_messages(with_categories=true) %}{% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}{% endwith %}
 {% block body %}{% endblock %}
 </main></div>
-<script>
+<script nonce="{{ csp_nonce }}">
+document.querySelectorAll('[data-href]').forEach(x=>x.addEventListener('click',()=>location.href=x.dataset.href));
+document.querySelectorAll('[data-auto-submit]').forEach(x=>x.addEventListener('change',()=>x.form.requestSubmit()));
+document.querySelectorAll('[data-select]').forEach(x=>x.addEventListener('click',()=>x.select()));
+document.querySelectorAll('[data-select-all]').forEach(x=>x.addEventListener('change',()=>document.querySelectorAll('input[name=cid]').forEach(c=>c.checked=x.checked)));
+document.querySelectorAll('[data-copy-message]').forEach(x=>x.addEventListener('click',async()=>{await navigator.clipboard.writeText(document.getElementById('capmsg').value);x.textContent='Mensaje copiado'}));
+document.querySelectorAll('[data-confirm]').forEach(x=>x.addEventListener('submit',e=>{if(!confirm(x.dataset.confirm))e.preventDefault()}));
+document.querySelectorAll('[data-file-names]').forEach(x=>x.addEventListener('change',()=>{x.form.querySelector('.fname').textContent=[...x.files].map(f=>f.name).join(', ');x.form.querySelector('.go').hidden=!x.files.length}));
+document.getElementById('menu-toggle').addEventListener('click',()=>document.getElementById('side').classList.toggle('open'));
 document.querySelectorAll('form[data-busy]').forEach(f=>f.addEventListener('submit',()=>{
   f.querySelectorAll('button[type=submit]').forEach(b=>{b.disabled=true;b.textContent=f.dataset.busy})}));
 document.addEventListener('click',e=>{const s=document.getElementById('side');if(s.classList.contains('open')&&!s.contains(e.target)&&!e.target.closest('.mtop'))s.classList.remove('open')});

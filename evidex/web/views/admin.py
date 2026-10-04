@@ -6,6 +6,8 @@ import json
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
 
 from evidex.accounts import users as U
+from evidex.web.security import start_session
+from evidex.core.storage import atomic_json
 from evidex.claims import assignment
 from evidex.web.common import cx, load_settings, log_access
 
@@ -23,8 +25,7 @@ def users_view():
         else:
             uname = request.form.get("usuario", "").strip().lower()
             if first:
-                session.clear()
-                session["user"] = uname
+                start_session(cx.store.get(uname))
                 cx.store.log(uname, "usuario", f"creó el administrador {uname}", request.remote_addr or "")
                 flash("Administrador creado. Desde ahora Evidex pide usuario y contraseña.", "ok")
             else:
@@ -66,7 +67,7 @@ def settings():
     if request.method == "POST":
         for k in ("empresa", "direccion_publica", "sightengine_user", "sightengine_secret", "google_vision_key"):
             cfg[k] = request.form.get(k, "").strip()
-        (cx.workdir / "config.json").write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
+        atomic_json(cx.workdir / "config.json", cfg)
         flash("Configuración guardada.", "ok")
         return redirect(url_for("admin.settings"))
     return render_template("admin/settings.html", cfg=cfg, on=external.configured(cfg), active="config")

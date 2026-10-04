@@ -29,11 +29,11 @@ a investigación. Solo cuentan los siniestros con decisión de fraude confirmado
 <div class="cols2" style="margin-top:16px">
 <div class="card"><h2 style="margin:0 0 4px">Alertas pendientes de decisión</h2><p class="hint" style="margin:0 0 8px">
 {{ m.pendientes_alerta|length }} siniestros derivados sin decisión · ${{ money(m.monto_pendiente_alerta) }} reclamados</p>
-<table>{% for r in m.pendientes_alerta[:8] %}<tr class="row" onclick="location.href='{{ url_for('claims.case_view', cid=r.id) }}'"><td style="white-space:nowrap"><a href="{{ url_for('claims.case_view', cid=r.id) }}"><b>{{ r.numero }}</b></a></td>
+<table>{% for r in m.pendientes_alerta[:8] %}<tr class="row" data-href="{{ url_for('claims.case_view', cid=r.id) }}"><td style="white-space:nowrap"><a href="{{ url_for('claims.case_view', cid=r.id) }}"><b>{{ r.numero }}</b></a></td>
 <td><span class="risk bad" style="--w:{{ r.score }}%"><i></i>{{ r.score }}</span></td><td class="num">${{ money(r.monto) }}</td></tr>{% else %}<tr><td class="hint">No hay alertas pendientes.</td></tr>{% endfor %}</table></div>
 <div class="card"><h2 style="margin:0 0 4px">Para mejorar</h2><p class="hint" style="margin:0 0 8px">Revisar estos casos ayuda a ajustar los umbrales.</p>
-<table>{% for r in m.missed %}<tr class="row" onclick="location.href='{{ url_for('claims.case_view', cid=r.id) }}'"><td style="white-space:nowrap"><a href="{{ url_for('claims.case_view', cid=r.id) }}"><b>{{ r.numero }}</b></a></td><td>Fraude no detectado</td></tr>{% endfor %}
-{% for r in m.false_alarms %}<tr class="row" onclick="location.href='{{ url_for('claims.case_view', cid=r.id) }}'"><td style="white-space:nowrap"><a href="{{ url_for('claims.case_view', cid=r.id) }}"><b>{{ r.numero }}</b></a></td><td>Falsa alarma · {{ r.rules|map('extract', rule_names)|join(', ') if r.rules else '' }}</td></tr>{% endfor %}</table></div>
+<table>{% for r in m.missed %}<tr class="row" data-href="{{ url_for('claims.case_view', cid=r.id) }}"><td style="white-space:nowrap"><a href="{{ url_for('claims.case_view', cid=r.id) }}"><b>{{ r.numero }}</b></a></td><td>Fraude no detectado</td></tr>{% endfor %}
+{% for r in m.false_alarms %}<tr class="row" data-href="{{ url_for('claims.case_view', cid=r.id) }}"><td style="white-space:nowrap"><a href="{{ url_for('claims.case_view', cid=r.id) }}"><b>{{ r.numero }}</b></a></td><td>Falsa alarma · {{ r.rules|map('extract', rule_names)|join(', ') if r.rules else '' }}</td></tr>{% endfor %}</table></div>
 </div>
 {% endif %}
 {% endblock %}

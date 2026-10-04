@@ -19,7 +19,7 @@
 
 <aside>
 <section class="panel" id="decision"><div class="ph"><h2>Decisión</h2></div><div class="pb">
-{% if can('editar_siniestros') %}<form method="post" action="{{ url_for('claims.decide', cid=c.id) }}" style="display:grid;gap:10px">
+{% if can('editar_siniestros') %}<form method="post" action="{{ url_for('claims.decide', cid=c.id) }}" style="display:grid;gap:10px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <select name="decision" required aria-label="Decisión">{% for k, v in decisions.items() %}<option value="{{ k }}" {{ 'selected' if c.decision == k }}>{{ v }}</option>{% endfor %}</select>
 {% if current_user %}<input type="hidden" name="actor" value="{{ current_user.name }}">{% else %}<input name="actor" placeholder="Su nombre" required aria-label="Su nombre">{% endif %}
 <input name="nota" placeholder="Nota (opcional)" aria-label="Nota">
@@ -41,7 +41,7 @@
 
 <section class="panel"><div class="ph"><h2>Analista responsable</h2></div><div class="pb">
 <p style="margin:0 0 8px"><b>{{ c.owner_name }}</b></p>
-{% if can_reassign %}<form method="post" action="{{ url_for('panel.reassign') }}" style="display:grid;gap:8px">
+{% if can_reassign %}<form method="post" action="{{ url_for('panel.reassign') }}" style="display:grid;gap:8px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <input type="hidden" name="cid" value="{{ c.id }}"><input type="hidden" name="volver" value="caso">
 {% if team %}<select name="analista" required aria-label="Nuevo analista"><option value="">Reasignar a…</option>{% for a in team %}<option value="{{ a.username }}" {{ 'selected' if a.username == c.owner }}>{{ a.name }}</option>{% endfor %}</select>
 {% else %}<input name="analista_nombre" placeholder="Nombre del analista" required aria-label="Nombre del analista">{% endif %}

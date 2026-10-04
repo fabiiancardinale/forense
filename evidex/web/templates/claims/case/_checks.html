@@ -2,5 +2,5 @@
 <details class="checks"><summary><span>{{ checks|length }} pruebas</span> <span class="ck ok">{{ n_ok }} sin hallazgos</span>{% if n_al %} <span class="ck al">{{ n_al }} con alerta</span>{% endif %}</summary>
 {% for group in checks|map(attribute='group')|unique %}<div class="ckgroup">{{ group }}</div>
 <ul>{% for c in checks if c.group == group %}<li class="{{ 'al ' ~ c.severity if c.status == 'alerta' else ('ok' if c.status == 'ok' else 'na') }}">
-<span class="mark" aria-hidden="true">{{ '!' if c.status == 'alerta' else ('✓' if c.status == 'ok' else '–') }}</span><span>{{ c.name }}{% if c.why %}<span class="why">No aplica: {{ c.why }}</span>{% endif %}</span></li>{% endfor %}</ul>{% endfor %}
+<span class="mark" aria-hidden="true">{{ '!' if c.status == 'alerta' else ('✓' if c.status == 'ok' else '–') }}</span><span>{{ c.name }}{% if c.why %}<span class="why">{{ c.status }}: {{ c.why }}</span>{% endif %}</span></li>{% endfor %}</ul>{% endfor %}
 </details>{% endif %}
