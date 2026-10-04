@@ -182,3 +182,13 @@ def test_case_opens_immediately_and_analyzes_in_background(tmp_path, monkeypatch
     background.wait(case, 30)
     page = c.get(f"/caso/{case.root.name}").get_data(as_text=True)
     assert "El último análisis no terminó" in page and not background.is_running(case)
+
+
+def test_tunnel_allows_portal_design_only(tmp_path):
+    from evidex.web import create_app
+    app = create_app(tmp_path, {"LEGACY_MODULES": True, "PUBLIC": True, "PUBLIC_BASE": "https://x.trycloudflare.com"})
+    c = app.test_client()
+    via = {"Cf-Ray": "x", "Cf-Connecting-Ip": "200.1.1.1"}
+    assert c.get("/static/portal.css", headers=via).status_code == 200
+    for path in ("/static/app.css", "/static/inspection.js", "/ingresar", "/"):
+        assert c.get(path, headers=via).status_code == 404, path

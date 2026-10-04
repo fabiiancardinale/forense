@@ -25,13 +25,16 @@ al cerrar o reiniciar Evidex. Envíelo de nuevo con los botones de abajo: sale c
 {% elif cap_temp %}<div class="flash warn" style="margin:0 0 10px;font-size:13px"><b>Dirección temporal.</b>
 El enlace funciona mientras Evidex siga abierto con <code>iniciar_publico.bat</code> y el computador encendido y con internet.
 Si lo cierra o reinicia, Evidex le avisará aquí para que lo reenvíe. Para una dirección fija, configure un dominio en Configuración.</div>{% endif %}
-<div class="sharebtns">
+{% if cap_local %}<p class="hint" style="margin:0 0 6px"><b>Para enviar el enlace, abra Evidex con <code>iniciar_publico.bat</code>.</b>
+Los botones de envío vuelven a aparecer cuando el enlace tiene una dirección que el asegurado pueda abrir.</p>
+{% else %}<div class="sharebtns">
 {% set sent = url_for('claims.capture_sent', cid=c.id) %}
 {% if wa_url %}<a class="btn pri" href="{{ wa_url }}" target="_blank" rel="noopener" data-sent-url="{{ sent }}">Enviar por WhatsApp</a>{% endif %}
 {% if mail_url %}<a class="btn" href="{{ mail_url }}" data-sent-url="{{ sent }}">Enviar por correo</a>{% endif %}
 <button class="btn" type="button" data-copy-message data-sent-url="{{ sent }}">Copiar mensaje</button></div>
 {% if not wa_url %}<p class="hint" style="margin:6px 0 0">Sin teléfono en la declaración: copie el mensaje y envíelo por el medio que use.</p>{% endif %}
 <textarea id="capmsg" readonly rows="4" class="hint" style="margin-top:10px;font-size:12.5px">{{ share_msg }}</textarea>
+{% endif %}
 <details style="margin-top:8px"><summary class="hint">Enlace, código QR y código</summary>
 <div style="display:flex;gap:12px;align-items:flex-start;margin-top:8px">{% if cap_qr %}<img src="data:image/png;base64,{{ cap_qr }}" alt="Código QR del enlace" style="width:104px;height:104px;border:1px solid var(--line);border-radius:8px;flex:none">{% endif %}
 <dl class="kv"><dt>Código</dt><dd style="letter-spacing:.12em">{{ cap.code }}</dd><dt>Vence</dt><dd>{{ cap.expires[:16]|replace('T',' ') }}</dd></dl></div>

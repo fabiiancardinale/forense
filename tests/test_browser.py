@@ -144,11 +144,40 @@ def test_send_buttons_record_address(page):
     pg.click("button:has-text('Registrar siniestro')")
     pg.wait_for_load_state("networkidle")
     pg.goto(f"{base}/caso/SIN-2026-7003?tab=asegurado")
+    assert "Para enviar el enlace, abra Evidex con" in pg.content()      # dirección local: sin botones de envío
+    assert not pg.query_selector("[data-copy-message]")
+    import json
+    (root / "casos" / "config.json").write_text(json.dumps({"direccion_publica": "https://evidex.ejemplo.cl"}))
+    pg.goto(f"{base}/caso/SIN-2026-7003?tab=asegurado")
     if pg.query_selector("button:has-text('Crear enlace para el asegurado')"):
         pg.click("button:has-text('Crear enlace para el asegurado')")
         pg.wait_for_load_state("networkidle")
     pg.click("[data-copy-message]")
     pg.wait_for_timeout(800)
     case = service.find_case(root / "casos", "SIN-2026-7003")
-    assert capture.load(case).get("sent_base") == base
+    assert capture.load(case).get("sent_base") == "https://evidex.ejemplo.cl"
     assert not [e for e in errors if "Content Security Policy" in e or "Refused" in e]
+
+
+def test_portal_keeps_its_design_through_the_tunnel(page):
+    """Por el túnel solo se abre el portal; su hoja de estilos también tiene que llegar."""
+    from evidex.claims import service
+    from evidex.portal import links as capture
+    pg, base, errors, root = page
+    _login(pg, base)
+    pg.goto(base + "/nuevo")
+    pg.fill("input[name=numero]", "SIN-2026-7004")
+    pg.fill("input[name=fecha_siniestro]", "2026-09-20T18:30")
+    pg.click("button:has-text('Registrar siniestro')")
+    pg.wait_for_load_state("networkidle")
+    case = service.find_case(root / "casos", "SIN-2026-7004")
+    capture.create_link(case, actor="prueba")
+    tok = capture.load(case)["token"]
+    ctx = pg.context.browser.new_context(extra_http_headers={"Cf-Ray": "prueba", "Cf-Connecting-Ip": "200.1.2.3"})
+    phone = ctx.new_page()                                     # como el celular del asegurado, por el túnel
+    assert phone.goto(f"{base}/c/{tok}").status == 200
+    bg = phone.evaluate("getComputedStyle(document.querySelector('header')).backgroundColor")
+    assert bg == "rgb(11, 31, 54)", bg                         # el diseño del portal cargó
+    assert phone.goto(f"{base}/static/app.css").status == 404   # el resto de Evidex sigue cerrado
+    assert phone.goto(f"{base}/ingresar").status == 404
+    ctx.close()

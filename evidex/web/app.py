@@ -23,6 +23,8 @@ BLUEPRINTS = (inspection.bp, panel.bp, claims.bp, portfolio.bp, investigations.b
 PUBLIC_ENDPOINTS = {"auth.login", "auth.logout", "static"} | {f"portal.{e}" for e in
                                                               ("capture_page", "capture_upload", "portal_file",
                                                                "portal_story", "portal_finish", "portal_remove")}
+# lo único de /static que se puede abrir desde afuera: el diseño del portal del asegurado
+PORTAL_STATIC = {"/static/portal.css"}
 NO_NAV = PUBLIC_ENDPOINTS | {"claims.report", "investigations.inv_report"}
 
 
@@ -96,7 +98,7 @@ def network_guard():
     """Desde otros equipos (red local o túnel público) solo se puede abrir el portal del asegurado."""
     if current_app.config['DEMO_MODE'] and request.remote_addr not in ('127.0.0.1', '::1'):
         abort(403)
-    if request.path.startswith("/c/"):
+    if request.path.startswith("/c/") or request.path in PORTAL_STATIC:
         return None
     via_tunnel = any(h in request.headers for h in ("Cf-Connecting-Ip", "Cf-Ray", "X-Forwarded-For"))
     host = (request.host or "").rsplit(":", 1)[0].strip("[]").lower()

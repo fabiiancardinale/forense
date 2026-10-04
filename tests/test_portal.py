@@ -57,6 +57,9 @@ def test_register_case_and_portal_for_insured(tmp_path):
     case = Case(work / "SIN-2026-2001")
     tok = capture.load(case)["token"]
     page = c.get("/caso/SIN-2026-2001?tab=asegurado").get_data(as_text=True)
+    assert "Para enviar el enlace, abra Evidex con" in page and "wa.me" not in page   # dirección local: no se envía
+    (work / "config.json").write_text('{"direccion_publica": "https://evidex.ejemplo.cl"}', encoding="utf-8")
+    page = c.get("/caso/SIN-2026-2001?tab=asegurado").get_data(as_text=True)
     assert "https://wa.me/56981234567?text=" in page and "mailto:ana@example.com" in page
     assert "Esperando al asegurado" in c.get("/").get_data(as_text=True)
     portal = c.get(f"/c/{tok}").get_data(as_text=True)
