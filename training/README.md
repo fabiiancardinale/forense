@@ -18,6 +18,27 @@ La regla `ai_dimensions` (tamaño típico de IA) marcó 20 originales. Lo hizo p
 
 Conclusión: sin la firma, las heurísticas actuales casi no ven la edición. El modelo tiene que superar estos números en el mismo banco de pruebas antes de activarse en producción.
 
+## Vuelta 1 del modelo (Kaggle, 5 de octubre de 2026)
+
+Configuración: 2.000 imágenes por carpeta (orig, sd2-sp y sdxl-fr), 15 épocas, efficientnet_b0 con pesos ImageNet, 512 px.
+
+Se midió con 300 fotos por tipo de la partición `testing`, que el modelo nunca vio, todas pasadas por WhatsApp (1600 px, JPEG 70):
+
+| | Evidex sin modelo | Vuelta 1 |
+|---|---|---|
+| Originales con alarma | 0 de 100 | **4 de 300 (1,3 %)** |
+| Editadas con IA en una zona (SD2) | 2 de 100 | **69 de 300 (23 %)** |
+| Regeneradas completas con IA (SDXL) | 7 de 100 | **215 de 300 (72 %)** |
+
+Las regeneradas completas se detectan bien. Las ediciones de una zona (el caso de Galaxy AI o del borrador mágico) siguen siendo el punto débil, sobre todo cuando la zona es pequeña. Todavía no se ha medido con fotos de autos.
+
+**Vuelta 2** (el notebook ya viene con esta configuración):
+
+- 3.000 imágenes editadas por carpeta, ahora con sd2-sp, sd2-fr, sdxl-fr y ps-sp, que es Photoshop con relleno generativo;
+- 6.000 originales;
+- 25 épocas, con parada automática a las 9 horas;
+- parte desde el modelo de la vuelta 1 si se agrega como *Input*.
+
 ## Pasos (Kaggle o Colab gratis, con GPU)
 
 **Lo más fácil:** importe `training/evidex_kaggle.ipynb` en Kaggle (*Create → New Notebook → File → Import Notebook*), active GPU e Internet en *Settings* y apriete **Run all**. El notebook hace los pasos de abajo solo y, al final, mide con fotos que el modelo nunca vio. Si cambia algo en `training/*.py`, regenere el notebook con `python training/hacer_notebook.py`.

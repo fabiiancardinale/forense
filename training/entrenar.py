@@ -97,6 +97,9 @@ def main(argv=None):
     ap.add_argument("--fpr", type=float, default=.05, help="falsas alarmas máximas en originales (validación)")
     ap.add_argument("--limite", type=int, default=0, help="usar solo N imágenes (prueba rápida)")
     ap.add_argument("--trabajadores", type=int, default=2)
+    ap.add_argument("--max-horas", type=float, default=0,
+                    help="parar antes de este tiempo y exportar lo mejor (Kaggle corta a las 12 h)")
+    ap.add_argument("--continuar", type=Path, help="evidex_ia.safetensors de una vuelta anterior (mismo encoder)")
     a = ap.parse_args(argv)
 
     filas = leer(a.manifiesto)
@@ -104,7 +107,13 @@ def main(argv=None):
         filas = filas[:a.limite // 2] + filas[-(a.limite - a.limite // 2):]
     entren, val = dividir(filas)
     disp = "cuda" if torch.cuda.is_available() else "cpu"
-    red = EvidexNet(a.encoder, a.preentrenado).to(disp)
+    red = EvidexNet(a.encoder, a.preentrenado and not a.continuar)
+    if a.continuar:
+        from safetensors.torch import load_file
+        red.load_state_dict(load_file(str(a.continuar)))
+        print(f"Continuando desde {a.continuar}", flush=True)
+    red = red.to(disp)
+    inicio, ultima = time.time(), 0.0
     opt = torch.optim.AdamW(red.parameters(), lr=a.lr, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=max(1, a.epocas))
     ds = Conjunto(entren, a.lado, aumentar=True)
@@ -112,6 +121,9 @@ def main(argv=None):
     mejor, hist = None, []
     a.salida.mkdir(parents=True, exist_ok=True)
     for ep in range(a.epocas):
+        if a.max_horas and time.time() - inicio + ultima * 1.1 > a.max_horas * 3600:
+            print(f"Se acaba el tiempo ({a.max_horas} h): se para en la época {ep} y se exporta lo mejor.", flush=True)
+            break
         ds.epoca = ep
         red.train()
         t, tot = time.time(), 0.0
@@ -126,7 +138,8 @@ def main(argv=None):
         u = umbral_para(ps, ys, a.fpr)
         met = {**metricas(ps, ys, u), "iou_zona": iou, "umbral": u}
         hist.append({"epoca": ep + 1, "perdida": tot, **met})
-        print(json.dumps(hist[-1], ensure_ascii=False), f"({time.time() - t:.0f}s)", flush=True)
+        ultima = time.time() - t
+        print(json.dumps(hist[-1], ensure_ascii=False), f"({ultima:.0f}s)", flush=True)
         if mejor is None or (met["deteccion_editadas"] or 0) > (mejor["deteccion_editadas"] or 0):
             mejor = met
             from safetensors.torch import save_file
@@ -139,7 +152,8 @@ def main(argv=None):
     conjuntos = Counter((f["conjunto"].split("/")[0], f["licencia"]) for f in filas)
     ficha = {
         "formato": FORMATO, "nombre": "Evidex IA (zonas editadas con IA)", "encoder": a.encoder,
-        "preentrenado": "ImageNet (timm)" if a.preentrenado else None, "lado": a.lado,
+        "preentrenado": "ImageNet (timm)" if a.preentrenado else None,
+        "continuado_desde": str(a.continuar) if a.continuar else None, "lado": a.lado,
         "normalizacion": "imagenet", "umbral": mejor["umbral"], "fpr_objetivo": a.fpr,
         "validacion": mejor, "historial": hist,
         "conjuntos": [{"nombre": n, "licencia": l, "imagenes": c} for (n, l), c in sorted(conjuntos.items())],

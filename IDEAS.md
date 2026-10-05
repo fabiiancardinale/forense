@@ -26,7 +26,11 @@ Ningún método solo detecta todo: se combinan las tres capas.
 **Capa 3: modelo forense propio** (grande)
 - [ ] Probar modelos de licencia libre con fotos reales: IML-ViT (MIT, ubica la zona editada) y SPAI (Apache 2.0, imágenes generadas completas). Revisar que los pesos también permitan uso comercial.
 - [ ] No usar TruFor: su licencia prohíbe el uso comercial (se probó solo como referencia: marcó la foto con el logo borrado con 0,55 contra 0,09-0,25 de fotos normales).
-- [ ] **Correr el entrenamiento en Kaggle** (media): 3.000 imágenes por carpeta de TGIF + fotos propias, 15 épocas; medir con `scripts/benchmark.py --whatsapp` contra la línea base.
+- [x] **Vuelta 1 del entrenamiento en Kaggle** (5 de octubre de 2026): con fotos pasadas por WhatsApp, 4 falsas alarmas de 300 originales; detecta 69 de 300 ediciones de una zona (antes 2 de 100) y 215 de 300 regeneradas completas (antes 7 de 100).
+- [ ] **Vuelta 2** (media): el notebook ya viene listo (más fotos, sd2-fr y Photoshop, 25 épocas, continúa desde la vuelta 1). Meta: más de 50 % en ediciones de una zona sin pasar de 2 % de falsas alarmas.
+- [ ] **Probar el modelo con la foto real** de Samsung editada y mandada por WhatsApp que Evidex no detectó.
+- [ ] **Recortes en vez de reducir la foto** (media): hoy la foto entera se reduce a 512 px y una edición pequeña casi desaparece. Analizar en mosaico (varios recortes de 512 de la foto a tamaño real) y quedarse con el más sospechoso; debería subir la detección de ediciones de una zona.
+- [ ] **Fotos de autos editadas para el entrenamiento** (lo que más ayudaría): ver la sección de juntar fotos.
 - [ ] **Segundo modelo para imágenes 100% generadas** (media): Community Forensics (CC BY 4.0), misma ficha y mismo banco de pruebas.
 - [ ] **Banco de pruebas en la pantalla** (media): subir una carpeta de originales y editadas y ver los números sin usar la consola.
 - [x] Integrarlo como "análisis profundo" con mapa de calor, primero solo como apoyo ("revisar esta zona"), en segundo plano.

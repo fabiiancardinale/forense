@@ -26,7 +26,11 @@ Antes de empezar, en el panel derecho (**Settings**):
 1. **Accelerator:** GPU T4 x2 (o P100).
 2. **Internet:** activado (para bajar TGIF; Kaggle pide verificar su teléfono).
 
-Después: **Run all**. Tarda unas 2 a 4 horas. Al final descargue `evidex_modelo.zip` desde la pestaña
+**Vuelta 2:** para partir desde el modelo anterior, suba `evidex_modelo.zip` como *Dataset* (Create → New Dataset)
+y agréguelo con **+ Add Input**. Si no, parte de cero. Use **Save Version → Save & Run All (Commit)**: corre en segundo
+plano y para sola antes de las 9 horas.
+
+Después: **Run all**. Tarda unas 6 a 9 horas. Al final descargue `evidex_modelo.zip` desde la pestaña
 **Output** (a la derecha) y copie los 3 archivos a `veritas\\modelos\\` en su PC.
 
 Datos: TGIF (IDLab, imec), CC BY 4.0, https://github.com/IDLabMedia/tgif-dataset. Se excluyen las variantes FLUX
@@ -36,9 +40,12 @@ Datos: TGIF (IDLab, imec), CC BY 4.0, https://github.com/IDLabMedia/tgif-dataset
     code("""
 # 1. Configuración (puede cambiar estos números)
 import os
-N_POR_CARPETA = int(os.environ.get("EVX_N", 2000))     # imágenes de TGIF por carpeta
-CARPETAS = os.environ.get("EVX_CARPETAS", "orig,sd2-sp,sdxl-fr")
-EPOCAS = int(os.environ.get("EVX_EPOCAS", 15))
+# Vuelta 2 (más fuerte). La vuelta 1 usó 2.000 por carpeta, orig+sd2-sp+sdxl-fr y 15 épocas.
+N_POR_CARPETA = int(os.environ.get("EVX_N", 3000))     # imágenes editadas de TGIF por carpeta
+N_ORIG = int(os.environ.get("EVX_N_ORIG", 6000))       # originales (más, para no tener 4 editadas por cada original)
+CARPETAS = os.environ.get("EVX_CARPETAS", "sd2-sp,sd2-fr,sdxl-fr,ps-sp")
+EPOCAS = int(os.environ.get("EVX_EPOCAS", 25))
+MAX_HORAS = float(os.environ.get("EVX_MAX_HORAS", 9))  # para antes y exporta lo mejor (Kaggle corta a las 12 h)
 LADO = int(os.environ.get("EVX_LADO", 512))
 LOTE = int(os.environ.get("EVX_LOTE", 16))
 N_PRUEBA = int(os.environ.get("EVX_N_PRUEBA", 300))   # fotos de la partición «testing» para medir al final
@@ -70,6 +77,7 @@ print("Archivos:", ", ".join(ARCHIVOS))
 """),
     code("""
 # 4. Bajar una parte de TGIF (lee el .tar.gz mientras llega; no baja los 14 GB completos)
+sh(f"{sys.executable} training/descargar_tgif.py --destino {DATOS} --n {N_ORIG} --particion training --carpetas orig")
 sh(f"{sys.executable} training/descargar_tgif.py --destino {DATOS} --n {N_POR_CARPETA} --particion training --carpetas {CARPETAS}")
 """),
     code("""
@@ -82,9 +90,13 @@ sh(f"{sys.executable} training/datos.py --tgif {DATOS} {extra} --salida manifies
 """),
     code("""
 # 6. Entrenar (aquí se van las horas; cada época imprime cuántas editadas detecta en validación)
-pre = "--preentrenado" if PREENTRENADO else ""
+# Si agregó con «+ Add Input» el modelo de la vuelta anterior (evidex_modelo.zip subido como Dataset),
+# se parte desde él en vez de empezar de cero: aprende más en el mismo tiempo.
+previo = glob.glob("/kaggle/input/**/evidex_ia.safetensors", recursive=True)
+pre = f"--continuar {previo[0]}" if previo else ("--preentrenado" if PREENTRENADO else "")
+print("Modelo anterior:", previo[0] if previo else "ninguno (se parte de cero)")
 sh(f"{sys.executable} training/entrenar.py --manifiesto manifiesto.csv --salida {SALIDA} "
-   f"--epocas {EPOCAS} --lado {LADO} --lote {LOTE} --trabajadores 4 {pre}")
+   f"--epocas {EPOCAS} --lado {LADO} --lote {LOTE} --trabajadores 4 --max-horas {MAX_HORAS} {pre}")
 """),
     code("""
 # 7. Medir con fotos que el modelo nunca vio (partición «testing»), pasadas por WhatsApp
@@ -93,7 +105,7 @@ from PIL import Image
 sys.path.insert(0, "training")
 from datos import a_tensor
 PRUEBA = DATOS + "_prueba"
-sh(f"{sys.executable} training/descargar_tgif.py --destino {PRUEBA} --n {N_PRUEBA} --particion testing --carpetas orig,sd2-sp,sdxl-fr")
+sh(f"{sys.executable} training/descargar_tgif.py --destino {PRUEBA} --n {N_PRUEBA} --particion testing --carpetas orig,sd2-sp,sd2-fr,sdxl-fr,ps-sp")
 ficha = json.load(open(f"{SALIDA}/evidex_ia.json"))
 sess = ort.InferenceSession(f"{SALIDA}/evidex_ia.onnx", providers=["CUDAExecutionProvider", "CPUExecutionProvider"])
 def whatsapp(p):
@@ -107,11 +119,11 @@ def puntajes(carpeta):
         out.append(float(sess.run(["puntaje"], {"imagen": x})[0][0]))
     return np.array(out)
 u = ficha["umbral"]
-res = {c: puntajes(c) for c in ("orig", "sd2-sp", "sdxl-fr")}
-medicion = {"umbral": u,
-            "falsas_alarmas_originales": f"{(res['orig'] >= u).sum()} de {len(res['orig'])}",
-            "detectadas_sd2_zona": f"{(res['sd2-sp'] >= u).sum()} de {len(res['sd2-sp'])}",
-            "detectadas_sdxl_regenerada": f"{(res['sdxl-fr'] >= u).sum()} de {len(res['sdxl-fr'])}",
+NOMBRES = {"orig": "falsas_alarmas_originales", "sd2-sp": "detectadas_sd2_zona", "sd2-fr": "detectadas_sd2_regenerada",
+           "sdxl-fr": "detectadas_sdxl_regenerada", "ps-sp": "detectadas_photoshop_zona"}
+res = {c: puntajes(c) for c in NOMBRES}
+medicion = {"umbral": u, **{NOMBRES[c]: f"{(v >= u).sum()} de {len(v)}" for c, v in res.items() if len(v)},
+            "vuelta_1": "falsas 4 de 300, sd2 zona 69 de 300, sdxl regenerada 215 de 300",
             "linea_base_evidex_hoy": "2-7 de cada 100 editadas pasadas por WhatsApp"}
 ficha["prueba_testing_whatsapp"] = medicion
 json.dump(ficha, open(f"{SALIDA}/evidex_ia.json", "w"), indent=2, ensure_ascii=False)   # el sha256 es del .onnx: sigue válido
