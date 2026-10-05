@@ -28,7 +28,7 @@ Antes de empezar, en el panel derecho (**Settings**):
 
 **Vuelta 3 (mosaico a tamaño real):** el modelo ya no achica la foto entera; la mira en pedazos de 512 px sin
 reducirla, para no perder ediciones pequeñas. Para partir desde el modelo anterior (recomendado, aprende más rápido), suba `evidex_modelo.zip` como *Dataset* (Create → New Dataset)
-y agréguelo con **+ Add Input**. Si no, parte de cero. Use **Save Version → Save & Run All (Commit)**: corre en segundo
+y agréguelo con **+ Add Input** (use el de la **vuelta 1**: la vuelta 2 salió peor). Si no, parte de cero. Use **Save Version → Save & Run All (Commit)**: corre en segundo
 plano y para sola antes de las 9 horas.
 
 Después: **Run all**. Tarda unas 6 a 9 horas. Al final descargue `evidex_modelo.zip` desde la pestaña
@@ -47,7 +47,9 @@ N_POR_CARPETA = int(os.environ.get("EVX_N", 3000))     # imágenes editadas de T
 N_ORIG = int(os.environ.get("EVX_N_ORIG", 6000))       # originales (más, para no tener 4 editadas por cada original)
 CARPETAS = os.environ.get("EVX_CARPETAS", "sd2-sp,sd2-fr,sdxl-fr,ps-sp")
 EPOCAS = int(os.environ.get("EVX_EPOCAS", 25))
-MAX_HORAS = float(os.environ.get("EVX_MAX_HORAS", 9))  # para antes y exporta lo mejor (Kaggle corta a las 12 h)
+MAX_HORAS = float(os.environ.get("EVX_MAX_HORAS", 9))
+FPR = float(os.environ.get("EVX_FPR", 0.02))          # falsas alarmas máximas en originales al elegir el umbral
+VAL_MAX = int(os.environ.get("EVX_VAL_MAX", 400))      # fotos de validación por época (validar en mosaico es lento)  # para antes y exporta lo mejor (Kaggle corta a las 12 h)
 LADO = int(os.environ.get("EVX_LADO", 512))
 LOTE = int(os.environ.get("EVX_LOTE", 16))
 N_PRUEBA = int(os.environ.get("EVX_N_PRUEBA", 300))   # fotos de la partición «testing» para medir al final
@@ -98,7 +100,7 @@ previo = glob.glob("/kaggle/input/**/evidex_ia.safetensors", recursive=True)
 pre = f"--continuar {previo[0]}" if previo else ("--preentrenado" if PREENTRENADO else "")
 print("Modelo anterior:", previo[0] if previo else "ninguno (se parte de cero)")
 sh(f"{sys.executable} training/entrenar.py --manifiesto manifiesto.csv --salida {SALIDA} "
-   f"--epocas {EPOCAS} --lado {LADO} --lote {LOTE} --trabajadores 4 --max-horas {MAX_HORAS} {pre}")
+   f"--epocas {EPOCAS} --lado {LADO} --lote {LOTE} --trabajadores 4 --max-horas {MAX_HORAS} --fpr {FPR} --val-max {VAL_MAX} {pre}")
 """),
     code("""
 # 7. Medir con fotos que el modelo nunca vio (partición «testing»), pasadas por WhatsApp
