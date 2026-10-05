@@ -27,10 +27,10 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from datos import Conjunto, dividir, leer           # noqa: E402
+from datos import MAX_LADO, Recortes, degradar_fijo, dividir, leer, puntuar_mosaico  # noqa: E402
 from modelo import ConPuntaje, EvidexNet, puntaje  # noqa: E402
 
-FORMATO = 1          # si cambia la entrada/salida del ONNX, sube y Evidex lo revisa
+FORMATO = 2          # 2 = mosaico a tamaño real (1 = foto entera achicada). Evidex revisa este número.
 
 
 def perdida(logits, mask, etiqueta):
@@ -45,19 +45,31 @@ def perdida(logits, mask, etiqueta):
 
 
 @torch.no_grad()
-def evaluar(red, carga, disp):
+def evaluar(red, filas, disp, lado, paso):
+    """Cada foto de validación entera, pasada por WhatsApp (1600 px, JPEG 70) y analizada en mosaico,
+    igual que la analizará Evidex. Así el umbral queda calibrado para fotos completas."""
+    from PIL import Image
     red.eval()
+
+    def correr(t):
+        logits = red(torch.from_numpy(t).to(disp))
+        return torch.sigmoid(logits).cpu().numpy(), puntaje(logits).cpu().numpy()
+
     ps, ys, ious = [], [], []
-    for x, m, y in carga:
-        logits = red(x.to(disp))
-        ps += puntaje(logits).cpu().tolist()
-        ys += y.tolist()
-        pm = (torch.sigmoid(logits) > .5).float().cpu()
-        mm = F.interpolate(m, size=pm.shape[-2:], mode="nearest")
-        for a, b, yy in zip(pm, mm, y):
-            if yy > 0:
-                inter, union = (a * b).sum().item(), ((a + b) > 0).sum().item()
-                ious.append(inter / union if union else 1.0)
+    for f in filas:
+        img = degradar_fijo(Image.open(f["ruta"]))
+        s, mapa, esc = puntuar_mosaico(correr, img, lado, paso)
+        ps.append(s)
+        ys.append(f["etiqueta"])
+        if f["etiqueta"]:
+            if f["mascara"]:
+                m = Image.open(f["mascara"]).convert("L").resize((mapa.shape[1], mapa.shape[0]), Image.NEAREST)
+                m = np.asarray(m) > 127
+            else:
+                m = np.ones(mapa.shape, bool)
+            a = mapa > .5
+            union = (a | m).sum()
+            ious.append(float((a & m).sum() / union) if union else 1.0)
     return np.array(ps), np.array(ys), float(np.mean(ious)) if ious else None
 
 
@@ -99,6 +111,7 @@ def main(argv=None):
     ap.add_argument("--trabajadores", type=int, default=2)
     ap.add_argument("--max-horas", type=float, default=0,
                     help="parar antes de este tiempo y exportar lo mejor (Kaggle corta a las 12 h)")
+    ap.add_argument("--val-max", type=int, default=800, help="fotos de validación por época (las más lentas)")
     ap.add_argument("--continuar", type=Path, help="evidex_ia.safetensors de una vuelta anterior (mismo encoder)")
     a = ap.parse_args(argv)
 
@@ -116,8 +129,12 @@ def main(argv=None):
     inicio, ultima = time.time(), 0.0
     opt = torch.optim.AdamW(red.parameters(), lr=a.lr, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=max(1, a.epocas))
-    ds = Conjunto(entren, a.lado, aumentar=True)
-    dv = DataLoader(Conjunto(val, a.lado, aumentar=False), batch_size=a.lote, num_workers=a.trabajadores)
+    paso = a.lado * 3 // 4                       # los pedazos se traslapan un cuarto
+    ds = Recortes(entren, a.lado)
+    import random as _r
+    val = sorted(val, key=lambda f: f["ruta"])
+    _r.Random(1).shuffle(val)
+    val = [f for f in val if f["etiqueta"] == 0][:a.val_max // 2] + [f for f in val if f["etiqueta"]][:a.val_max // 2]
     mejor, hist = None, []
     a.salida.mkdir(parents=True, exist_ok=True)
     for ep in range(a.epocas):
@@ -134,7 +151,7 @@ def main(argv=None):
             opt.step()
             tot += loss.item()
         sched.step()
-        ps, ys, iou = evaluar(red, dv, disp)
+        ps, ys, iou = evaluar(red, val, disp, a.lado, paso)
         u = umbral_para(ps, ys, a.fpr)
         met = {**metricas(ps, ys, u), "iou_zona": iou, "umbral": u}
         hist.append({"epoca": ep + 1, "perdida": tot, **met})
@@ -154,10 +171,12 @@ def main(argv=None):
         "formato": FORMATO, "nombre": "Evidex IA (zonas editadas con IA)", "encoder": a.encoder,
         "preentrenado": "ImageNet (timm)" if a.preentrenado else None,
         "continuado_desde": str(a.continuar) if a.continuar else None, "lado": a.lado,
+        "modo": "mosaico", "paso": paso, "max_lado": MAX_LADO,
         "normalizacion": "imagenet", "umbral": mejor["umbral"], "fpr_objetivo": a.fpr,
         "validacion": mejor, "historial": hist,
         "conjuntos": [{"nombre": n, "licencia": l, "imagenes": c} for (n, l), c in sorted(conjuntos.items())],
-        "aumentos": "como WhatsApp: reducción 640-2048 px, JPEG 50-92 (a veces doble), recorte leve, espejo",
+        "aumentos": "como WhatsApp: reducción 640-2048 px, JPEG 50-92 (a veces doble), recorte leve, espejo; "
+                    "recortes a tamaño real (60 % sobre la zona editada)",
         "fecha": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "sha256_onnx": hashlib.sha256((a.salida / "evidex_ia.onnx").read_bytes()).hexdigest(),
         "advertencia": "Indicio para revisar, no prueba. Validar con fotos reales de siniestros antes de usar.",

@@ -39,6 +39,19 @@ Las regeneradas completas se detectan bien. Las ediciones de una zona (el caso d
 - 25 épocas, con parada automática a las 9 horas;
 - parte desde el modelo de la vuelta 1 si se agrega como *Input*.
 
+## Vuelta 3: mosaico a tamaño real (el notebook ya viene así)
+
+Hasta la vuelta 2 la foto entera se achicaba a 512×512, tanto al entrenar como al analizar. Una foto de celular de 4000×3000 quedaba unas 8 veces más chica, y una edición pequeña, como un rayón borrado con Galaxy AI, quedaba en unos pocos píxeles.
+
+Ahora:
+
+- **Al entrenar:** recortes de 512 px de la foto sin achicarla (solo lo que reduce WhatsApp). El 60 % de los recortes de fotos editadas cae sobre la zona cambiada. La etiqueta es del recorte: editado si contiene parte de la zona.
+- **Al analizar (Evidex y la medición del notebook):** la foto se recorre en pedazos de 512 que se traslapan un cuarto. El puntaje es el del pedazo más sospechoso y el mapa se arma con todos. Fotos de más de 2048 px se reducen a 2048 antes, para acotar el tiempo: 1 a 2 s por foto en CPU, en segundo plano.
+- **Regeneradas completas (`-fr`):** toda la imagen pasó por la IA, así que la máscara es la imagen completa.
+- **Validación:** se hace foto por foto, pasada por WhatsApp y en mosaico, igual que en Evidex. Así el umbral queda calibrado para fotos completas.
+- **Compatibilidad:** la ficha dice `formato: 2` y `modo: mosaico`. Evidex sigue aceptando los modelos de formato 1 (foto achicada).
+- **Arranque:** se puede continuar desde el modelo de la vuelta 1 o 2: la red es la misma, solo cambia cómo se le muestran las fotos.
+
 ## Pasos (Kaggle o Colab gratis, con GPU)
 
 **Lo más fácil:** importe `training/evidex_kaggle.ipynb` en Kaggle (*Create → New Notebook → File → Import Notebook*), active GPU e Internet en *Settings* y apriete **Run all**. El notebook hace los pasos de abajo solo y, al final, mide con fotos que el modelo nunca vio. Si cambia algo en `training/*.py`, regenere el notebook con `python training/hacer_notebook.py`.

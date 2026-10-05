@@ -22,7 +22,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-FORMATO = 1
+FORMATOS = (1, 2)        # 1 = foto entera achicada al lado del modelo; 2 = mosaico a tamaño real
 NOMBRE = "evidex_ia"
 LICENCIAS_BLOQUEADAS = ("nc", "non-commercial", "noncommercial", "no comercial", "research only", "desconocida")
 DEFAULT_DIR = Path(__file__).resolve().parents[2] / "modelos"
@@ -63,7 +63,7 @@ def _open(onnx_p: Path, card_p: Path):
         card = json.loads(card_p.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None, "ficha del modelo ilegible"
-    if card.get("formato") != FORMATO:
+    if card.get("formato") not in FORMATOS:
         return None, f"formato de modelo {card.get('formato')} no soportado"
     data = onnx_p.read_bytes()
     if hashlib.sha256(data).hexdigest() != card.get("sha256_onnx"):
@@ -104,9 +104,53 @@ def _hot_box(prob: np.ndarray, thr: float, w: int, h: int):
     m = prob >= max(thr, .5)
     if m.sum() < 4:
         return None
-    ys, xs = np.nonzero(m)
+    from evidex.forensics.image_content import _largest_blob
+    ys, xs = np.nonzero(_largest_blob(m))                  # la zona más grande, no todas las sueltas
     sx, sy = w / prob.shape[1], h / prob.shape[0]
     return [int(xs.min() * sx), int(ys.min() * sy), int((xs.max() + 1) * sx), int((ys.max() + 1) * sy)]
+
+
+# ---- mosaico (igual que training/datos.py: tests/test_learned_model.py revisa que den lo mismo) ----------
+def _positions(n: int, side: int, step: int) -> list[int]:
+    if n <= side:
+        return [0]
+    return list(range(0, n - side, step)) + [n - side]
+
+
+def _prepare(img: Image.Image, max_side: int) -> Image.Image:
+    img = img.convert("RGB")
+    if max(img.size) > max_side:
+        f = max_side / max(img.size)
+        img = img.resize((max(1, round(img.width * f)), max(1, round(img.height * f))), Image.LANCZOS)
+    return img
+
+
+def _normalize(img: Image.Image) -> np.ndarray:
+    return (np.asarray(img, dtype=np.float32) / 255.0 - MEAN) / STD
+
+
+def _mosaic_score(run, img: Image.Image, side: int, step: int, batch: int = 8):
+    """(puntaje = el del pedazo más sospechoso, mapa de la foto a 1/esc, esc)."""
+    w, h = img.size
+    W, H = max(w, side), max(h, side)
+    x = np.empty((H, W, 3), np.float32)
+    x[:] = (0 - MEAN) / STD                                   # relleno negro, como al entrenar
+    x[:h, :w] = _normalize(img)
+    pos = [(xx, yy) for yy in _positions(H, side, step) for xx in _positions(W, side, step)]
+    tiles = np.stack([x[yy:yy + side, xx:xx + side].transpose(2, 0, 1) for xx, yy in pos]).astype(np.float32)
+    maps, scores = [], []
+    for i in range(0, len(tiles), batch):
+        m, s = run(tiles[i:i + batch])
+        maps.append(np.asarray(m))
+        scores.append(np.asarray(s).reshape(-1))
+    maps, scores = np.concatenate(maps)[:, 0], np.concatenate(scores)
+    esc = side // maps.shape[-1]
+    acc = np.zeros((H // esc + 1, W // esc + 1), np.float32)
+    cnt = np.zeros_like(acc)
+    for (xx, yy), m in zip(pos, maps):
+        acc[yy // esc:yy // esc + m.shape[0], xx // esc:xx // esc + m.shape[1]] += m
+        cnt[yy // esc:yy // esc + m.shape[0], xx // esc:xx // esc + m.shape[1]] += 1
+    return float(scores.max()), (acc / np.maximum(cnt, 1))[:max(1, h // esc), :max(1, w // esc)], esc
 
 
 def check(path) -> dict:
@@ -115,15 +159,21 @@ def check(path) -> dict:
     if sess is None:
         return {}
     side = int(card.get("lado", 512))
+    thr = float(card["umbral"])
     with Image.open(path) as img:
-        img = img.convert("RGB")
-        w, h = img.size
-        x = np.asarray(img.resize((side, side), Image.BILINEAR), dtype=np.float32) / 255.0
-    x = ((x - MEAN) / STD).transpose(2, 0, 1)[None].astype(np.float32)
-    prob, score = sess.run(["mapa", "puntaje"], {"imagen": x})
-    prob, score, thr = prob[0, 0], float(score[0]), float(card["umbral"])
+        orig_w, orig_h = img.size
+        if card.get("modo") == "mosaico":
+            img = _prepare(img, int(card.get("max_lado", 2048)))
+            n = sess.get_inputs()[0].shape[0]                    # lote fijo del modelo, o variable
+            score, prob, _ = _mosaic_score(lambda t: sess.run(["mapa", "puntaje"], {"imagen": t}),
+                                           img, side, int(card.get("paso", side * 3 // 4)),
+                                           batch=n if isinstance(n, int) and n > 0 else 8)
+        else:                                                     # modelos de formato 1: foto entera achicada
+            x = _normalize(img.convert("RGB").resize((side, side), Image.BILINEAR))
+            m, s = sess.run(["mapa", "puntaje"], {"imagen": x.transpose(2, 0, 1)[None].astype(np.float32)})
+            prob, score = m[0, 0], float(s[0])
     out = {"score": round(score, 4), "threshold": round(thr, 4), "flag": score >= thr, "model": card["_id"]}
-    box = _hot_box(prob, thr, w, h) if out["flag"] else None
+    box = _hot_box(prob, thr, orig_w, orig_h) if out["flag"] else None
     if box:
         out["region"] = {"bbox": box, "area": round(float((prob >= max(thr, .5)).mean()), 4)}
     return out

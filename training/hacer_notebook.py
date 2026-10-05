@@ -26,7 +26,8 @@ Antes de empezar, en el panel derecho (**Settings**):
 1. **Accelerator:** GPU T4 x2 (o P100).
 2. **Internet:** activado (para bajar TGIF; Kaggle pide verificar su teléfono).
 
-**Vuelta 2:** para partir desde el modelo anterior, suba `evidex_modelo.zip` como *Dataset* (Create → New Dataset)
+**Vuelta 3 (mosaico a tamaño real):** el modelo ya no achica la foto entera; la mira en pedazos de 512 px sin
+reducirla, para no perder ediciones pequeñas. Para partir desde el modelo anterior (recomendado, aprende más rápido), suba `evidex_modelo.zip` como *Dataset* (Create → New Dataset)
 y agréguelo con **+ Add Input**. Si no, parte de cero. Use **Save Version → Save & Run All (Commit)**: corre en segundo
 plano y para sola antes de las 9 horas.
 
@@ -40,7 +41,8 @@ Datos: TGIF (IDLab, imec), CC BY 4.0, https://github.com/IDLabMedia/tgif-dataset
     code("""
 # 1. Configuración (puede cambiar estos números)
 import os
-# Vuelta 2 (más fuerte). La vuelta 1 usó 2.000 por carpeta, orig+sd2-sp+sdxl-fr y 15 épocas.
+# Vuelta 3: recortes a tamaño real (la foto ya no se achica a 512) y análisis en mosaico, como en Evidex.
+# La vuelta 1 usó 2.000 por carpeta, orig+sd2-sp+sdxl-fr, 15 épocas y la foto entera achicada.
 N_POR_CARPETA = int(os.environ.get("EVX_N", 3000))     # imágenes editadas de TGIF por carpeta
 N_ORIG = int(os.environ.get("EVX_N_ORIG", 6000))       # originales (más, para no tener 4 editadas por cada original)
 CARPETAS = os.environ.get("EVX_CARPETAS", "sd2-sp,sd2-fr,sdxl-fr,ps-sp")
@@ -103,27 +105,25 @@ sh(f"{sys.executable} training/entrenar.py --manifiesto manifiesto.csv --salida 
 import io, json, numpy as np, onnxruntime as ort
 from PIL import Image
 sys.path.insert(0, "training")
-from datos import a_tensor
+from datos import degradar_fijo, preparar, puntuar_mosaico
 PRUEBA = DATOS + "_prueba"
 sh(f"{sys.executable} training/descargar_tgif.py --destino {PRUEBA} --n {N_PRUEBA} --particion testing --carpetas orig,sd2-sp,sd2-fr,sdxl-fr,ps-sp")
 ficha = json.load(open(f"{SALIDA}/evidex_ia.json"))
 sess = ort.InferenceSession(f"{SALIDA}/evidex_ia.onnx", providers=["CUDAExecutionProvider", "CPUExecutionProvider"])
-def whatsapp(p):
-    im = Image.open(p).convert("RGB"); im.thumbnail((1600, 1600))
-    b = io.BytesIO(); im.save(b, "JPEG", quality=70)
-    return Image.open(io.BytesIO(b.getvalue()))
+correr = lambda t: sess.run(["mapa", "puntaje"], {"imagen": t})
 def puntajes(carpeta):
+    # igual que Evidex: foto pasada por WhatsApp (1600 px, JPEG 70) y analizada en mosaico a tamaño real
     out = []
     for p in sorted(glob.glob(f"{PRUEBA}/{carpeta}/**/*.png", recursive=True)):
-        x = a_tensor(whatsapp(p), ficha["lado"])[None]
-        out.append(float(sess.run(["puntaje"], {"imagen": x})[0][0]))
+        img = preparar(degradar_fijo(Image.open(p)), ficha["max_lado"])
+        out.append(puntuar_mosaico(correr, img, ficha["lado"], ficha["paso"])[0])
     return np.array(out)
 u = ficha["umbral"]
 NOMBRES = {"orig": "falsas_alarmas_originales", "sd2-sp": "detectadas_sd2_zona", "sd2-fr": "detectadas_sd2_regenerada",
            "sdxl-fr": "detectadas_sdxl_regenerada", "ps-sp": "detectadas_photoshop_zona"}
 res = {c: puntajes(c) for c in NOMBRES}
 medicion = {"umbral": u, **{NOMBRES[c]: f"{(v >= u).sum()} de {len(v)}" for c, v in res.items() if len(v)},
-            "vuelta_1": "falsas 4 de 300, sd2 zona 69 de 300, sdxl regenerada 215 de 300",
+            "vuelta_1 (foto achicada)": "falsas 4 de 300, sd2 zona 69 de 300, sdxl regenerada 215 de 300",
             "linea_base_evidex_hoy": "2-7 de cada 100 editadas pasadas por WhatsApp"}
 ficha["prueba_testing_whatsapp"] = medicion
 json.dump(ficha, open(f"{SALIDA}/evidex_ia.json", "w"), indent=2, ensure_ascii=False)   # el sha256 es del .onnx: sigue válido

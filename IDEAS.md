@@ -29,7 +29,9 @@ Ningún método solo detecta todo: se combinan las tres capas.
 - [x] **Vuelta 1 del entrenamiento en Kaggle** (5 de octubre de 2026): con fotos pasadas por WhatsApp, 4 falsas alarmas de 300 originales; detecta 69 de 300 ediciones de una zona (antes 2 de 100) y 215 de 300 regeneradas completas (antes 7 de 100).
 - [ ] **Vuelta 2** (media): el notebook ya viene listo (más fotos, sd2-fr y Photoshop, 25 épocas, continúa desde la vuelta 1). Meta: más de 50 % en ediciones de una zona sin pasar de 2 % de falsas alarmas.
 - [ ] **Probar el modelo con la foto real** de Samsung editada y mandada por WhatsApp que Evidex no detectó.
-- [ ] **Recortes en vez de reducir la foto** (media): hoy la foto entera se reduce a 512 px y una edición pequeña casi desaparece. Analizar en mosaico (varios recortes de 512 de la foto a tamaño real) y quedarse con el más sospechoso; debería subir la detección de ediciones de una zona.
+- [x] **Recortes en vez de reducir la foto** (hecho: vuelta 3, mosaico a tamaño real en el entrenamiento y en Evidex; falta correrla en Kaggle): hoy la foto entera se reduce a 512 px y una edición pequeña casi desaparece. Analizar en mosaico (varios recortes de 512 de la foto a tamaño real) y quedarse con el más sospechoso; debería subir la detección de ediciones de una zona.
+- [ ] **Canal de ruido para el modelo** (media): además de los colores, darle una versión de la foto que muestre solo el grano del sensor (filtros SRM o una huella de ruido propia); la IA imita bien la forma pero no el grano de la cámara.
+- [ ] **Modelo más grande** (después): efficientnet_b2 o similar si la vuelta 3 se queda corta; medir cuánto tarda por foto en el servidor.
 - [ ] **Fotos de autos editadas para el entrenamiento** (lo que más ayudaría): ver la sección de juntar fotos.
 - [ ] **Segundo modelo para imágenes 100% generadas** (media): Community Forensics (CC BY 4.0), misma ficha y mismo banco de pruebas.
 - [ ] **Banco de pruebas en la pantalla** (media): subir una carpeta de originales y editadas y ver los números sin usar la consola.
