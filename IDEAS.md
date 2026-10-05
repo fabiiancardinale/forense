@@ -88,6 +88,19 @@ No sirve para detectar ediciones en fotos (adivina con buena redacción). Sí pa
 - [ ] **Medir el daño en 3D** (grande): con el video alrededor del auto, reconstruir la abolladura en 3D, medir su profundidad y comparar con lo que cobra el presupuesto.
 - [ ] **Avisar en vivo** (media): mientras el asegurado llena el portal, Evidex ya revisa; si algo no cuadra (foto antigua, sin el código al azar), le pide otra foto en ese momento, antes de que el caso llegue al analista.
 
+## Prioridad de revisión de siniestros (riesgo del caso, no de la persona)
+Idea central: no decir «quién es estafador», sino «qué siniestro conviene revisar primero y por qué». Siempre decide un analista; Evidex solo ordena la bandeja y explica.
+
+- [ ] **Puntaje de prioridad explicable** (media, se puede hacer ya, sin datos de BCI): de 0 a 100 por siniestro, sumando lo que Evidex ya calcula y las circunstancias del caso, con cada punto a la vista («+25 foto editada con IA», «+15 póliza contratada hace 5 días»). Ordena la bandeja del analista; nunca rechaza un siniestro por sí solo.
+  - Señales de la evidencia: fotos editadas o reutilizadas, documentos alterados, fechas o GPS que no calzan, copias de fotos con marca de IA.
+  - Señales del siniestro: póliza muy reciente, aviso tardío, monto alto para el tipo de daño, varios siniestros seguidos, mismo taller, testigos o teléfono en casos distintos (Redes).
+  - Pesos ajustables por el jefe (ver «Ajuste de umbrales desde la pantalla») y registro de cada cambio.
+- [ ] **Modelo entrenado con siniestros cerrados de BCI** (grande, después): reemplaza los pesos a mano por un modelo (por ejemplo, árboles de decisión potenciados) entrenado con casos antiguos y su resultado real (fraude confirmado o no). Requiere autorización escrita de BCI y datos anonimizados. Se mide igual que el detector de fotos: cuántos fraudes encuentra en el 10 % de casos con puntaje más alto y cuántas falsas alarmas da.
+- [ ] **Explicación obligatoria** (rápida): cada puntaje muestra sus razones en el informe. Lo exige la Ley 21.719 (vigente desde diciembre de 2026) para decisiones con apoyo automatizado: derecho a explicación y a revisión humana.
+- [ ] **Datos que nunca se usan** (regla fija): edad, sexo, nacionalidad, comuna, nivel de ingresos ni nada que funcione como reflejo de ellos. Revisar cada señal nueva antes de agregarla.
+- [ ] **Control de sesgo** (media): revisar cada cierto tiempo si el puntaje marca más a algún grupo sin que haya más fraude confirmado en ese grupo, y que el modelo no aprenda solo de quién fue investigado antes (eso repite las sospechas del pasado).
+- [ ] **Revisión legal antes de usarlo con casos reales** (con abogado): base legal del tratamiento, aviso al asegurado, derecho de oposición a decisiones automatizadas y evaluación de impacto.
+
 ## Ranking de talleres (en Cartera, junto a Redes y Métricas)
 No es "taller externo = sospechoso": se mira cada taller, en convenio o no, sobre todos sus casos.
 - Porcentaje de sus siniestros con alertas, comparado con el promedio de los talleres.
