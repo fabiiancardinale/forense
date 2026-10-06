@@ -159,3 +159,14 @@ def test_training_crops_follow_the_edited_zone(tmp_path):
     con_zona = sum(y for _, _, y in out)
     assert 12 <= con_zona <= 36, con_zona                      # la mayoría sobre la zona, pero no todos
     assert all((m.sum() > 0) == bool(y) for _, m, y in out)     # la etiqueta es del recorte
+
+
+def test_calibration_threshold_keeps_false_alarms_under_target():
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "training"))
+    import calibrar
+    orig = np.random.default_rng(3).random(1000)
+    for fpr in (.01, .015, .03):
+        u = calibrar.umbral_para(orig, fpr)
+        assert (orig >= u).mean() <= fpr + 1e-9 and (orig >= u).mean() >= fpr - .002

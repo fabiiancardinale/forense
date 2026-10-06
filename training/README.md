@@ -52,6 +52,14 @@ Ahora:
 - **Compatibilidad:** la ficha dice `formato: 2` y `modo: mosaico`. Evidex sigue aceptando los modelos de formato 1 (foto achicada).
 - **Arranque:** se puede continuar desde el modelo de la vuelta 1 o 2: la red es la misma, solo cambia cómo se le muestran las fotos.
 
+## Calibrar el umbral sin volver a entrenar
+
+`training/evidex_calibrar.ipynb` (o `training/calibrar.py`) toma un modelo ya entrenado y fija desde qué puntaje se da la alerta. Usa unas 1.200 originales de la partición *validation* de TGIF, que el modelo nunca vio; la meta por defecto es 1,5 % de falsas alarmas. Después mide con la partición *testing*.
+
+- No necesita GPU y tarda menos de 1 hora.
+- El `.onnx` no cambia, así que su sha256 sigue valiendo; solo cambia la ficha.
+- Muestra las opciones con metas de 1 %, 1,5 %, 2 % y 3 % para elegir con datos.
+
 ## Pasos (Kaggle o Colab gratis, con GPU)
 
 **Lo más fácil:** importe `training/evidex_kaggle.ipynb` en Kaggle (*Create → New Notebook → File → Import Notebook*), active GPU e Internet en *Settings* y apriete **Run all**. El notebook hace los pasos de abajo solo y, al final, mide con fotos que el modelo nunca vio. Si cambia algo en `training/*.py`, regenere el notebook con `python training/hacer_notebook.py`.
