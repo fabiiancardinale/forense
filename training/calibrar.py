@@ -23,7 +23,11 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+try:
+    _AQUI = Path(__file__).resolve().parent
+except NameError:                                # pegado en una celda de notebook: busca training/ al lado
+    _AQUI = Path.cwd() / "training"
+sys.path.insert(0, str(_AQUI))
 from datos import degradar_fijo, preparar, puntuar_mosaico  # noqa: E402
 
 TIPOS = {"orig": "originales (falsas alarmas)", "sd2-sp": "zona editada SD2", "sd2-fr": "regenerada SD2",
@@ -110,4 +114,7 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
-    main()
+    if "ipykernel" in sys.modules:               # se abrió este archivo como notebook por error
+        print("Este archivo no es el notebook. En Kaggle importe «evidex_calibrar.ipynb» (File → Import Notebook).")
+    else:
+        main()
