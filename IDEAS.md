@@ -12,6 +12,20 @@ Lista de mejoras conversadas, para retomarlas después. Esfuerzo: **rápida** (h
 ## Fotos editadas con IA (plan en 3 capas)
 Ningún método solo detecta todo: se combinan las tres capas.
 
+**Lista de las mejores opciones, en orden** (7 de octubre de 2026; el detalle de cada una está más abajo)
+1. Pedir el original por WhatsApp «como documento»: botón y mensaje modelo (rápida, gratis, cubre Samsung, Google, Apple y ChatGPT).
+2. Comparar fotos del mismo daño dentro del caso (media; no depende del editor y funciona después de WhatsApp).
+3. Captura segura en el portal y video corto alrededor del auto cuando hay sospecha (media).
+4. Paso manual «Verificar con SynthID» con registro en el historial (rápida; Google, OpenAI, Nvidia, Kakao).
+5. API de OpenAI para verificar origen, opcional y apagada por defecto (rápida; necesita autorización de BCI).
+6. Leer TrustMark (rápida, gratis, sin mandar la foto afuera).
+7. Terminar la vuelta 4: medir, calibrar y probar con las 9 fotos reales.
+8. Vuelta 5: base DINOv2, Qwen-Image-Edit en el generador y revisar la marca invisible de SDXL.
+9. 100 a 300 pares propios hechos con Galaxy AI, Google Fotos, iPhone, ChatGPT, Gemini y Meta AI.
+10. Probar Sightengine, Hive y Reality Defender con las 9 fotos antes de decidir si se integran.
+11. Búsqueda inversa (TinEye o Google Vision).
+12. Pedir acceso a la API de SynthID de Google Cloud (formulario, a nombre de Zelekpress).
+
 **Capa 1: que no lleguen fotos editadas** (la de más impacto)
 - [ ] **Captura segura obligatoria en el portal** (rápida): las fotos del daño se toman con la cámara en el momento, sin subir desde la galería.
 - [ ] **Pedir el original** (rápida): si una foto llega de galería o WhatsApp, sin datos o recortada, se marca "no verificable" y se le pide al asegurado el archivo original (WhatsApp como Documento o por el portal). El original trae la anotación de IA de Samsung o Google y la firma C2PA, que Evidex ya lee.
