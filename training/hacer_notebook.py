@@ -97,7 +97,14 @@ sh(f"{sys.executable} training/descargar_tgif.py --destino {DATOS} --n {N_POR_CA
     code("""
 # 5. Manifiesto: qué imágenes se usan y con qué licencia (se niega si hay alguna no comercial)
 import glob
-propias = [os.path.dirname(p) for p in glob.glob("/kaggle/input/*/originales") + glob.glob("/kaggle/input/*/*/originales")]
+# fotos de autos fabricadas con evidex_generar_autos.ipynb (evidex_autos_ia.zip agregado como Input)
+import zipfile
+for i, z in enumerate(glob.glob("/kaggle/input/**/evidex_autos_ia.zip", recursive=True)):
+    destino = f"{os.path.dirname(os.path.abspath(DATOS))}/autos_ia_{i}"
+    if not os.path.isdir(destino):
+        zipfile.ZipFile(z).extractall(destino)
+propias = sorted({os.path.dirname(p) for p in glob.glob("/kaggle/input/**/originales", recursive=True)
+                  + glob.glob(f"{os.path.dirname(os.path.abspath(DATOS))}/autos_ia_*/originales")})
 extra = " ".join(f"--propias {p}" for p in propias)
 print("Fotos propias:", propias or "ninguna")
 sh(f"{sys.executable} training/datos.py --tgif {DATOS} {extra} --salida manifiesto.csv")

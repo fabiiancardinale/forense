@@ -40,8 +40,12 @@ TGIF_EVITAR = ("flux",)          # FLUX.1 dev tiene licencia no comercial: esas 
 
 
 def licencia_permitida(lic: str) -> bool:
+    """«NC» cuenta solo como palabra (CC BY-NC), no dentro de otra («licence», «once»)."""
+    import re
     l = (lic or "desconocida").lower()
-    return not any(b in l for b in LICENCIAS_BLOQUEADAS)
+    if not l.strip():
+        l = "desconocida"
+    return not any(re.search(r"(?<![a-z])" + re.escape(b) + r"(?![a-z])", l) for b in LICENCIAS_BLOQUEADAS)
 
 
 def _mascara_tgif(img: Path, masks: Path) -> str:
@@ -73,6 +77,10 @@ def manifiesto_tgif(raiz: Path) -> list[dict]:
 
 
 def manifiesto_propias(raiz: Path, licencia: str = "propia (fotos de Zelekpress con permiso)") -> list[dict]:
+    """raiz/originales, raiz/editadas y raiz/mascaras (opcional). Si hay raiz/licencia.txt, esa es la licencia
+    (por ejemplo, las fotos que fabrica training/generar_autos.py)."""
+    if (raiz / "licencia.txt").exists():
+        licencia = (raiz / "licencia.txt").read_text(encoding="utf-8").strip()
     filas = []
     for sub, et in (("originales", 0), ("editadas", 1)):
         for img in sorted(p for p in (raiz / sub).rglob("*") if p.suffix.lower() in IMAGES):

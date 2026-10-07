@@ -38,8 +38,12 @@ def model_dir() -> Path:
 
 
 def _license_ok(lic: str) -> bool:
+    """«NC» cuenta solo como palabra (CC BY-NC), no dentro de otra («licence», «once»)."""
+    import re
     l = (lic or "desconocida").lower()
-    return not any(b in l for b in LICENCIAS_BLOQUEADAS)
+    if not l.strip():
+        l = "desconocida"
+    return not any(re.search(r"(?<![a-z])" + re.escape(b) + r"(?![a-z])", l) for b in LICENCIAS_BLOQUEADAS)
 
 
 def _load():

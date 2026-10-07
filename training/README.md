@@ -52,6 +52,18 @@ Ahora:
 - **Compatibilidad:** la ficha dice `formato: 2` y `modo: mosaico`. Evidex sigue aceptando los modelos de formato 1 (foto achicada).
 - **Arranque:** se puede continuar desde el modelo de la vuelta 1 o 2: la red es la misma, solo cambia cómo se le muestran las fotos.
 
+## Fotos de autos editadas con IA (generadas)
+
+`training/evidex_generar_autos.ipynb` (o `training/generar_autos.py`) arma el conjunto de autos editados con IA que no existe en público.
+
+- **Fotos de base:** «Car parts and car damages» de Humans in the Loop: 1.812 fotos de autos con polígonos de 21 partes y 8 tipos de daño, licencia CC0.
+- **Editores:**
+  - SDXL inpainting 0.1 (OpenRAIL++-M; respetar sus restricciones de uso);
+  - Kandinsky 2.2 (Apache 2.0);
+  - LaMa (Apache 2.0).
+- **Ediciones:** se borra un daño real, se agrega un daño a una parte sana, o se rehace un foco, espejo, patente, parrilla o llanta. Como en el teléfono, la IA trabaja sobre un recorte y se pega solo la zona editada; fuera de la máscara la foto queda idéntica.
+- **Resultado:** `evidex_autos_ia.zip`, que trae `originales/`, `editadas/`, `mascaras/`, `registro.jsonl` y `licencia.txt`. El notebook de entrenamiento lo usa solo si se agrega como Input. Los vehículos apartados se miden aparte.
+
 ## Calibrar el umbral sin volver a entrenar
 
 `training/evidex_calibrar.ipynb` (o `training/calibrar.py`) toma un modelo ya entrenado y fija desde qué puntaje se da la alerta. Usa unas 1.200 originales de la partición *validation* de TGIF, que el modelo nunca vio; la meta por defecto es 1,5 % de falsas alarmas. Después mide con la partición *testing*.
