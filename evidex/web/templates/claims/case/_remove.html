@@ -1,5 +1,11 @@
 {% if i.excluded %}<div class="hint off-note">Quitado del análisis por {{ i.excluded.actor }}: {{ i.excluded.data.reason }}</div>
 {% if can('editar_siniestros') %}<form method="post" action="{{ url_for('claims.evidence_restore', cid=c.id, digest=i.digest) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="tab" value="{{ tab }}"><button class="linkbtn" type="submit">Restaurar</button></form>{% endif %}
+{% if can('eliminar_evidencia') %}<details class="rm purge"><summary class="linkbtn danger">Eliminar definitivamente</summary>
+<form method="post" action="{{ url_for('claims.evidence_purge', cid=c.id, digest=i.digest) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="tab" value="{{ tab }}">
+<select name="motivo" required aria-label="Motivo"><option value="">Motivo…</option><option>Datos de prueba</option><option>Pedido de borrado del asegurado (Ley 21.719)</option><option>Plazo de conservación cumplido</option><option>Contiene datos de terceros agregados por error</option></select>
+<input name="confirmar" required placeholder="Escriba ELIMINAR" aria-label="Confirmación" autocomplete="off">
+<button class="btn sm danger" type="submit">Eliminar</button>
+<p class="hint">Borra el archivo para siempre. En el historial queda quién, cuándo y por qué.</p></form></details>{% endif %}
 {% elif can('editar_siniestros') %}<details class="rm"><summary class="linkbtn">Quitar</summary>
 <form method="post" action="{{ url_for('claims.evidence_exclude', cid=c.id, digest=i.digest) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="tab" value="{{ tab }}">
 <select name="motivo" required aria-label="Motivo"><option value="">Motivo…</option><option>Se agregó por error</option><option>Es de otro siniestro</option><option>Está duplicado</option><option>Archivo ilegible o dañado</option></select>

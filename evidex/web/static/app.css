@@ -328,3 +328,5 @@ details.checks .mark{margin-top:1px}
 .zlegend li{display:flex;gap:8px;align-items:baseline;font-size:13.5px}
 .zsw{display:inline-block;width:14px;height:14px;border-radius:3px;flex:none;transform:translateY(2px)}
 .zimg{max-width:100%;border-radius:8px;border:1px solid var(--line)}
+.btn.danger{background:var(--red);border-color:var(--red);color:#fff}
+.rm.purge input[name=confirmar]{width:130px;margin:0 6px}

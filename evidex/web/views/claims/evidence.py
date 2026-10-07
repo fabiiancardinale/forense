@@ -46,7 +46,7 @@ def add_photos(cid):
 def evidence_exclude(cid, digest):
     case = load_claim(cid)
     motivo = request.form.get("motivo", "").strip()[:200]
-    if not service.has_evidence(case, digest) or not motivo:
+    if not service.has_evidence(case, digest) or digest in case.purged() or not motivo:
         flash("Indique el motivo para quitar el archivo.", "bad")
     elif digest not in case.excluded():
         case.exclude_evidence(digest, actor_name() or "analista", motivo)
@@ -60,10 +60,43 @@ def evidence_exclude(cid, digest):
 @bp.post("/caso/<cid>/archivo/<digest>/restaurar")
 def evidence_restore(cid, digest):
     case = load_claim(cid)
-    if digest in case.excluded():
+    if digest in case.purged():
+        flash("Ese archivo se eliminó definitivamente: no se puede restaurar.", "bad")
+    elif digest in case.excluded():
         case.restore_evidence(digest, actor_name() or "analista")
         r = run_claim_analysis(case)
         flash("Archivo restaurado" + ("; analizando el caso." if r and r.get("background") else " y caso reanalizado."), "ok")
+    return _back(cid)
+
+
+PURGE_REASONS = ("Datos de prueba", "Pedido de borrado del asegurado (Ley 21.719)",
+                 "Plazo de conservación cumplido", "Contiene datos de terceros agregados por error")
+
+
+@bp.post("/caso/<cid>/archivo/<digest>/eliminar")
+def evidence_purge(cid, digest):
+    """Eliminación definitiva de un archivo ya quitado del análisis. Queda la constancia en la cadena."""
+    from evidex.claims import analysis
+    from evidex.web.common import cx
+    case = load_claim(cid)
+    motivo = request.form.get("motivo", "").strip()
+    if not DIGEST.fullmatch(digest or "") or not service.has_evidence(case, digest) or digest in case.purged():
+        abort(404)
+    if motivo not in PURGE_REASONS or request.form.get("confirmar", "").strip().upper() != "ELIMINAR":
+        flash("Para eliminar definitivamente, elija el motivo y escriba ELIMINAR.", "bad")
+        return _back(cid)
+    try:
+        name = case.purge_evidence(digest, actor_name() or "administrador", motivo)
+    except (KeyError, ValueError) as ex:
+        flash(str(ex).strip("'\""), "bad")
+        return _back(cid)
+    numero = (service.declaration(case) or {}).get("numero")
+    if numero:
+        analysis.purge_from_registry(cx.registry, numero, digest)
+    log_access("eliminar_archivo", f"{name} ({digest[:12]})")
+    r = run_claim_analysis(case)
+    flash(f"«{name}» eliminado definitivamente. Queda la constancia en el historial del caso"
+          + ("; analizando el caso." if r and r.get("background") else "."), "ok")
     return _back(cid)
 
 
@@ -79,7 +112,7 @@ def evidence_metadata(cid, digest):
     from flask import render_template
     from evidex.forensics.deep_meta import read_all
     case = load_claim(cid)
-    if not re.fullmatch(r"[0-9a-f]{64}", digest or "") or not service.has_evidence(case, digest):
+    if not re.fullmatch(r"[0-9a-f]{64}", digest or "") or not service.has_evidence(case, digest) or digest in case.purged():
         abort(404)
     name = next((e["data"].get("original_name") for e in case.ledger.entries()
                  if e["action"] == "evidence_added" and e["subject"] == digest), digest[:12])
@@ -121,7 +154,7 @@ def evidence_zones(cid, digest):
     from evidex.claims.guide import explain
     from evidex.forensics.image_content import ZONE_LEGEND, zones
     case = load_claim(cid)
-    if not DIGEST.fullmatch(digest or "") or not service.has_evidence(case, digest):
+    if not DIGEST.fullmatch(digest or "") or not service.has_evidence(case, digest) or digest in case.purged():
         abort(404)
     name = _evidence_name(case, digest)
     found = zones(_content(case, digest), confirmed=_ai_confirmed(case, digest))
@@ -134,7 +167,7 @@ def evidence_zones(cid, digest):
 def evidence_zones_image(cid, digest):
     from evidex.forensics.image_content import overlay
     case = load_claim(cid)
-    if not DIGEST.fullmatch(digest or "") or not service.has_evidence(case, digest):
+    if not DIGEST.fullmatch(digest or "") or not service.has_evidence(case, digest) or digest in case.purged():
         abort(404)
     try:
         png = overlay(case.evidence_dir / digest, _content(case, digest), maxside=1400, upright=True,
@@ -157,7 +190,7 @@ META_SECTIONS = [("archivo", "Archivo"), ("samsung", "Samsung: datos propios del
 def doc_version(cid, digest, n):
     from evidex.forensics.pdf_versions import version_bytes
     case = load_claim(cid)
-    if not DIGEST.fullmatch(digest) or not service.has_evidence(case, digest):
+    if not DIGEST.fullmatch(digest) or not service.has_evidence(case, digest) or digest in case.purged():
         abort(404)
     name = next((e["data"]["original_name"] for e in case.ledger.entries()
                  if e["action"] == "evidence_added" and e["subject"] == digest), "documento.pdf")

@@ -33,6 +33,7 @@ LEGACY_ROLES = {"liquidador": "analista"}          # nombres de rol de versiones
 PERMS = {
     "ver_siniestros": {"administrador", "jefe", "analista", "investigador"},
     "editar_siniestros": {"administrador", "jefe", "analista"},
+    "eliminar_evidencia": {"administrador", "jefe"},                # borrar definitivamente (no se puede deshacer)
     "ver_todos": {"administrador", "jefe", "investigador"},        # sin esto, solo los casos propios
     "equipo": {"administrador", "jefe"},                           # panel de equipo y reasignar casos
     "investigaciones": {"administrador", "jefe", "investigador"},  # crear expedientes, auditorías, ver todos
@@ -52,7 +53,7 @@ ENDPOINTS = {
     "claims.reanalyze": "editar_siniestros", "claims.decide": "editar_siniestros", "claims.capture_link": "editar_siniestros",
     "claims.capture_sent": "editar_siniestros",
     "claims.load_demo": "editar_siniestros", "claims.evidence_exclude": "editar_siniestros",
-    "claims.evidence_restore": "editar_siniestros", "claims.derive": "editar_siniestros",
+    "claims.evidence_restore": "editar_siniestros", "claims.evidence_purge": "eliminar_evidencia", "claims.derive": "editar_siniestros",
     "claims.derive_cancel": "editar_siniestros", "claims.dossier_report": "ver_siniestros",
     "investigations.investigations": "peritaje", "investigations.inv_view": "peritaje",
     "investigations.inv_response": "peritaje", "investigations.inv_conclusion": "peritaje",

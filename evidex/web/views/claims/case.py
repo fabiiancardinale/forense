@@ -48,6 +48,7 @@ def _refresh_if_needed(case: Case) -> None:
 def evidence_items(case: Case, snap: dict) -> list[dict]:
     """Todos los archivos del caso (también los quitados del análisis), con sus datos y alertas."""
     excluded = case.excluded()
+    purged = case.purged()
     photos = {p["digest"]: p for p in snap["photos"]}
     docs = {d["digest"]: d for d in snap["docs"]}
     by_ev: dict[str, list[dict]] = {}
@@ -66,6 +67,8 @@ def evidence_items(case: Case, snap: dict) -> list[dict]:
         if e["action"] != "evidence_added" or e["data"].get("note") == "declaracion":
             continue
         d, digest = e["data"], e["subject"]
+        if digest in purged:
+            continue                                   # eliminado definitivamente: solo queda en el historial
         note = d.get("note") or ("documento" if Path(d["original_name"]).suffix.lower() == ".pdf" else "foto")
         info = photos.get(digest) or docs.get(digest) or {}
         found = sorted(by_ev.get(digest[:8], []), key=lambda f: SEV_ORDER[f["severity"]])
@@ -210,6 +213,7 @@ def _tab_history(case, snap, items):
                   "case_derived": f"{d.get('empresa', '')}, plazo {d.get('plazo') or 'sin plazo'}",
                   "derivation_cancelled": d.get("reason", ""), "decision": d.get("label", ""),
                   "evidence_excluded": d.get("reason", ""),
+                  "evidence_purged": f"{d.get('original_name', '')} · motivo: {d.get('reason', '')}",
                   "claim_analyzed": f"{d.get('findings', 0)} hallazgo(s), riesgo {d.get('score', '—')}"}.get(e["action"], "")
         rows.append({"ts": e["ts"], "actor": e["actor"], "what": what, "detail": detail, "hash": e["hash"]})
     return {"rows": rows[::-1], "accesos": cx.store.entries(subject=summarize(case)["numero"], limit=50) if cx.store.enabled() else []}

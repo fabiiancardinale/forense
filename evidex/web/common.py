@@ -155,7 +155,7 @@ ANALYSIS_MARK = "informe.evidencias"
 def analysis_mark(case: Case) -> str:
     """Huella de lo que se analizó: cantidad de cambios de evidencia y versión de las pruebas de Evidex."""
     n_ev = sum(1 for e in case.ledger.entries()
-               if e["action"] in ("evidence_added", "evidence_excluded", "evidence_restored"))
+               if e["action"] in ("evidence_added", "evidence_excluded", "evidence_restored", "evidence_purged"))
     from evidex.forensics import learned
     mid = learned.model_id()                      # instalar o cambiar el modelo aprendido pide reanalizar
     return f"{n_ev}|{service.ANALYSIS_VERSION}" + (f"|{mid}" if mid else "")
@@ -368,6 +368,8 @@ def send_evidence(case: Case, digest: str, mini: bool = False):
     if not re.fullmatch(r"[0-9a-f]{64}", digest or "") or not service.has_evidence(case, digest):
         abort(404)
     path = case.evidence_dir / digest
+    if digest in case.purged() or not path.exists():
+        abort(404)                                   # eliminado definitivamente
     name = next((e["data"]["original_name"] for e in case.ledger.entries()
                  if e["action"] == "evidence_added" and e["subject"] == digest), "archivo")
     ext = Path(name).suffix.lower()

@@ -52,7 +52,7 @@ def cmd_ingest(a):
     tl = _timeline(case, rebuild=True)
     total = 0
     for e in case.ledger.entries():
-        if e["action"] == "evidence_added":
+        if e["action"] == "evidence_added" and e["subject"] not in case.purged():
             n = tl.ingest(case.evidence_dir / e["subject"], e["subject"], e["data"]["original_name"])
             total += n
             print(f"  {e['data']['original_name']}: {n} eventos")

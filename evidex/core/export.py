@@ -29,9 +29,13 @@ for i, e in enumerate(entries):
 else:
     print(f"[OK] cadena de custodia íntegra ({len(entries)} entradas)")
 
+purged = {e["subject"]: e for e in entries if e["action"] == "evidence_purged"}
 for e in entries:
     if e["action"] != "evidence_added":
         continue
+    if e["subject"] in purged:
+        print(f"[OK] evidencia eliminada definitivamente: {e['data']['original_name']} "
+              f"({purged[e['subject']]['data'].get('reason', '')})"); continue
     f = here / "evidence" / e["subject"]
     if not f.exists():
         print(f"[FALLA] falta evidencia {e['data']['original_name']}"); ok = False; continue

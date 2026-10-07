@@ -86,7 +86,8 @@ def _integrity_html(chain_ok, chain_msg, ev_ok, ev_problems, seal_txt) -> str:
 
 ACTIONS = {"case_created": "Caso creado", "evidence_added": "Archivo agregado", "analysis_run": "Análisis",
            "claim_analyzed": "Análisis de Evidex", "evidence_excluded": "Archivo quitado del análisis",
-           "evidence_restored": "Archivo restaurado", "case_assigned": "Caso asignado", "case_derived": "Derivado a peritaje",
+           "evidence_restored": "Archivo restaurado",
+           "evidence_purged": "Archivo eliminado definitivamente", "case_assigned": "Caso asignado", "case_derived": "Derivado a peritaje",
            "derivation_cancelled": "Derivación anulada", "derivation_delivered": "Perito entregó informe final",
            "decision": "Decisión", "capture_link_created": "Enlace al asegurado creado",
            "portal_finished": "Asegurado terminó de subir", "imported_from": "Importado del historial",
@@ -103,6 +104,8 @@ def _action_text(e) -> str:
         txt += f' <small>({e["subject"][:8]}) motivo: {html.escape(d["reason"])}</small>'
     elif e["action"] == "evidence_restored":
         txt += f' <small>({e["subject"][:8]})</small>'
+    elif e["action"] == "evidence_purged":
+        txt += f' <small>{html.escape(d.get("original_name", ""))} ({e["subject"][:8]}) motivo: {html.escape(d.get("reason", ""))}</small>'
     return txt
 
 

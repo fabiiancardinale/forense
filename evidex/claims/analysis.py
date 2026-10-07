@@ -693,6 +693,32 @@ def load_registry(path: Path | None) -> list[dict]:
 
 
 @serialized(lambda path, *a, **kw: path)
+def purge_from_registry(path: Path | None, claim: str, digest: str) -> int:
+    """Saca del registro entre siniestros las filas de un archivo eliminado definitivamente."""
+    from evidex.core.storage import locked
+    if not path or not Path(path).exists():
+        return 0
+    with locked(Path(path)):
+        lines = Path(path).read_text(encoding="utf-8").splitlines()
+        keep = []
+        for line in lines:
+            try:
+                r = json.loads(line)
+            except ValueError:
+                keep.append(line)
+                continue
+            if r.get("claim") == claim and r.get("sha256") == digest:
+                continue
+            keep.append(line)
+        removed = len(lines) - len(keep)
+        if removed:
+            tmp = Path(path).with_suffix(".tmp")
+            tmp.write_text("\n".join(keep) + ("\n" if keep else ""), encoding="utf-8")
+            tmp.replace(path)
+            _REGISTRY_CACHE.pop(str(Path(path).resolve()), None)
+    return removed
+
+
 def update_registry(path: Path, claim: str, photos: list[Photo], docs=(), decl: dict | None = None,
                     level: str | None = None) -> None:
     """Agrega al registro las fotos, documentos y datos del siniestro (sin duplicar)."""
