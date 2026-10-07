@@ -50,6 +50,28 @@ Ningún método solo detecta todo: se combinan las tres capas.
 - [x] Guardar los pesos en safetensors (no pickle: puede ejecutar código y se rompe entre versiones) y correrlo con ONNX + onnxruntime, sin instalar PyTorch. Cargar una vez al iniciar; el archivo se descarga al instalar con su huella digital, fuera de GitHub; cada versión nueva reanaliza los casos.
 - [ ] Opción: huella del ruido propia (idea de Noiseprint del artículo de TruFor, con código y datos propios), entrenada solo con fotos sin editar.
 
+**Investigación: cómo detectar las ediciones de todos los editores** (7 de octubre de 2026)
+Hallazgo central: no hay un detector que reconozca todos los editores. Cada editor se ataca por un camino distinto, y el modelo propio solo cubre lo que se le enseñó.
+
+| Editor | Marca que deja | ¿Sobrevive a WhatsApp? | Camino |
+|---|---|---|---|
+| Samsung Galaxy AI | Metadatos SEF/genAIType; C2PA desde S25; marca visible ✨ | Metadatos no; marca visible sí, salvo que la recorten o la borren | Evidex ya lee todo eso; pedir el original |
+| Google Fotos (Magic Editor, Reimagine) | C2PA en ediciones con IA; **SynthID** (marca invisible en los píxeles) en Reimagine desde feb. 2025 | C2PA no; SynthID sí, según Google | Verificar SynthID en la app Gemini (a mano; no hay API pública) |
+| ChatGPT / OpenAI | C2PA; **SynthID** anunciado el 19 de mayo de 2026 | C2PA no; SynthID sí | Igual que Google; además, la imagen se regenera completa, y eso nuestro modelo lo detecta bien (95 %) |
+| Gemini / Imagen | SynthID + C2PA | SynthID sí | App Gemini |
+| Adobe Firefly / Photoshop | C2PA; a veces TrustMark (marca invisible de código abierto, MIT) | C2PA no; TrustMark está hecho para resistir JPEG | Leer TrustMark nosotros (gratis, licencia MIT) |
+| Meta AI | Marca invisible propia + IPTC | Sin datos públicos claros | Por ahora solo el modelo |
+| Apple (Limpiar) | Metadatos de edición | No | Pedir el original |
+
+- [ ] **Leer TrustMark** (rápida-media): decodificador MIT de Adobe/CAI. Si una foto trae TrustMark, la marca apunta a sus credenciales C2PA aunque WhatsApp haya borrado los metadatos. Bajo costo; cubre Firefly y a cualquiera que use «credenciales duraderas».
+- [ ] **Botón «Verificar en Gemini (SynthID)»** (rápida): no hay API pública de SynthID (Google la prepara para socios empresariales). Por ahora se pone un paso guiado: el analista sube la foto a la app Gemini y pregunta si fue hecha o editada con IA de Google, y registra la respuesta en el caso. Cubre Google Fotos (Reimagine), Gemini y, desde mayo de 2026, ChatGPT. Ojo: Google avisa que las ediciones muy chicas pueden no llevar SynthID. Pedir acceso a la API de detección cuando salga.
+- [ ] **Entrenar con «pegado solo de la zona»** (ya lo hace nuestro generador): un estudio de 2026 (INP-X) mostró que los detectores, incluso dos comerciales, caen del 91 % al 55 % cuando fuera de la zona editada se dejan los píxeles originales, porque aprendían el rastro global del VAE y no la zona. Los teléfonos hacen justamente eso. Nuestro generador ya pega solo la zona; hay que mantenerlo así y medir siempre en ese caso.
+- [ ] **Más editores en el generador** (media, lo que más acerca a «todos»): agregar editores por instrucción con licencia comercial, como Qwen-Image-Edit (Apache 2.0), que se parecen a ChatGPT, Gemini y Galaxy AI («borra el rayón», «agrega una abolladura»). Revisar también FLUX.2 klein 4B (Apache 2.0) y Z-Image (Apache 2.0). No usar FLUX.2 dev ni klein 9B, que no permiten uso comercial sin pagar. Variedad de editores > cantidad de fotos de uno solo.
+- [ ] **Detector que aprende lo «normal» de la cámara** (grande): en vez de aprender cada editor, aprender cómo se ve el grano de una foto real de celular y marcar lo que no calza, como en la idea de «autoconsistencia» y en GIFL (2025). Se entrena solo con fotos reales, así que no depende del editor. Es el camino que generaliza mejor a editores nuevos. Código propio; las ideas de los artículos se pueden reimplementar.
+- [ ] **Fotos reales de los editores de verdad** (lo que más ayuda): 100 a 300 pares hechos con Galaxy AI, Google Fotos, iPhone, ChatGPT, Gemini y Meta AI, pasados por WhatsApp. Ningún conjunto público los trae; UniAIDet (2025) tampoco incluye GPT-4o, Gemini ni Photoshop.
+- Descartados por licencia: B-Free (CVPR 2025, Nápoles; solo uso sin fines de lucro) y FUSED (2026; el repositorio no declara licencia, hay que preguntar a los autores). UniAIDet (CC BY-NC-SA, no comercial).
+- Límite que hay que decir a BCI: con WhatsApp y sin original, una edición chica hecha con un editor que el modelo no conoce puede pasar. La defensa más fuerte sigue siendo la captura segura y pedir el original.
+
 **Datasets con licencia que permite uso comercial** (revisar la letra chica con un abogado antes de vender)
 - [ ] **TGIF / TGIF2** (Universidad de Gante, CC BY 4.0 / CC BY-SA 4.0): ~271.000 fotos reales editadas localmente con IA (SD2, SDXL, Firefly, FLUX) con la máscara de la zona cambiada. Base para entrenar el modelo que marca la zona editada. Cuidado: fotos de MS-COCO (licencias de Flickr mezcladas) y parte hecha con FLUX.1 dev (licencia propia): preferir la parte de SD2/SDXL o confirmar con los autores. https://github.com/IDLabMedia/tgif-dataset
 - [ ] **Community Forensics** (CVPR 2025, CC BY 4.0, versión base, no la "Small" que es no comercial): imágenes reales y generadas por miles de modelos. Para el detector de imágenes 100% inventadas con IA.
