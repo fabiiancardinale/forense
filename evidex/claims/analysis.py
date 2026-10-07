@@ -473,7 +473,7 @@ def photo_set_findings(photos: list["Photo"]) -> list[Finding]:
 CROP_MAX_PHOTOS = 20   # con más fotos solo se comparan los pares parecidos (cada par toma ~0,1 s)
 
 
-CONTENT_VERSION = 2        # súbalo si cambia el análisis de píxeles o de C2PA: se recalcula la caché por foto
+CONTENT_VERSION = 3        # súbalo si cambia el análisis de píxeles o de C2PA: se recalcula la caché por foto
 
 
 def content_version():
