@@ -72,14 +72,14 @@ GUIDE: dict[str, tuple[str, str]] = {
     # ---- fotos: contenido ------------------------------------------------------------------
     "pasted_region": (
         "Una zona de la foto se guardó de forma distinta al resto, como si se hubiera pegado desde otra imagen (un daño, "
-        "una patente, un objeto). La zona está marcada en rojo en Revisar foto.",
+        "una patente, un objeto). La zona está marcada en rojo en «Ver zonas marcadas», en la foto.",
         "Revise la zona marcada y pida una inspección presencial del daño."),
     "recompressed": (
         "La foto dice venir directo de la cámara, pero se abrió y guardó de nuevo, por ejemplo en un editor.",
         "Pida el original y compárelo."),
     "cloned_region": (
         "Una parte de la foto está copiada en otro lugar de la misma imagen. Se usa para agrandar un daño o tapar algo.",
-        "Pida una inspección presencial del vehículo."),
+        "Abra «Ver zonas marcadas» en la foto (las dos zonas en naranjo) y pida una inspección presencial del vehículo."),
     "daylight_at_night": (
         "La foto muestra cielo de día, pero su fecha dice que se tomó de noche en ese lugar. La fecha de la foto no es "
         "la real.",
@@ -97,13 +97,13 @@ GUIDE: dict[str, tuple[str, str]] = {
         "El modelo de Evidex se entrenó con miles de fotos originales y editadas con IA (pasadas por una compresión "
         "como la de WhatsApp) y aprendió a reconocer las huellas que deja la IA en los píxeles. A diferencia de los "
         "metadatos, esto no se borra al reenviar la foto. Es una estimación: puede equivocarse.",
-        "Mire la zona marcada en azul en Revisar foto. Si coincide con el daño, pida la foto original desde el "
+        "Abra «Ver zonas marcadas» en la foto y mire el recuadro azul. Si coincide con el daño, pida la foto original desde el "
         "teléfono (portal de captura) o una inspección presencial."),
     "noise_inconsistent": (
         "Toda la foto sale del mismo sensor, así que el \"grano\" de la imagen debería ser parejo (según la luz). "
         "Una zona con un grano claramente distinto puede haberse pegado desde otra foto o retocado. Es una señal de "
         "apoyo: por sí sola no prueba edición.",
-        "Mire la zona marcada en morado en Revisar foto (y el mapa de ruido). Si coincide con el daño, pida una "
+        "Abra «Ver zonas marcadas» en la foto y mire el recuadro morado. Si coincide con el daño, pida una "
         "inspección presencial."),
     "resized_after_capture": (
         "La cámara anota dentro del archivo el tamaño exacto de la foto que guardó. Si el archivo mide otra cosa, la foto "

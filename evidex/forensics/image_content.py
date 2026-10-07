@@ -445,8 +445,38 @@ def analyze_image(path) -> dict:
     return out
 
 
-def overlay(path, content: dict, maxside: int = 900) -> bytes | None:
-    """Imagen reducida con las zonas sospechosas marcadas (PNG), para mostrar al liquidador."""
+ZONE_LEGEND = [  # (color, texto, qué significa) para la leyenda de la vista de zonas
+    ((220, 38, 38), "posible pegado", "Zona sin la huella de compresión del resto: pudo pegarse desde otra imagen."),
+    ((124, 58, 237), "grano distinto", "Zona con un grano del sensor distinto al resto de la foto."),
+    ((234, 140, 0), "region similar", "Dos zonas casi idénticas dentro de la misma foto (posible clonado)."),
+    ((14, 116, 144), "revisar esta zona (modelo)", "Zona que el modelo de IA de Evidex ve como posiblemente editada con IA."),
+]
+
+
+def zones(content: dict) -> list[str]:
+    """Qué zonas marcadas tiene una foto (para mostrar el botón y la leyenda)."""
+    content = content or {}
+    out = []
+    if (content.get("ghost") or {}).get("region"):
+        out.append("posible pegado")
+    if (content.get("noise") or {}).get("region"):
+        out.append("grano distinto")
+    if (content.get("clone") or {}).get("src"):
+        out.append("region similar")
+    if (content.get("learned") or {}).get("region"):
+        out.append("revisar esta zona (modelo)")
+    return out
+
+
+_UPRIGHT = {2: (Image.FLIP_LEFT_RIGHT,), 3: (Image.ROTATE_180,), 4: (Image.FLIP_TOP_BOTTOM,),
+            5: (Image.FLIP_LEFT_RIGHT, Image.ROTATE_90), 6: (Image.ROTATE_270,),
+            7: (Image.FLIP_LEFT_RIGHT, Image.ROTATE_270), 8: (Image.ROTATE_90,)}
+
+
+def overlay(path, content: dict, maxside: int = 900, upright: bool = False) -> bytes | None:
+    """Imagen reducida con las zonas sospechosas marcadas (PNG), para mostrar al liquidador.
+    Las zonas se calcularon sobre los píxeles tal como vienen en el archivo; con upright=True la imagen ya
+    marcada se gira como la muestra el teléfono (orientación EXIF), para que no se vea de lado."""
     boxes = []
     if (content.get("ghost") or {}).get("region"):
         boxes.append((content["ghost"]["region"]["bbox"], (220, 38, 38), "posible pegado"))
@@ -460,6 +490,7 @@ def overlay(path, content: dict, maxside: int = 900) -> bytes | None:
     if not boxes:
         return None
     with Image.open(path) as img:
+        orientation = img.getexif().get(0x0112, 1) if upright else 1
         im = img.convert("RGB")
     s = min(1.0, maxside / max(im.size))
     im = im.resize((int(im.width * s), int(im.height * s)))
@@ -467,8 +498,11 @@ def overlay(path, content: dict, maxside: int = 900) -> bytes | None:
     for (x0, y0, x1, y1), col, label in boxes:
         box = [x0 * s, y0 * s, x1 * s, y1 * s]
         dr.rectangle(box, outline=col, width=4)
-        dr.rectangle([box[0], box[1] - 18, box[0] + 8 * len(label) + 8, box[1]], fill=col)
-        dr.text((box[0] + 4, box[1] - 16), label, fill=(255, 255, 255))
+        ty = box[1] - 18 if box[1] >= 18 else box[3]          # la etiqueta va arriba, o abajo si no cabe
+        dr.rectangle([box[0], ty, box[0] + 8 * len(label) + 8, ty + 18], fill=col)
+        dr.text((box[0] + 4, ty + 2), label, fill=(255, 255, 255))
+    for t in _UPRIGHT.get(orientation, ()):
+        im = im.transpose(t)
     b = io.BytesIO()
     im.save(b, "PNG")
     return b.getvalue()

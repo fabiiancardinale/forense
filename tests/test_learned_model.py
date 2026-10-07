@@ -170,3 +170,33 @@ def test_calibration_threshold_keeps_false_alarms_under_target():
     for fpr in (.01, .015, .03):
         u = calibrar.umbral_para(orig, fpr)
         assert (orig >= u).mean() <= fpr + 1e-9 and (orig >= u).mean() >= fpr - .002
+
+
+def test_case_photo_shows_marked_zones_page(model_env, tmp_path):
+    """La alerta dice «Ver zonas marcadas»: el botón tiene que existir en la foto y mostrar el recuadro."""
+    import io
+    import re
+    from helpers import web_client
+    make_model(model_env)
+    foto = photo(tmp_path / "IMG-20261007-WA0001.jpg")
+    with Image.open(foto) as im:                      # foto de celular girada (orientación EXIF 6)
+        exif = im.getexif()
+        exif[0x0112] = 6
+        im.save(foto, "JPEG", quality=90, exif=exif)
+    c = web_client(tmp_path)
+    with open(foto, "rb") as fh:
+        r = c.post("/nuevo", data={"numero": "SIN-2026-8100", "fecha_siniestro": "2026-10-07T10:00",
+                                   "fotos": [(fh, foto.name)]}, content_type="multipart/form-data")
+    assert r.status_code == 302
+    page = c.get("/caso/SIN-2026-8100?tab=fotos").get_data(as_text=True)
+    assert "Posible zona editada con IA" in page and "Ver zonas marcadas (1)" in page
+    assert "Revisar foto" not in page
+    link = re.search(r'href="(/caso/SIN-2026-8100/archivo/[0-9a-f]{64}/zonas)"', page).group(1)
+    z = c.get(link)
+    assert z.status_code == 200 and "Revisar esta zona (modelo)" in z.get_data(as_text=True)
+    img = c.get(link + ".png")
+    assert img.status_code == 200 and img.mimetype == "image/png"
+    with Image.open(io.BytesIO(img.data)) as im:
+        assert im.height > im.width                   # se muestra derecha, como en el teléfono
+        a = np.asarray(im.convert("RGB")).astype(int)
+    assert ((abs(a[..., 0] - 14) < 30) & (abs(a[..., 1] - 116) < 30) & (abs(a[..., 2] - 144) < 30)).sum() > 50

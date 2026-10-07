@@ -323,3 +323,8 @@ details.checks .mark{margin-top:1px}
 .metasec .sig{background:var(--redbg);color:var(--red);border-radius:6px;padding:6px 10px;margin:8px 0;font-size:13px}
 .metasec .ed{background:var(--ambbg);color:var(--amb);border-radius:6px;padding:6px 10px;margin:8px 0;font-size:13px}
 .flinks li:has(> details){list-style:none;margin-left:-14px}
+.zonelink{margin-top:8px}
+.zlegend{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:6px}
+.zlegend li{display:flex;gap:8px;align-items:baseline;font-size:13.5px}
+.zsw{display:inline-block;width:14px;height:14px;border-radius:3px;flex:none;transform:translateY(2px)}
+.zimg{max-width:100%;border-radius:8px;border:1px solid var(--line)}

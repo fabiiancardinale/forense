@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block title %}Zonas marcadas · {{ name }}{% endblock %}
+{% block crumbs %}<a href="{{ url_for('claims.index') }}">Cola de trabajo</a> / <a href="{{ url_for('claims.case_view', cid=cid, tab='fotos') }}">{{ cid }}</a> / Zonas marcadas{% endblock %}
+{% block heading %}<h1>Zonas marcadas en {{ name }}</h1>
+<p class="sub">Cada recuadro es un indicio para revisar, no una prueba. Compárelo con el daño declarado.</p>{% endblock %}
+{% block body %}
+{% if legend %}
+<section class="panel"><div class="pb">
+<ul class="zlegend">{% for col, label, why in legend %}<li><span class="zsw" style="background:rgb{{ col }}"></span><b>{{ label|capitalize }}:</b> {{ why }}</li>{% endfor %}</ul>
+<img class="zimg" src="{{ url_for('claims.evidence_zones_image', cid=cid, digest=digest) }}" alt="Foto con las zonas marcadas">
+<p class="hint">Si una zona marcada coincide con el daño, pida la foto original desde el teléfono (portal de captura) o una inspección presencial.
+<a href="{{ url_for('claims.evidence_file', cid=cid, digest=digest) }}" target="_blank" rel="noopener">Ver la foto original sin marcas</a></p>
+</div></section>
+{% else %}
+<section class="panel"><div class="pb"><p>Esta foto no tiene zonas marcadas.</p></div></section>
+{% endif %}
+{% endblock %}

@@ -580,7 +580,7 @@ def content_findings(p: "Photo", decl: dict, place, cite) -> list[Finding]:
     g = c.get("ghost") or {}
     if g.get("region"):
         out.append(Finding("pasted_region", "alta", f"Zona de la foto agregada después ({p.name})",
-                           f"Una zona de {p.name} (marcada en rojo en la revisión de la foto) no tiene la huella de "
+                           f"Una zona de {p.name} (marcada en rojo en «Ver zonas marcadas») no tiene la huella de "
                            f"compresión que tiene el resto de la imagen: el resto se guardó antes con calidad "
                            f"~{g['q_first']} y esa zona no. Es la huella típica de pegar un elemento (daño, patente, "
                            "objeto) desde otra imagen.", cite, p.ts))
@@ -592,7 +592,7 @@ def content_findings(p: "Photo", decl: dict, place, cite) -> list[Finding]:
     nz = (c.get("noise") or {}).get("region")
     if nz and not g.get("region"):
         out.append(Finding("noise_inconsistent", "media", f"Zona con grano distinto al resto ({p.name})",
-                           f"Una zona de {p.name} (marcada en morado en la revisión de la foto) tiene {nz['kind']} grano "
+                           f"Una zona de {p.name} (marcada en morado en «Ver zonas marcadas») tiene {nz['kind']} grano "
                            f"de sensor que el resto de la imagen (unas {nz['ratio']} veces). Toda la foto sale del mismo "
                            "sensor, así que una zona con otro grano puede venir de otra imagen o estar retocada.",
                            cite, p.ts))
@@ -601,7 +601,7 @@ def content_findings(p: "Photo", decl: dict, place, cite) -> list[Finding]:
         out.append(Finding("ai_model_region", "media", f"Posible zona editada con IA ({p.name})",
                            f"El modelo de Evidex entrenado para reconocer ediciones con IA marcó {p.name} "
                            f"(puntaje {lr['score']:.4f}; alerta desde {lr['threshold']:.4f})"
-                           + (", en la zona marcada en azul en la revisión de la foto" if lr.get("region") else "")
+                           + (", en la zona marcada en azul en «Ver zonas marcadas»" if lr.get("region") else "")
                            + ". Funciona aunque la foto haya pasado por WhatsApp, pero es una estimación: "
                            "revise esa zona.", cite, p.ts))
     cl = c.get("clone") or {}

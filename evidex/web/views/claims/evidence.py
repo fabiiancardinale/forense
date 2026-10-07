@@ -90,6 +90,53 @@ def evidence_metadata(cid, digest):
                            active="index")
 
 
+def _content(case, digest: str) -> dict:
+    """Análisis de píxeles guardado de una foto del caso (zonas pegadas, grano, clonado, modelo de IA)."""
+    import json
+    try:
+        cache = json.loads((case.root / "analisis_imagen.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    c = cache.get(digest) if isinstance(cache, dict) else None
+    return c if isinstance(c, dict) else {}
+
+
+def _evidence_name(case, digest: str) -> str:
+    return next((e["data"].get("original_name") for e in case.ledger.entries()
+                 if e["action"] == "evidence_added" and e["subject"] == digest), digest[:12])
+
+
+@bp.get("/caso/<cid>/archivo/<digest>/zonas")
+def evidence_zones(cid, digest):
+    """La foto con las zonas sospechosas marcadas en colores, con su leyenda y las alertas de esa foto."""
+    from flask import render_template
+    from evidex.claims.guide import explain
+    from evidex.forensics.image_content import ZONE_LEGEND, zones
+    case = load_claim(cid)
+    if not DIGEST.fullmatch(digest or "") or not service.has_evidence(case, digest):
+        abort(404)
+    name = _evidence_name(case, digest)
+    found = zones(_content(case, digest))
+    log_access("ver_zonas", name)
+    legend = [(c, t, why) for c, t, why in ZONE_LEGEND if t in found]
+    return render_template("claims/zones.html", cid=cid, digest=digest, name=name, legend=legend, active="index")
+
+
+@bp.get("/caso/<cid>/archivo/<digest>/zonas.png")
+def evidence_zones_image(cid, digest):
+    from evidex.forensics.image_content import overlay
+    case = load_claim(cid)
+    if not DIGEST.fullmatch(digest or "") or not service.has_evidence(case, digest):
+        abort(404)
+    try:
+        png = overlay(case.evidence_dir / digest, _content(case, digest), maxside=1400, upright=True)
+    except Exception:
+        png = None
+    if not png:
+        abort(404)
+    return send_file(io.BytesIO(png), mimetype="image/png", max_age=0)
+
+
 META_SECTIONS = [("archivo", "Archivo"), ("samsung", "Samsung: datos propios del teléfono (SEF)"),
                  ("apple", "Apple"), ("google", "Google / Android (XMP de cámara)"), ("c2pa", "Credenciales de contenido (C2PA)"),
                  ("exif", "EXIF (todas las carpetas)"), ("fabricante", "Nota del fabricante (MakerNote)"), ("xmp", "XMP"),
