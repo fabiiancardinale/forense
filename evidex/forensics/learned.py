@@ -99,9 +99,9 @@ def model_id() -> str | None:
     return card["_id"] if sess is not None else None
 
 
-def _hot_box(prob: np.ndarray, thr: float, w: int, h: int):
+def _hot_box(prob: np.ndarray, thr: float, w: int, h: int, floor: float = .5):
     """Caja (en píxeles de la foto) de la zona más sospechosa, o None."""
-    m = prob >= max(thr, .5)
+    m = prob >= max(thr, floor)
     if m.sum() < 4:
         return None
     from evidex.forensics.image_content import _largest_blob
@@ -176,4 +176,10 @@ def check(path) -> dict:
     box = _hot_box(prob, thr, orig_w, orig_h) if out["flag"] else None
     if box:
         out["region"] = {"bbox": box, "area": round(float((prob >= max(thr, .5)).mean()), 4)}
+    # la zona más sospechosa aunque no llegue al umbral: se muestra solo si otra prueba ya confirmó que la
+    # foto se editó con IA (firma del teléfono, marca visible, copia de una foto marcada), para saber dónde mirar
+    peak = float(prob.max()) if prob.size else 0.0
+    best = _hot_box(prob, peak * .9, orig_w, orig_h, floor=0) if peak > 0 else None
+    if best:
+        out["best"] = {"bbox": best, "peak": round(peak, 4)}
     return out

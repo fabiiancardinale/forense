@@ -200,3 +200,79 @@ def test_case_photo_shows_marked_zones_page(model_env, tmp_path):
         assert im.height > im.width                   # se muestra derecha, como en el teléfono
         a = np.asarray(im.convert("RGB")).astype(int)
     assert ((abs(a[..., 0] - 14) < 30) & (abs(a[..., 1] - 116) < 30) & (abs(a[..., 2] - 144) < 30)).sum() > 50
+
+
+def test_ai_confirmed_photo_shows_most_likely_zone_below_threshold(model_env, tmp_path):
+    """El archivo dice «editada con Galaxy AI» pero no dónde; el modelo no llega a su umbral. Igual se muestra
+    la zona que el modelo ve más sospechosa, como pista (en otro color y marcada como estimación)."""
+    import io
+    import json as _json
+    import re
+    from helpers import web_client
+    from test_deep_metadata import _exif, _sef
+    make_model(model_env, umbral=.999)                      # umbral que la zona tenue no alcanza
+    a = np.full((600, 800, 3), 120, np.uint8)
+    a += np.random.default_rng(4).integers(0, 20, a.shape, dtype=np.uint8)
+    a[380:460, 560:660] = (180, 90, 90)                     # zona algo rojiza: sospechosa, pero bajo el umbral
+    b = io.BytesIO()
+    Image.fromarray(a).save(b, "JPEG", quality=92, exif=_exif())
+    foto = tmp_path / "20261004_121956.jpg"
+    foto.write_bytes(b.getvalue() + _sef({"PEg_Info": _json.dumps({"genImageVersion": "v1", "genAIType": 1}).encode()}))
+    r = learned.check(foto)
+    assert not r["flag"] and "region" not in r and r["best"]["bbox"]
+    x0, y0, x1, y1 = r["best"]["bbox"]
+    assert 540 <= x0 <= 580 and 360 <= y0 <= 400 and 640 <= x1 <= 680 and 440 <= y1 <= 480, r
+    c = web_client(tmp_path)
+    with open(foto, "rb") as fh:
+        c.post("/nuevo", data={"numero": "SIN-2026-8200", "fecha_siniestro": "2026-10-04T10:00",
+                               "fotos": [(fh, foto.name)]}, content_type="multipart/form-data")
+    page = c.get("/caso/SIN-2026-8200?tab=fotos").get_data(as_text=True)
+    assert "Editada con IA" in page and "Ver zonas marcadas (1)" in page
+    assert "Posible zona editada con IA" not in page          # el modelo no da alerta propia bajo su umbral
+    link = re.search(r'href="(/caso/SIN-2026-8200/archivo/[0-9a-f]{64}/zonas)"', page).group(1)
+    assert "Zona mas probable (estimacion)" in c.get(link).get_data(as_text=True)
+    with Image.open(io.BytesIO(c.get(link + ".png").data)) as im:
+        px = np.asarray(im.convert("RGB")).astype(int)
+    assert ((abs(px[..., 0] - 2) < 25) & (abs(px[..., 1] - 132) < 25) & (abs(px[..., 2] - 199) < 25)).sum() > 50
+
+
+def test_clean_photo_never_shows_most_likely_zone(model_env, tmp_path):
+    """Sin otra prueba que confirme IA, la zona bajo el umbral no se muestra (evita falsas pistas)."""
+    import re
+    from helpers import web_client
+    make_model(model_env, umbral=.999)
+    a = np.full((600, 800, 3), 120, np.uint8)
+    a[380:460, 560:660] = (180, 90, 90)
+    foto = tmp_path / "limpia.jpg"
+    Image.fromarray(a).save(foto, "JPEG", quality=92)
+    assert learned.check(foto).get("best")
+    c = web_client(tmp_path)
+    with open(foto, "rb") as fh:
+        c.post("/nuevo", data={"numero": "SIN-2026-8201", "fecha_siniestro": "2026-10-04T10:00",
+                               "fotos": [(fh, foto.name)]}, content_type="multipart/form-data")
+    page = c.get("/caso/SIN-2026-8201?tab=fotos").get_data(as_text=True)
+    assert "Ver zonas marcadas" not in page
+
+
+def test_tgif_download_balances_object_types_and_keeps_vehicles(tmp_path):
+    """TGIF viene ordenado por tipo de objeto: «las primeras N» dejaban fuera los autos."""
+    import io
+    import sys
+    import tarfile
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "training"))
+    import descargar_tgif
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as t:
+        for cl in ("bottle", "couch", "oven", "car", "truck", "zebra"):        # como en el archivo real: por tipo
+            for i in range(50):
+                data = b"x"
+                info = tarfile.TarInfo(f"training/{cl}/{i}_orig.png")
+                info.size = len(data)
+                t.addfile(info, io.BytesIO(data))
+    abrir = lambda: io.BytesIO(buf.getvalue())                                # noqa: E731
+    antes = descargar_tgif.bajar("orig", "training", tmp_path / "a", 100, abrir=abrir)
+    assert set(antes) == {"bottle", "couch"}                                  # el problema: ningún auto
+    por = descargar_tgif.bajar("orig", "training", tmp_path / "b", 0, por_clase=10, vehiculos=30, abrir=abrir)
+    assert por == {"bottle": 10, "couch": 10, "oven": 10, "car": 30, "truck": 30, "zebra": 10}
+    assert (tmp_path / "b" / "orig" / "training" / "car" / "29_orig.png").exists()

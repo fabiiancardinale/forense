@@ -26,9 +26,12 @@ Antes de empezar, en el panel derecho (**Settings**):
 1. **Accelerator:** GPU T4 x2 (o P100).
 2. **Internet:** activado (para bajar TGIF; Kaggle pide verificar su teléfono).
 
-**Vuelta 3 (mosaico a tamaño real):** el modelo ya no achica la foto entera; la mira en pedazos de 512 px sin
-reducirla, para no perder ediciones pequeñas. Para partir desde el modelo anterior (recomendado, aprende más rápido), suba `evidex_modelo.zip` como *Dataset* (Create → New Dataset)
-y agréguelo con **+ Add Input** (use el de la **vuelta 1**: la vuelta 2 salió peor). Si no, parte de cero. Use **Save Version → Save & Run All (Commit)**: corre en segundo
+**Vuelta 4 (con autos):** TGIF viene ordenado por tipo de objeto y las vueltas anteriores tomaban «las primeras N»
+fotos: solo unos 10 tipos (botellas, sillones, hornos...) y ningún auto. Ahora se recorre el archivo completo y se
+toman fotos de los 53 tipos, con más autos, camionetas, buses, motos y bicicletas (la descarga tarda ~30 minutos).
+Como TGIF no trae autos en sus particiones de prueba, una parte de los vehículos se aparta y se mide aparte.
+Para partir desde el modelo anterior (recomendado), suba el `evidex_modelo_calibrado.zip` de la vuelta 3 como
+*Dataset* (Create → New Dataset) y agréguelo con **+ Add Input**. Si no, parte de cero. Use **Save Version → Save & Run All (Commit)**: corre en segundo
 plano y para sola antes de las 9 horas.
 
 Después: **Run all**. Tarda unas 6 a 9 horas. Al final descargue `evidex_modelo.zip` desde la pestaña
@@ -43,8 +46,13 @@ Datos: TGIF (IDLab, imec), CC BY 4.0, https://github.com/IDLabMedia/tgif-dataset
 import os
 # Vuelta 3: recortes a tamaño real (la foto ya no se achica a 512) y análisis en mosaico, como en Evidex.
 # La vuelta 1 usó 2.000 por carpeta, orig+sd2-sp+sdxl-fr, 15 épocas y la foto entera achicada.
-N_POR_CARPETA = int(os.environ.get("EVX_N", 3000))     # imágenes editadas de TGIF por carpeta
-N_ORIG = int(os.environ.get("EVX_N_ORIG", 6000))       # originales (más, para no tener 4 editadas por cada original)
+# Vuelta 4: todos los tipos de objeto de TGIF (balanceados) y más vehículos.
+N_POR_CARPETA = int(os.environ.get("EVX_N", 0))        # tope total por carpeta (0 = lo que den los topes por tipo)
+POR_CLASE = int(os.environ.get("EVX_POR_CLASE", 60))   # editadas por tipo de objeto
+VEHICULOS = int(os.environ.get("EVX_VEHICULOS", 300))  # editadas por tipo de vehículo (auto, camioneta, bus, moto, bici)
+N_ORIG = int(os.environ.get("EVX_N_ORIG", 0))
+POR_CLASE_ORIG = int(os.environ.get("EVX_POR_CLASE_ORIG", 120))   # originales por tipo (traen 3 tamaños por foto)
+VEHICULOS_ORIG = int(os.environ.get("EVX_VEHICULOS_ORIG", 600))
 CARPETAS = os.environ.get("EVX_CARPETAS", "sd2-sp,sd2-fr,sdxl-fr,ps-sp")
 EPOCAS = int(os.environ.get("EVX_EPOCAS", 25))
 MAX_HORAS = float(os.environ.get("EVX_MAX_HORAS", 9))
@@ -81,8 +89,10 @@ print("Archivos:", ", ".join(ARCHIVOS))
 """),
     code("""
 # 4. Bajar una parte de TGIF (lee el .tar.gz mientras llega; no baja los 14 GB completos)
-sh(f"{sys.executable} training/descargar_tgif.py --destino {DATOS} --n {N_ORIG} --particion training --carpetas orig")
-sh(f"{sys.executable} training/descargar_tgif.py --destino {DATOS} --n {N_POR_CARPETA} --particion training --carpetas {CARPETAS}")
+sh(f"{sys.executable} training/descargar_tgif.py --destino {DATOS} --n {N_ORIG} --particion training --carpetas orig "
+   f"--por-clase {POR_CLASE_ORIG} --vehiculos {VEHICULOS_ORIG}")
+sh(f"{sys.executable} training/descargar_tgif.py --destino {DATOS} --n {N_POR_CARPETA} --particion training "
+   f"--carpetas {CARPETAS} --por-clase {POR_CLASE} --vehiculos {VEHICULOS}")
 """),
     code("""
 # 5. Manifiesto: qué imágenes se usan y con qué licencia (se niega si hay alguna no comercial)
@@ -125,7 +135,8 @@ NOMBRES = {"orig": "falsas_alarmas_originales", "sd2-sp": "detectadas_sd2_zona",
            "sdxl-fr": "detectadas_sdxl_regenerada", "ps-sp": "detectadas_photoshop_zona"}
 res = {c: puntajes(c) for c in NOMBRES}
 medicion = {"umbral": u, **{NOMBRES[c]: f"{(v >= u).sum()} de {len(v)}" for c, v in res.items() if len(v)},
-            "vuelta_1 (foto achicada)": "falsas 4 de 300, sd2 zona 69 de 300, sdxl regenerada 215 de 300",
+            "vuelta_3_calibrada": "falsas 5 de 300, sd2 zona 66, sd2 regenerada 149, sdxl regenerada 286, photoshop 7 (de 300)",
+            "vehiculos (apartados del entrenamiento)": ficha.get("validacion", {}).get("vehiculos"),
             "linea_base_evidex_hoy": "2-7 de cada 100 editadas pasadas por WhatsApp"}
 ficha["prueba_testing_whatsapp"] = medicion
 json.dump(ficha, open(f"{SALIDA}/evidex_ia.json", "w"), indent=2, ensure_ascii=False)   # el sha256 es del .onnx: sigue válido

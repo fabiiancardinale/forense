@@ -450,11 +450,18 @@ ZONE_LEGEND = [  # (color, texto, qué significa) para la leyenda de la vista de
     ((124, 58, 237), "grano distinto", "Zona con un grano del sensor distinto al resto de la foto."),
     ((234, 140, 0), "region similar", "Dos zonas casi idénticas dentro de la misma foto (posible clonado)."),
     ((14, 116, 144), "revisar esta zona (modelo)", "Zona que el modelo de IA de Evidex ve como posiblemente editada con IA."),
+    ((2, 132, 199), "zona mas probable (estimacion)", "Otra prueba ya confirmó que la foto se editó con IA, pero no dice dónde. "
+     "Esta es la zona que el modelo ve más sospechosa, aunque no llegue a su umbral de alerta: úsela como pista."),
 ]
 
+# reglas que confirman que la foto se editó con IA sin decir dónde (firma del teléfono, marca visible, copia)
+AI_CONFIRMED = {"ai_edited", "ai_generated", "ai_label_visible", "ai_watermark_removed", "ai_mark_cropped",
+                "copy_of_ai_photo"}
 
-def zones(content: dict) -> list[str]:
-    """Qué zonas marcadas tiene una foto (para mostrar el botón y la leyenda)."""
+
+def zones(content: dict, confirmed: bool = False) -> list[str]:
+    """Qué zonas marcadas tiene una foto (para mostrar el botón y la leyenda). `confirmed`: otra prueba ya
+    confirmó que se editó con IA; entonces también cuenta la zona más probable del modelo."""
     content = content or {}
     out = []
     if (content.get("ghost") or {}).get("region"):
@@ -463,8 +470,11 @@ def zones(content: dict) -> list[str]:
         out.append("grano distinto")
     if (content.get("clone") or {}).get("src"):
         out.append("region similar")
-    if (content.get("learned") or {}).get("region"):
+    lr = content.get("learned") or {}
+    if lr.get("region"):
         out.append("revisar esta zona (modelo)")
+    elif confirmed and lr.get("best"):
+        out.append("zona mas probable (estimacion)")
     return out
 
 
@@ -473,7 +483,7 @@ _UPRIGHT = {2: (Image.FLIP_LEFT_RIGHT,), 3: (Image.ROTATE_180,), 4: (Image.FLIP_
             7: (Image.FLIP_LEFT_RIGHT, Image.ROTATE_270), 8: (Image.ROTATE_90,)}
 
 
-def overlay(path, content: dict, maxside: int = 900, upright: bool = False) -> bytes | None:
+def overlay(path, content: dict, maxside: int = 900, upright: bool = False, confirmed: bool = False) -> bytes | None:
     """Imagen reducida con las zonas sospechosas marcadas (PNG), para mostrar al liquidador.
     Las zonas se calcularon sobre los píxeles tal como vienen en el archivo; con upright=True la imagen ya
     marcada se gira como la muestra el teléfono (orientación EXIF), para que no se vea de lado."""
@@ -482,8 +492,11 @@ def overlay(path, content: dict, maxside: int = 900, upright: bool = False) -> b
         boxes.append((content["ghost"]["region"]["bbox"], (220, 38, 38), "posible pegado"))
     if (content.get("noise") or {}).get("region"):
         boxes.append((content["noise"]["region"]["bbox"], (124, 58, 237), "grano distinto"))
-    if (content.get("learned") or {}).get("region"):
-        boxes.append((content["learned"]["region"]["bbox"], (14, 116, 144), "revisar esta zona (modelo)"))
+    lr = content.get("learned") or {}
+    if lr.get("region"):
+        boxes.append((lr["region"]["bbox"], (14, 116, 144), "revisar esta zona (modelo)"))
+    elif confirmed and lr.get("best"):
+        boxes.append((lr["best"]["bbox"], (2, 132, 199), "zona mas probable (estimacion)"))
     cl = content.get("clone") or {}
     if cl.get("src"):
         boxes += [(cl["src"], (234, 140, 0), "region similar A"), (cl["dst"], (234, 140, 0), "region similar B")]
@@ -497,6 +510,10 @@ def overlay(path, content: dict, maxside: int = 900, upright: bool = False) -> b
     dr = ImageDraw.Draw(im)
     for (x0, y0, x1, y1), col, label in boxes:
         box = [x0 * s, y0 * s, x1 * s, y1 * s]
+        for a, b in ((0, 2), (1, 3)):                        # una zona muy chica se agranda para que se vea
+            if box[b] - box[a] < 28:
+                c = (box[a] + box[b]) / 2
+                box[a], box[b] = max(0, c - 14), c + 14
         dr.rectangle(box, outline=col, width=4)
         ty = box[1] - 18 if box[1] >= 18 else box[3]          # la etiqueta va arriba, o abajo si no cabe
         dr.rectangle([box[0], ty, box[0] + 8 * len(label) + 8, ty + 18], fill=col)

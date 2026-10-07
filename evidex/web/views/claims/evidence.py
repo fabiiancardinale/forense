@@ -101,6 +101,14 @@ def _content(case, digest: str) -> dict:
     return c if isinstance(c, dict) else {}
 
 
+def _ai_confirmed(case, digest: str) -> bool:
+    """¿Otra prueba ya confirmó que esta foto se editó con IA (firma del teléfono, marca visible, copia)?"""
+    from evidex.forensics.image_content import AI_CONFIRMED
+    snap = service.snapshot(case) or {}
+    return any(f.get("rule") in AI_CONFIRMED and any(str(e).startswith(digest[:8]) for e in f.get("evidence") or [])
+               for f in snap.get("findings") or [])
+
+
 def _evidence_name(case, digest: str) -> str:
     return next((e["data"].get("original_name") for e in case.ledger.entries()
                  if e["action"] == "evidence_added" and e["subject"] == digest), digest[:12])
@@ -116,7 +124,7 @@ def evidence_zones(cid, digest):
     if not DIGEST.fullmatch(digest or "") or not service.has_evidence(case, digest):
         abort(404)
     name = _evidence_name(case, digest)
-    found = zones(_content(case, digest))
+    found = zones(_content(case, digest), confirmed=_ai_confirmed(case, digest))
     log_access("ver_zonas", name)
     legend = [(c, t, why) for c, t, why in ZONE_LEGEND if t in found]
     return render_template("claims/zones.html", cid=cid, digest=digest, name=name, legend=legend, active="index")
@@ -129,7 +137,8 @@ def evidence_zones_image(cid, digest):
     if not DIGEST.fullmatch(digest or "") or not service.has_evidence(case, digest):
         abort(404)
     try:
-        png = overlay(case.evidence_dir / digest, _content(case, digest), maxside=1400, upright=True)
+        png = overlay(case.evidence_dir / digest, _content(case, digest), maxside=1400, upright=True,
+                      confirmed=_ai_confirmed(case, digest))
     except Exception:
         png = None
     if not png:

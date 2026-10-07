@@ -54,7 +54,7 @@ def evidence_items(case: Case, snap: dict) -> list[dict]:
     for f in snap["findings"]:
         for ev in f["evidence"]:
             by_ev.setdefault(ev, []).append(f)
-    from evidex.forensics.image_content import zones
+    from evidex.forensics.image_content import AI_CONFIRMED, zones
     try:
         import json
         content = json.loads((case.root / "analisis_imagen.json").read_text(encoding="utf-8"))
@@ -74,7 +74,8 @@ def evidence_items(case: Case, snap: dict) -> list[dict]:
             "title": (d.get("portal") or {}).get("title") or info.get("title") or d["original_name"],
             "name": d["original_name"], "who": "asegurado" if e["actor"].startswith("asegurado") else e["actor"],
             "received": e["ts"], "info": info, "findings": found,
-            "zones": zones(content.get(digest) if isinstance(content.get(digest), dict) else {}),
+            "zones": zones(content.get(digest) if isinstance(content.get(digest), dict) else {},
+                           confirmed=any(f["rule"] in AI_CONFIRMED for f in found)),
             "worst": found[0]["severity"] if found else None, "excluded": excluded.get(digest),
             "is_image": Path(d["original_name"]).suffix.lower() in (".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"),
         })

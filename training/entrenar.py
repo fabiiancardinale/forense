@@ -27,7 +27,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from datos import MAX_LADO, Recortes, degradar_fijo, dividir, leer, puntuar_mosaico  # noqa: E402
+from datos import MAX_LADO, Recortes, degradar_fijo, dividir, es_vehiculo, leer, puntuar_mosaico  # noqa: E402
 from modelo import ConPuntaje, EvidexNet, puntaje  # noqa: E402
 
 FORMATO = 2          # 2 = mosaico a tamaño real (1 = foto entera achicada). Evidex revisa este número.
@@ -134,7 +134,14 @@ def main(argv=None):
     import random as _r
     val = sorted(val, key=lambda f: f["ruta"])
     _r.Random(1).shuffle(val)
-    val = [f for f in val if f["etiqueta"] == 0][:a.val_max // 2] + [f for f in val if f["etiqueta"]][:a.val_max // 2]
+    # mitad vehículos (las particiones validation/testing de TGIF no traen autos: se miden aquí, con fotos
+    # que no se usan para entrenar) y mitad del resto, en originales y editadas
+    def tomar(filas, n):
+        veh = [f for f in filas if es_vehiculo(f)][:n // 2]
+        return veh + [f for f in filas if not es_vehiculo(f)][:n - len(veh)]
+    val = tomar([f for f in val if f["etiqueta"] == 0], a.val_max // 2) + tomar([f for f in val if f["etiqueta"]], a.val_max // 2)
+    es_veh = np.array([es_vehiculo(f) for f in val])
+    print(f"Validación: {len(val)} fotos, {int(es_veh.sum())} de vehículos", flush=True)
     mejor, hist = None, []
     a.salida.mkdir(parents=True, exist_ok=True)
     for ep in range(a.epocas):
@@ -154,6 +161,11 @@ def main(argv=None):
         ps, ys, iou = evaluar(red, val, disp, a.lado, paso)
         u = umbral_para(ps, ys, a.fpr)
         met = {**metricas(ps, ys, u), "iou_zona": iou, "umbral": u}
+        if es_veh.any():
+            mv = metricas(ps[es_veh], ys[es_veh], u)
+            met["vehiculos"] = {"deteccion_editadas": mv["deteccion_editadas"],
+                                "falsas_alarmas_originales": mv["falsas_alarmas_originales"],
+                                "n_editadas": mv["n_editadas"], "n_originales": mv["n_originales"]}
         hist.append({"epoca": ep + 1, "perdida": tot, **met})
         ultima = time.time() - t
         print(json.dumps(hist[-1], ensure_ascii=False), f"({ultima:.0f}s)", flush=True)

@@ -24,6 +24,13 @@ import numpy as np
 from PIL import Image
 
 IMAGES = {".jpg", ".jpeg", ".png", ".webp"}
+VEHICULOS = {"car", "truck", "bus", "motorcycle", "bicycle"}
+
+
+def es_vehiculo(fila: dict) -> bool:
+    """TGIF guarda cada foto en una carpeta con su tipo de objeto («.../car/123_orig.png»). Las fotos propias
+    de autos (conjunto «propias/...») también cuentan."""
+    return Path(fila["ruta"]).parent.name in VEHICULOS or str(fila.get("conjunto", "")).startswith("propias")
 LICENCIAS_BLOQUEADAS = ("nc", "non-commercial", "noncommercial", "no comercial", "research only", "desconocida")
 CAMPOS = ["ruta", "etiqueta", "mascara", "conjunto", "licencia"]
 
