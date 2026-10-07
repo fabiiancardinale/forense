@@ -81,6 +81,15 @@ def test_purge_deletes_file_keeps_custody_and_registry_clean(tmp_path):
     verify = next(out.rglob("verify.py"))
     res = subprocess.run([sys.executable, str(verify)], capture_output=True, text=True, cwd=verify.parent)
     assert "FALLA" not in res.stdout and "eliminada definitivamente: foto_0.jpg" in res.stdout, res.stdout
+    # si la misma foto vuelve a llegar después (por ejemplo, por el portal), es evidencia nueva: se muestra y analiza
+    with open(fotos[0], "rb") as fh:
+        r = c.post(f"/caso/{cid}/fotos", data={"fotos": [(fh, "foto_0_otra_vez.jpg")]},
+                   content_type="multipart/form-data", follow_redirects=True)
+    assert "ya estaban en el caso" not in r.get_data(as_text=True)
+    assert (case.evidence_dir / digest).exists() and digest not in case.excluded() and digest not in case.purged()
+    assert "foto_0_otra_vez.jpg" in c.get(f"/caso/{cid}?tab=fotos").get_data(as_text=True)
+    assert any(e["subject"] == digest for e in case.active_evidence())
+    assert case.verify_evidence() == (True, [])
 
 
 def test_purge_from_registry_only_touches_that_claim_and_file(tmp_path):

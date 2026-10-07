@@ -70,10 +70,19 @@ class Case:
                 out[e["subject"]] = e
             elif e["action"] == "evidence_restored" and out.get(e["subject"], {}).get("action") != "evidence_purged":
                 out.pop(e["subject"], None)
+            elif e["action"] == "evidence_added" and out.get(e["subject"], {}).get("action") == "evidence_purged":
+                out.pop(e["subject"], None)        # se eliminó y después volvió a llegar: es evidencia nueva
         return out
 
     def purged(self) -> dict[str, dict]:
-        return {e["subject"]: e for e in self.ledger.entries() if e["action"] == "evidence_purged"}
+        """Archivos eliminados definitivamente (y que no volvieron a llegar después)."""
+        out: dict[str, dict] = {}
+        for e in self.ledger.entries():
+            if e["action"] == "evidence_purged":
+                out[e["subject"]] = e
+            elif e["action"] == "evidence_added":
+                out.pop(e["subject"], None)
+        return out
 
     def active_evidence(self) -> list[dict]:
         ex = self.excluded()

@@ -29,7 +29,12 @@ for i, e in enumerate(entries):
 else:
     print(f"[OK] cadena de custodia íntegra ({len(entries)} entradas)")
 
-purged = {e["subject"]: e for e in entries if e["action"] == "evidence_purged"}
+purged = {}
+for e in entries:                       # eliminados definitivamente y que no volvieron a llegar después
+    if e["action"] == "evidence_purged":
+        purged[e["subject"]] = e
+    elif e["action"] == "evidence_added":
+        purged.pop(e["subject"], None)
 for e in entries:
     if e["action"] != "evidence_added":
         continue

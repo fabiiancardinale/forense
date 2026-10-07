@@ -28,7 +28,8 @@ def add_photos(cid):
         photos, rejected = save_uploads(request.files.getlist("fotos"), Path(td))
         added = 0
         for p in photos:
-            if not service.has_evidence(case, sha256_file(p)):
+            d = sha256_file(p)
+            if not service.has_evidence(case, d) or d in case.purged():       # eliminado antes: vuelve a entrar
                 case.add_evidence(p, note=service.evidence_note(p))
                 added += 1
     if rejected:
