@@ -600,7 +600,7 @@ def content_findings(p: "Photo", decl: dict, place, cite) -> list[Finding]:
     if lr.get("flag") and not (p.meta.get("deep") or {}).get("ai"):
         out.append(Finding("ai_model_region", "media", f"Posible zona editada con IA ({p.name})",
                            f"El modelo de Evidex entrenado para reconocer ediciones con IA marcó {p.name} "
-                           f"(puntaje {lr['score']:.2f}; alerta desde {lr['threshold']:.2f})"
+                           f"(puntaje {lr['score']:.4f}; alerta desde {lr['threshold']:.4f})"
                            + (", en la zona marcada en azul en la revisión de la foto" if lr.get("region") else "")
                            + ". Funciona aunque la foto haya pasado por WhatsApp, pero es una estimación: "
                            "revise esa zona.", cite, p.ts))

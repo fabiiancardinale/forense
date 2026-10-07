@@ -113,7 +113,7 @@ def image_analysis(path, name, output, config, result):
     lr = content.get('learned') or {}
     if ls['available'] and not lr.get('error'):
         detector(result, 'localización aprendida', 'completed',
-                 f"Modelo {ls['id']}: puntaje {lr.get('score', 0):.2f} (alerta desde {ls['threshold']:.2f}). "
+                 f"Modelo {ls['id']}: puntaje {lr.get('score', 0):.4f} (alerta desde {ls['threshold']:.4f}). "
                  'Estimación entrenada; no es prueba.', required=False)
         result['learned'] = lr
     else:

@@ -149,6 +149,17 @@ No es "taller externo = sospechoso": se mira cada taller, en convenio o no, sobr
 - [ ] Búsqueda global por RUT, patente, teléfono o taller (rápida).
 - [ ] Panel de tendencias: fraudes por mes, comuna, taller y tipo de señal (media).
 
+## Datos personales: quién ve qué y cuánto tiempo se guardan (Ley 21.719)
+Zelekpress es el encargado y BCI el responsable de los datos. Revisar todo con abogado y dejarlo en el contrato.
+
+- [ ] **Nivel 1: datos ocultos según el rol** (media, para el piloto): el admin de Zelekpress ve códigos («ASEG-7F3A», «12.***.***-5», «PAT-91C2»); los usuarios de BCI ven los datos reales. Las fotos y los documentos del caso no se abren con rol de Zelekpress.
+- [ ] **Nivel 2: cifrado con clave de BCI** (grande, antes de producción en Hostinger): nombres, RUT, teléfonos, direcciones y documentos se guardan cifrados; la clave se abre solo con la sesión de un usuario de BCI. Ni Zelekpress ni quien entre al servidor puede leerlos. Clave de respaldo guardada por BCI (si se pierden todas, los datos no se recuperan).
+- [ ] **Cruces sin ver el dato** (media): mismo RUT, teléfono o patente en varios siniestros se detecta con una huella con clave (HMAC), sin mostrar el dato.
+- [ ] **Acceso de soporte temporal** (media): si Zelekpress necesita entrar a un caso, BCI da un permiso por tiempo limitado; queda registrado quién entró, cuándo y qué vio.
+- [ ] **Plazo de conservación** (media): al cerrar un caso, Evidex calcula su fecha de borrado (plazo fijado por BCI). Durante el plazo, el caso queda cifrado y con acceso restringido al jefe.
+- [ ] **Borrar o anonimizar al vencer el plazo** (media): aviso al jefe con botón para borrar o anonimizar (reemplazar nombre, RUT, teléfono y patente por códigos; quitar GPS y metadatos de las fotos; borrar documentos), con registro de quién lo hizo. Lo anonimizado de verdad deja de ser dato personal y sirve para estadísticas.
+- [ ] **Pedido de borrado del asegurado** (rápida): procedimiento para cuando una persona pide borrar sus datos antes del plazo (lo decide BCI).
+
 ## Seguridad y requisitos de TI
 - [ ] Cifrado de los casos en el disco (media).
 - [ ] Inicio de sesión con las cuentas corporativas (Microsoft o Google) (media).
