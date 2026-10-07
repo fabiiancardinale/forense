@@ -31,6 +31,7 @@ N_ORIG_VAL = int(os.environ.get("EVX_N_ORIG_VAL", 1200))   # originales para cal
 N_EDIT_VAL = int(os.environ.get("EVX_N_EDIT_VAL", 200))    # editadas por tipo, para ver cuánto se detecta
 N_PRUEBA = int(os.environ.get("EVX_N_PRUEBA", 300))
 BASE = "/kaggle/temp" if os.path.isdir("/kaggle") else "."
+os.makedirs(BASE, exist_ok=True)
 SALIDA = "/kaggle/working/modelos" if os.path.isdir("/kaggle") else "modelos_calibrado"
 """),
     code("""

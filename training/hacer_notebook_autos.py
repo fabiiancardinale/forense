@@ -30,7 +30,8 @@ import os
 MAX_HORAS = float(os.environ.get("EVX_MAX_HORAS", 7.5))   # para antes y deja lo que alcanzó (Kaggle corta a las 12 h)
 LIMITE = int(os.environ.get("EVX_LIMITE", 0))              # 0 = todas las fotos; un número = prueba rápida
 SEMILLA = int(os.environ.get("EVX_SEMILLA", 0))
-BASE = "/kaggle/temp" if os.path.isdir("/kaggle") else "."
+BASE = os.environ.get("EVX_BASE") or ("/kaggle/temp" if os.path.isdir("/kaggle") else ".")
+os.makedirs(BASE, exist_ok=True)                           # en Kaggle /kaggle/temp no existe al empezar
 SALIDA = f"{BASE}/autos_ia"
 """),
     code("""
@@ -50,7 +51,7 @@ import torch
 N_GPU = torch.cuda.device_count()
 LAMA = f"{BASE}/big-lama.pt"            # LaMa se baja una vez aquí (las dos GPU lo comparten)
 if not os.path.exists(LAMA):
-    sh(f"curl -sL -o {LAMA} https://github.com/enesmsahin/simple-lama-inpainting/releases/download/v0.1.0/big-lama.pt")
+    sh(f"curl -fsSL --retry 3 --create-dirs -o {LAMA} https://github.com/enesmsahin/simple-lama-inpainting/releases/download/v0.1.0/big-lama.pt")
 print("GPU:", [torch.cuda.get_device_name(i) for i in range(N_GPU)] or "NO HAY GPU (active el acelerador en Settings)")
 """),
     code("""
@@ -61,7 +62,7 @@ if hitl:
 else:
     HITL = f"{BASE}/hitl"
     if not glob.glob(f"{HITL}/**/ann/*.json", recursive=True):
-        sh(f"curl -sL -o {BASE}/hitl.zip https://www.kaggle.com/api/v1/datasets/download/humansintheloop/car-parts-and-car-damages")
+        sh(f"curl -fsSL --retry 3 --create-dirs -o {BASE}/hitl.zip https://www.kaggle.com/api/v1/datasets/download/humansintheloop/car-parts-and-car-damages")
         sh(f"cd {BASE} && mkdir -p hitl && cd hitl && unzip -q ../hitl.zip -x '*/masks_human/*' '*/masks_machine/*'")
 print("Fotos de autos en:", HITL, "-", len(glob.glob(f"{HITL}/**/img/*", recursive=True)), "fotos")
 """),
