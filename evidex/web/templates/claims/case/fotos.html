@@ -1,6 +1,6 @@
 {% set upload_label = 'Agregar fotos' %}{% include "claims/case/_upload.html" %}
 {% if items %}<div class="evgrid">
-{% for i in items %}<article class="evcard{{ ' off' if i.excluded }}{{ ' ' ~ i.worst if i.worst }}">
+{% for i in items %}<article class="evcard{{ ' off' if i.excluded }}{{ ' ' ~ i.worst if i.worst }}" id="f-{{ i.digest[:12] }}">
 <a class="pic" href="{{ url_for('claims.evidence_file', cid=c.id, digest=i.digest) }}" target="_blank" rel="noopener" title="Abrir en tamaño completo">
 <img src="{{ url_for('claims.evidence_file', cid=c.id, digest=i.digest, mini=1) }}" alt="{{ i.title }}" loading="lazy">
 {% if i.findings %}<span class="sev {{ i.worst }}">{{ i.findings|length }} alerta{{ 's' if i.findings|length > 1 }}</span>{% endif %}</a>
@@ -14,6 +14,7 @@
 {% if i.zones %}<a class="btn sm zonelink" href="{{ url_for('claims.evidence_zones', cid=c.id, digest=i.digest) }}" target="_blank" rel="noopener">Ver zonas marcadas ({{ i.zones|length }})</a>{% endif %}
 <a class="hint metalink" href="{{ url_for('claims.evidence_metadata', cid=c.id, digest=i.digest) }}" target="_blank" rel="noopener">Ver todos los datos del archivo</a>
 {% set checks = i.info.checks %}{% include "claims/case/_checks.html" %}
+{% include "claims/case/_teach.html" %}
 <div class="acts">{% include "claims/case/_remove.html" %}</div>
 </div></article>{% endfor %}</div>
 {% else %}<div class="card empty"><h2>Aún no hay fotos</h2><p>Agréguelas arriba o pídaselas al asegurado en la pestaña Asegurado.</p></div>{% endif %}

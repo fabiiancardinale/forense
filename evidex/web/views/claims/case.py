@@ -62,6 +62,8 @@ def evidence_items(case: Case, snap: dict) -> list[dict]:
         content = content if isinstance(content, dict) else {}
     except (OSError, ValueError):
         content = {}
+    from evidex.forensics.training_bank import Bank
+    marked = {b["digest"]: b for b in Bank(cx.workdir).entries()}
     items = []
     for e in case.ledger.entries():
         if e["action"] != "evidence_added" or e["data"].get("note") == "declaracion":
@@ -80,6 +82,8 @@ def evidence_items(case: Case, snap: dict) -> list[dict]:
             "zones": zones(content.get(digest) if isinstance(content.get(digest), dict) else {},
                            confirmed=any(f["rule"] in AI_CONFIRMED for f in found)),
             "worst": found[0]["severity"] if found else None, "excluded": excluded.get(digest),
+            "model": (content.get(digest) or {}).get("learned") if isinstance(content.get(digest), dict) else None,
+            "bank": marked.get(digest),
             "is_image": Path(d["original_name"]).suffix.lower() in (".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"),
         })
     return items
@@ -148,7 +152,8 @@ def _todo(case, items) -> list[tuple[str, str, str]]:
 
 
 def _tab_photos(case, snap, items):
-    return {"items": [i for i in items if i["kind"] == "foto"]}
+    from evidex.forensics.training_bank import APPS, ORIGENES
+    return {"items": [i for i in items if i["kind"] == "foto"], "teach_apps": APPS, "teach_origins": ORIGENES}
 
 
 def _tab_docs(case, snap, items):
@@ -214,6 +219,8 @@ def _tab_history(case, snap, items):
                   "derivation_cancelled": d.get("reason", ""), "decision": d.get("label", ""),
                   "evidence_excluded": d.get("reason", ""),
                   "evidence_purged": f"{d.get('original_name', '')} · motivo: {d.get('reason', '')}",
+                  "training_marked": f"{d.get('original_name', '')}: {'editada con IA' if d.get('label') == 'editada' else 'sin editar'}"
+                                     + (f" ({d['app']})" if d.get("app") else ""),
                   "claim_analyzed": f"{d.get('findings', 0)} hallazgo(s), riesgo {d.get('score', '—')}"}.get(e["action"], "")
         rows.append({"ts": e["ts"], "actor": e["actor"], "what": what, "detail": detail, "hash": e["hash"]})
     return {"rows": rows[::-1], "accesos": cx.store.entries(subject=summarize(case)["numero"], limit=50) if cx.store.enabled() else []}

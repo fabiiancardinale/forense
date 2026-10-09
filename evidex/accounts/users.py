@@ -34,6 +34,7 @@ PERMS = {
     "ver_siniestros": {"administrador", "jefe", "analista", "investigador"},
     "editar_siniestros": {"administrador", "jefe", "analista"},
     "eliminar_evidencia": {"administrador", "jefe"},                # borrar definitivamente (no se puede deshacer)
+    "ensenar_modelo": {"administrador", "jefe", "analista"},        # marcar fotos para el banco de entrenamiento
     "ver_todos": {"administrador", "jefe", "investigador"},        # sin esto, solo los casos propios
     "equipo": {"administrador", "jefe"},                           # panel de equipo y reasignar casos
     "investigaciones": {"administrador", "jefe", "investigador"},  # crear expedientes, auditorías, ver todos
@@ -66,6 +67,8 @@ ENDPOINTS = {
     "portfolio.networks": "redes", "portfolio.metrics_view": "cartera", "portfolio.import_view": "cartera",
     "portfolio.import_demo": "cartera", "portfolio.template_download": "cartera", "portfolio.export_xlsx": "cartera",
     "tools.photo_check": "ver_siniestros",
+    "training.mark": "ensenar_modelo", "training.index": "ensenar_modelo", "training.preview": "ensenar_modelo",
+    "training.remove": "ensenar_modelo", "training.export": "admin",
     "admin.settings": "admin", "admin.users_view": "admin", "admin.user_toggle": "admin", "admin.firm_add": "admin",
 }
 ROLE_HELP = {"administrador": "Todo, más usuarios, empresas de peritaje y configuración.",
@@ -76,7 +79,8 @@ ROLE_HELP = {"administrador": "Todo, más usuarios, empresas de peritaje y confi
 ACTION_LABELS = {"ingreso": "Ingresó", "ingreso_fallido": "Ingreso fallido", "salida": "Salió", "ver_caso": "Abrió el caso",
                  "decision": "Registró decisión", "descarga": "Descargó", "ver_expediente": "Abrió expediente",
                  "usuario": "Cambió un usuario", "exporta_excel": "Exportó a Excel", "reasignar": "Reasignó un caso",
-                 "derivar": "Derivó a perito", "entregar_informe": "Entregó informe final", "quitar_archivo": "Quitó un archivo"}
+                 "derivar": "Derivó a perito", "entregar_informe": "Entregó informe final", "quitar_archivo": "Quitó un archivo",
+                 "ensenar_modelo": "Marcó una foto para el modelo", "exporta_entrenamiento": "Exportó el banco de entrenamiento"}
 MAX_FAILS, LOCK_SECONDS = 5, 300
 DUMMY_HASH = generate_password_hash("not-a-user-password")
 USERNAME = re.compile(r"^[a-z0-9._-]{3,32}$")

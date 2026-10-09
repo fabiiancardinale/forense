@@ -64,6 +64,20 @@ Ahora:
 - **Ediciones:** se borra un daño real, se agrega un daño a una parte sana, o se rehace un foco, espejo, patente, parrilla o llanta. Como en el teléfono, la IA trabaja sobre un recorte y se pega solo la zona editada; fuera de la máscara la foto queda idéntica.
 - **Resultado:** `evidex_autos_ia.zip`, que trae `originales/`, `editadas/`, `mascaras/`, `registro.jsonl` y `licencia.txt`. El notebook de entrenamiento lo usa solo si se agrega como Input. Los vehículos apartados se miden aparte.
 
+## Enseñarle al modelo desde Evidex (banco de entrenamiento)
+
+En la pestaña Fotos de un caso, cada foto tiene **«Enseñar al modelo»**:
+
+- se responde si está editada con IA o no, con qué app y si cambió una zona o toda la foto;
+- si se elige la **foto original sin editar** (otra foto del mismo caso), Evidex calcula la zona que cambió comparando las dos;
+- se indica el origen: foto de prueba (propia o con permiso escrito) o siniestro real con autorización escrita de la aseguradora (Ley 21.719).
+
+Evidex guarda una copia aparte del caso, en `casos/entrenamiento/`, con quién la marcó, cuándo y qué puntaje había dado el modelo. Si el archivo se elimina definitivamente del caso, la copia también se borra. En el menú, **«Enseñar al modelo»** muestra el banco y la zona calculada de cada foto, para revisarla a ojo.
+
+El administrador baja el zip con **«Exportar para entrenar»** y lo sube a Kaggle como Dataset. Se agrega con **+ Add Input** al notebook de entrenamiento, que lo toma como fotos propias. Las editadas de una zona que no tienen la original quedan en `editadas_sin_zona/` y no se usan.
+
+El modelo **nunca** se reentrena ni se instala solo. Después de entrenar se calibra y se mide con el mismo conjunto de prueba, y se instala a mano solo si mejora. Esto protege contra errores y contra marcas mal hechas a propósito, y deja claro qué versión analizó cada caso.
+
 ## Calibrar el umbral sin volver a entrenar
 
 `training/evidex_calibrar.ipynb` (o `training/calibrar.py`) toma un modelo ya entrenado y fija desde qué puntaje se da la alerta. Usa unas 1.200 originales de la partición *validation* de TGIF, que el modelo nunca vio; la meta por defecto es 1,5 % de falsas alarmas. Después mide con la partición *testing*.

@@ -330,3 +330,11 @@ details.checks .mark{margin-top:1px}
 .zimg{max-width:100%;border-radius:8px;border:1px solid var(--line)}
 .btn.danger{background:var(--red);border-color:var(--red);color:#fff}
 .rm.purge input[name=confirmar]{width:130px;margin:0 6px}
+
+/* enseñar al modelo */
+.teach{margin-top:8px}.teach summary{cursor:pointer}
+.teachform{display:grid;gap:8px;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:10px}
+.teachform fieldset{border:0;padding:0;margin:0;display:grid;gap:4px}.teachform legend{font-weight:600;font-size:13px;margin-bottom:2px}
+.teachform label{font-size:13px;display:flex;gap:8px;align-items:flex-start;justify-content:flex-start;text-align:left;font-weight:400;margin:0}
+.teachform label input[type=radio],.teachform label input[type=checkbox]{width:auto;flex:none;margin:2px 0 0;min-height:0;padding:0}.teachform select,.teachform input[name=nota]{width:100%}
+.teachform label.confirm{font-weight:600}

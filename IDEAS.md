@@ -12,11 +12,11 @@ Lista de mejoras conversadas, para retomarlas después. Esfuerzo: **rápida** (h
 ## Fotos editadas con IA (plan en 3 capas)
 Ningún método solo detecta todo: se combinan las tres capas.
 
-**Corregir al modelo desde Evidex** (idea de Fabián, 9 de octubre de 2026; media)
-- [ ] Botones en la foto: «El modelo se equivocó: esta foto SÍ está editada / NO está editada», con app usada (Galaxy AI, Google, ChatGPT...) y, si se puede, la zona marcada o la foto original al lado (Evidex calcula la máscara exacta comparando las dos).
-- [ ] Banco de entrenamiento aparte de los casos, con registro de quién marcó, cuándo y de dónde salió la foto. Solo fotos propias de prueba; fotos reales de asegurados solo con autorización escrita de BCI (Ley 21.719).
-- [ ] Botón «Exportar para entrenar»: zip con originales/, editadas/, mascaras/ y licencia.txt, listo para el notebook de Kaggle (vuelta N).
-- [ ] El modelo nuevo nunca se instala solo: se calibra y se mide con un conjunto de prueba fijo, y se instala solo si mejora (protege contra errores, contra alguien que marque mal a propósito y mantiene la trazabilidad de versiones ante BCI). Después se puede automatizar el envío a Kaggle con su API.
+**Corregir al modelo desde Evidex** (idea de Fabián, 9 de octubre de 2026; **hecho**)
+- [x] Botones en la foto: «El modelo se equivocó: esta foto SÍ está editada / NO está editada», con app usada (Galaxy AI, Google, ChatGPT...) y, si se puede, la zona marcada o la foto original al lado (Evidex calcula la máscara exacta comparando las dos).
+- [x] Banco de entrenamiento aparte de los casos, con registro de quién marcó, cuándo y de dónde salió la foto. Solo fotos propias de prueba; fotos reales de asegurados solo con autorización escrita de BCI (Ley 21.719).
+- [x] Botón «Exportar para entrenar»: zip con originales/, editadas/, mascaras/ y licencia.txt, listo para el notebook de Kaggle (vuelta N).
+- [x] El modelo nuevo nunca se instala solo: se calibra y se mide con un conjunto de prueba fijo, y se instala solo si mejora (protege contra errores, contra alguien que marque mal a propósito y mantiene la trazabilidad de versiones ante BCI). Pendiente: automatizar el envío a Kaggle con su API.
 
 **Lista de las mejores opciones, en orden** (7 de octubre de 2026; el detalle de cada una está más abajo)
 1. Pedir el original por WhatsApp «como documento»: botón y mensaje modelo (rápida, gratis, cubre Samsung, Google, Apple y ChatGPT).

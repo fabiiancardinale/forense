@@ -1,0 +1,32 @@
+{% extends "base.html" %}{% block title %}Banco de entrenamiento{% endblock %}
+{% block heading %}<h1>Banco de entrenamiento del modelo</h1>
+<p class="sub">Fotos que alguien marcó como «editada con IA» o «sin editar» desde la pestaña Fotos de un caso. Sirven para entrenar la próxima versión del modelo.
+El modelo no cambia solo: se exporta este banco, se entrena en Kaggle, se calibra y se instala a mano solo si mejora.</p>{% endblock %}
+{% block actions %}{% if can_export and entries %}<a class="btn" href="{{ url_for('training.export') }}">{{ icon('download') }}Exportar para entrenar (.zip)</a>{% endif %}{% endblock %}
+{% block body %}
+<section class="block"><div class="tiles">
+<div class="tile accent-blue"><div class="lbl">{{ icon('camera', 14) }}Fotos en el banco</div><b>{{ s.total }}</b><span>{{ s.editadas }} editadas · {{ s.originales }} sin editar</span></div>
+<div class="tile accent-red"><div class="lbl">{{ icon('alert', 14) }}Errores del modelo</div><b>{{ s.errores_modelo }}</b><span>fotos donde el modelo se equivocó</span></div>
+<div class="tile"><div class="lbl">{{ icon('filecheck', 14) }}Editadas que sirven</div><b>{{ s.con_zona }}</b><span>con zona o rehechas completas</span></div>
+<div class="tile accent-amb"><div class="lbl">{{ icon('clock', 14) }}Editadas sin zona</div><b>{{ s.sin_zona }}</b><span>falta la foto original para saber qué cambió</span></div>
+</div></section>
+{% if s.por_app %}<p class="hint">Editadas por app: {% for a, n in s.por_app.items() %}{{ a }} {{ n }}{{ ', ' if not loop.last }}{% endfor %}.
+Para que el modelo aprenda de verdad hacen falta unas 100 a 300 editadas de distintas apps, más fotos sin editar.</p>{% endif %}
+<section class="panel"><div class="ph"><h2>Fotos marcadas</h2><span class="hint">Rojo = zona calculada con la original. Revísela: si la zona no coincide con lo editado, quite la foto y márquela de nuevo.</span></div>
+{% if entries %}<div class="evgrid">{% for e in entries %}<article class="evcard" id="b-{{ e.digest[:12] }}">
+<a class="pic" href="{{ url_for('training.preview', digest=e.digest) }}" target="_blank" rel="noopener"><img src="{{ url_for('training.preview', digest=e.digest) }}" alt="{{ e.nombre }}" loading="lazy"></a>
+<div class="body"><b class="t">{{ e.nombre }}</b>
+<dl class="kv sm">
+<dt>Respuesta</dt><dd>{% if e.etiqueta == 'editada' %}<span class="badge bad">Editada con IA</span>{% else %}<span class="badge ok">Sin editar</span>{% endif %}</dd>
+{% if e.etiqueta == 'editada' %}<dt>App</dt><dd>{{ e.app or 'no indicada' }}</dd>
+<dt>Zona</dt><dd>{% if e.mascara %}calculada ({{ ((e.cobertura or 0) * 100)|round(1) }} % de la foto){% elif e.alcance == 'completa' %}toda la foto{% else %}<span class="badge warn">falta la original</span>{% endif %}</dd>{% endif %}
+<dt>Modelo</dt><dd>{% if e.modelo and e.modelo.score is not none %}{{ '%.4f'|format(e.modelo.score) }} / {{ '%.4f'|format(e.modelo.threshold) }}{% if e.modelo_acerto is sameas false %} <span class="badge bad">se equivocó</span>{% elif e.modelo_acerto %} <span class="badge ok">acertó</span>{% endif %}{% else %}sin análisis{% endif %}</dd>
+<dt>Origen</dt><dd>{{ 'Prueba' if e.origen == 'prueba' else 'Siniestro autorizado' }} · caso {{ e.caso }}</dd>
+<dt>Marcó</dt><dd>{{ e.actor }} · {{ e.ts[:16]|replace('T', ' ') }}</dd>
+{% if e.nota %}<dt>Nota</dt><dd>{{ e.nota }}</dd>{% endif %}</dl>
+<form method="post" action="{{ url_for('training.remove', digest=e.digest) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="motivo" value="quitada desde el banco"><button class="linkbtn danger" type="submit">Quitar del banco</button></form>
+</div></article>{% endfor %}</div>
+{% else %}<div class="pb"><p>Todavía no hay fotos. En un caso, pestaña Fotos, use «Enseñar al modelo» en cada foto.</p></div>{% endif %}
+</section>
+{% endblock %}

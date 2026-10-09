@@ -13,6 +13,7 @@
 {% if can('ver_siniestros') %}<div class="grp">Siniestros</div>
 <a href="{{ url_for('claims.index') }}" class="{{ 'on' if active in ('index', 'new') }}">{{ icon('list') }}Cola de trabajo{% if nav_pending %}<span class="n" title="Riesgo alto sin decisión">{{ nav_pending }}</span>{% endif %}</a>
 <a href="{{ url_for('tools.photo_check') }}" class="{{ 'on' if active=='foto' }}">{{ icon('camera') }}Revisar una foto</a>{% endif %}
+{% if can('ensenar_modelo') %}<a href="{{ url_for('training.index') }}" class="{{ 'on' if active=='entrenar' }}">{{ icon('filecheck') }}Enseñar al modelo</a>{% endif %}
 {% if can('equipo') %}<div class="grp">Equipo</div>
 <a href="{{ url_for('panel.team') }}" class="{{ 'on' if active=='team' }}">{{ icon('users') }}Carga y atrasos</a>{% endif %}
 {% if can('peritaje') %}<div class="grp">{{ 'Peritaje' if perito else 'Investigaciones' }}</div>

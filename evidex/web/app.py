@@ -16,9 +16,9 @@ from evidex.claims import service
 from evidex.core.case import Case
 from evidex.web.common import LEVEL_TEXT, claim_visible, cx
 from evidex.web.icons import icon
-from evidex.web.views import admin, auth, claims, investigations, panel, portal, portfolio, tools, inspection
+from evidex.web.views import admin, auth, claims, investigations, panel, portal, portfolio, tools, inspection, training
 
-BLUEPRINTS = (inspection.bp, panel.bp, claims.bp, portfolio.bp, investigations.bp, portal.bp, tools.bp, auth.bp, admin.bp)
+BLUEPRINTS = (inspection.bp, panel.bp, claims.bp, portfolio.bp, investigations.bp, portal.bp, tools.bp, auth.bp, admin.bp, training.bp)
 # vistas que no exigen sesión: ingreso y el portal del asegurado (se protege con su enlace secreto)
 PUBLIC_ENDPOINTS = {"auth.login", "auth.logout", "static"} | {f"portal.{e}" for e in
                                                               ("capture_page", "capture_upload", "portal_file",

@@ -1,0 +1,20 @@
+{% if i.is_image and can('ensenar_modelo') and not i.excluded %}<details class="teach"><summary class="linkbtn">Enseñar al modelo{% if i.bank %} <span class="badge {{ 'bad' if i.bank.etiqueta == 'editada' else 'ok' }}">en el banco: {{ 'editada' if i.bank.etiqueta == 'editada' else 'sin editar' }}</span>{% endif %}</summary>
+<form method="post" action="{{ url_for('training.mark', cid=c.id, digest=i.digest) }}" class="teachform"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<p class="hint">{% if i.model and i.model.score is not none %}El modelo dio <b>{{ '%.4f'|format(i.model.score) }}</b> (alerta desde {{ '%.4f'|format(i.model.threshold) }}): {{ 'la marcó como editada' if i.model.flag else 'no la marcó' }}.{% else %}El modelo no analizó esta foto.{% endif %}
+Si se equivocó (o acertó y quiere reforzarlo), dígale la respuesta correcta.</p>
+<fieldset><legend>¿Está editada con IA?</legend>
+<label><input type="radio" name="etiqueta" value="editada" required{{ ' checked' if i.bank and i.bank.etiqueta == 'editada' }}> Sí, está editada</label>
+<label><input type="radio" name="etiqueta" value="original"{{ ' checked' if i.bank and i.bank.etiqueta == 'original' }}> No, no está editada</label></fieldset>
+<fieldset><legend>Si está editada</legend>
+<select name="app" aria-label="App usada"><option value="">¿Con qué app?</option>{% for a in teach_apps %}<option{{ ' selected' if i.bank and i.bank.app == a }}>{{ a }}</option>{% endfor %}</select>
+<label><input type="radio" name="alcance" value="zona" checked> Cambió una zona</label>
+<label><input type="radio" name="alcance" value="completa"{{ ' checked' if i.bank and i.bank.alcance == 'completa' }}> La IA rehízo toda la foto</label>
+<select name="original" aria-label="Foto original"><option value="">Foto original sin editar (opcional)…</option>{% for o in items if o.is_image and o.digest != i.digest %}<option value="{{ o.digest }}">{{ o.title }}</option>{% endfor %}</select>
+<p class="hint">Con la original, Evidex calcula exactamente qué zona cambió. Sin ella, una edición de zona no sirve para entrenar.</p></fieldset>
+<fieldset><legend>¿De dónde sale la foto?</legend>{% for k, v in teach_origins.items() %}
+<label><input type="radio" name="origen" value="{{ k }}" required{{ ' checked' if (i.bank and i.bank.origen == k) or (not i.bank and k == 'prueba') }}> {{ v }}</label>{% endfor %}</fieldset>
+<input name="nota" maxlength="300" placeholder="Nota (opcional): qué se cambió" value="{{ i.bank.nota if i.bank else '' }}">
+<label class="confirm"><input type="checkbox" name="confirmo" value="si" required> Confirmo que esta foto se puede usar para entrenar el modelo (Ley 21.719).</label>
+<button class="btn sm" type="submit">Guardar en el banco de entrenamiento</button>
+<p class="hint">Se guarda una copia aparte del caso. El modelo no cambia solo: se reentrena y se instala a mano solo si mejora. <a href="{{ url_for('training.index') }}">Ver el banco</a></p>
+</form></details>{% endif %}
