@@ -37,6 +37,12 @@ def test_change_mask_finds_the_edited_zone(tmp_path):
     inside = m[210:290, 310:410].mean()
     outside = np.concatenate([m[:150].ravel(), m[400:].ravel(), m[:, :200].ravel()]).mean()
     assert inside > .9 and outside < .01
+    # rehecha completa (como ChatGPT): todo cambia un poco y una zona mucho -> toda la foto
+    o = np.asarray(Image.open(po), np.float32)
+    regen = np.clip((o - 128) * 1.5 + 128 + np.random.RandomState(3).normal(0, 25, o.shape), 0, 255).astype(np.uint8)
+    pr = tmp_path / "rehecha.jpg"
+    Image.fromarray(regen).save(pr, "JPEG", quality=85)
+    assert (np.asarray(TB.change_mask(po, pr)) > 127).all()
     # la misma foto con otra compresión: no hay cambio, no se inventa una zona
     po2 = tmp_path / "otra_compresion.jpg"
     po2.write_bytes(_jpeg(Image.open(po), 60))

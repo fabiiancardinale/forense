@@ -115,6 +115,8 @@ class Bank:
             m = change_mask(original, src)
             if m is not None:
                 cobertura = round(float((np.asarray(m) > 127).mean()), 4)
+                if cobertura >= .5:
+                    alcance = "completa"
                 self.mascaras.mkdir(parents=True, exist_ok=True)
                 buf = io.BytesIO()
                 m.save(buf, "PNG")
@@ -230,9 +232,11 @@ def change_mask(original: Path, edited: Path, min_area: float = .0005) -> Image.
     y = np.asarray(b.resize((sw, sh), Image.LANCZOS).filter(ImageFilter.GaussianBlur(1.5)), np.float32)
     x = x - x.mean((0, 1)) + y.mean((0, 1))             # mismo brillo medio (por si el editor tocó la exposición)
     d = np.abs(x - y).max(2)
+    if (d > 14).mean() > .5:
+        return Image.new("L", (w, h), 255)              # cambió más de la mitad: la IA rehízo la foto entera (ChatGPT)
     med = float(np.median(d))
     mad = float(np.median(np.abs(d - med))) or 1.0
-    t = max(14.0, med + 8 * mad)
+    t = min(max(14.0, med + 8 * mad), 35.0)             # tope: si el editor retocó todo un poco, igual se ve la zona
     m = Image.fromarray(((d > t) * 255).astype(np.uint8))
     m = m.filter(ImageFilter.MinFilter(3)).filter(ImageFilter.MaxFilter(9))     # sin puntos sueltos, zona continua
     if (np.asarray(m) > 127).mean() < min_area:
