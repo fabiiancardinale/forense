@@ -214,17 +214,49 @@ def _load(path: Path) -> Image.Image:
         return ImageOps.exif_transpose(im).convert("RGB")
 
 
+def _align(a: Image.Image, b: Image.Image, max_crop: float = .12, max_err: float = 10.0):
+    """Ventana de la original `a` que corresponde a la editada `b`, cuando `b` es un recorte (y quizá un leve
+    acercamiento) de `a`. Se busca en grises a 256 px; el error es la mediana de la diferencia, así la zona editada
+    no estorba. Devuelve la caja en píxeles de `a`, o None si nada calza."""
+    W = 256
+    gb = np.asarray(b.convert("L").resize((W, max(1, round(b.height * W / b.width))), Image.BILINEAR), np.float32)
+    hb, wb = gb.shape
+    best = None
+    for s in np.linspace(1.0, 1 + max_crop, 13):
+        wa = round(W * s)
+        ha = round(a.height * wa / a.width)
+        if ha < hb or wa < wb:
+            continue
+        ga = np.asarray(a.convert("L").resize((wa, ha), Image.BILINEAR), np.float32)
+        if (ha - hb) > max_crop * ha + 2 and (wa - wb) > max_crop * wa + 2:
+            continue
+        for dy in range(0, ha - hb + 1, 2):
+            for dx in range(0, wa - wb + 1, 2):
+                e = float(np.median(np.abs(ga[dy:dy + hb, dx:dx + wb] - gb)))
+                if best is None or e < best[0]:
+                    best = (e, dx, dy, wa)
+    if best is None or best[0] > max_err:
+        return None
+    e, dx, dy, wa = best
+    f = a.width / wa
+    return (round(dx * f), round(dy * f), round((dx + wb) * f), round((dy + hb) * f))
+
+
 def change_mask(original: Path, edited: Path, min_area: float = .0005) -> Image.Image | None:
     """Máscara (L, tamaño de la editada) de la zona que cambió entre la foto original y la editada.
 
-    Las dos se llevan al mismo tamaño (WhatsApp reduce ambas igual). Si la forma es distinta (recorte), no se
-    adivina: devuelve None. Se suaviza para no confundir la compresión JPEG con un cambio."""
+    Las dos se llevan al mismo tamaño (WhatsApp reduce ambas igual). Si la editada es un recorte leve de la original
+    (la edición con IA de Samsung recorta unos píxeles), se busca primero dónde calza. Si no calza, no se adivina:
+    devuelve None. Se suaviza para no confundir la compresión JPEG con un cambio."""
     try:
         a, b = _load(original), _load(edited)
     except (OSError, ValueError):
         return None
     if abs(a.width / a.height - b.width / b.height) > .02:
-        return None
+        box = _align(a, b)
+        if box is None:
+            return None
+        a = a.crop(box)
     w, h = b.size
     f = min(1.0, 1024 / max(w, h))                       # se compara a 1024 px como máximo
     sw, sh = max(1, round(w * f)), max(1, round(h * f))

@@ -47,7 +47,12 @@ def test_change_mask_finds_the_edited_zone(tmp_path):
     po2 = tmp_path / "otra_compresion.jpg"
     po2.write_bytes(_jpeg(Image.open(po), 60))
     assert TB.change_mask(po, po2) is None
-    # recortada (otra forma): no se adivina
+    # recortada unos píxeles abajo, como la edición de Samsung: se busca dónde calza y la zona sigue bien
+    pc = tmp_path / "editada_recortada.jpg"
+    Image.open(pe).crop((0, 0, 960, 690)).save(pc, "JPEG", quality=85)
+    mc = np.asarray(TB.change_mask(po, pc)) > 127
+    assert mc.shape == (690, 960) and mc[210:290, 310:410].mean() > .9 and mc[:150].mean() < .01
+    # recortada a otra forma muy distinta: no se adivina
     crop = tmp_path / "recorte.jpg"
     Image.open(pe).crop((0, 0, 700, 700)).save(crop, "JPEG")
     assert TB.change_mask(po, crop) is None
