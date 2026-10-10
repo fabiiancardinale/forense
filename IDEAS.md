@@ -16,6 +16,7 @@ Ningún método solo detecta todo: se combinan las tres capas.
 - [x] Botones en la foto: «El modelo se equivocó: esta foto SÍ está editada / NO está editada», con app usada (Galaxy AI, Google, ChatGPT...) y, si se puede, la zona marcada o la foto original al lado (Evidex calcula la máscara exacta comparando las dos).
 - [x] Banco de entrenamiento aparte de los casos, con registro de quién marcó, cuándo y de dónde salió la foto. Solo fotos propias de prueba; fotos reales de asegurados solo con autorización escrita de BCI (Ley 21.719).
 - [x] Botón «Exportar para entrenar»: zip con originales/, editadas/, mascaras/ y licencia.txt, listo para el notebook de Kaggle (vuelta N).
+- [x] Primeras marcas de Fabián (10 de octubre de 2026): 12 fotos (6 Samsung Galaxy AI, 2 ChatGPT, 4 originales). El modelo de la vuelta 4 falló en 7: con Galaxy AI las originales a veces puntúan más alto que las editadas (0,9988 contra 0,9972). Ajustes hechos: ChatGPT rehace toda la foto (zona = foto completa) y Galaxy AI recorta unos píxeles (se alinea antes de comparar).
 - [x] El modelo nuevo nunca se instala solo: se calibra y se mide con un conjunto de prueba fijo, y se instala solo si mejora (protege contra errores, contra alguien que marque mal a propósito y mantiene la trazabilidad de versiones ante BCI). Pendiente: automatizar el envío a Kaggle con su API.
 
 **Lista de las mejores opciones, en orden** (7 de octubre de 2026; el detalle de cada una está más abajo)
