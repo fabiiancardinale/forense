@@ -137,6 +137,29 @@ class Bank:
         self._append(row)
         return row
 
+    def remask(self, digest: str, original: Path, actor: str) -> dict | None:
+        """Vuelve a calcular la zona de una editada con su original (por ejemplo, después de mejorar el cálculo).
+        Deja una marca nueva igual a la anterior, con la zona nueva."""
+        e = self.get(digest)
+        foto = self.photo(digest)
+        if not e or e["etiqueta"] != "editada" or foto is None or not Path(original).exists():
+            return None
+        m = change_mask(Path(original), foto)
+        p = self.mascaras / f"{digest}.png"
+        row = {**e, "ts": _now(), "actor": actor, "recalculada": True}
+        if m is None:
+            if p.exists():
+                p.unlink()
+            row.update(mascara=False, cobertura=None)
+        else:
+            buf = io.BytesIO()
+            m.save(buf, "PNG")
+            atomic_bytes(p, buf.getvalue())
+            cob = round(float((np.asarray(m) > 127).mean()), 4)
+            row.update(mascara=True, cobertura=cob, alcance="completa" if cob >= .5 else (e.get("alcance") or "zona"))
+        self._append(row)
+        return row
+
     def remove(self, digest: str, actor: str, motivo: str = "") -> bool:
         """Saca la foto del banco y borra su copia (no toca el caso)."""
         if not self.get(digest):
@@ -239,7 +262,40 @@ def _align(a: Image.Image, b: Image.Image, max_crop: float = .12, max_err: float
         return None
     e, dx, dy, wa = best
     f = a.width / wa
-    return (round(dx * f), round(dy * f), round((dx + wb) * f), round((dy + hb) * f))
+    return _refine(a, b, (dx * f, dy * f, (dx + wb) * f, (dy + hb) * f))
+
+
+def _refine(a: Image.Image, b: Image.Image, box: tuple) -> tuple:
+    """Ajuste fino (subpíxel) de la ventana: la búsqueda gruesa a 256 px se equivoca hasta ~10 px, y eso deja
+    los bordes de todo el auto marcados como «cambiados». Se ajustan escala y posición por turnos a 768 px."""
+    R = 768
+    size = (R, max(1, round(b.height * R / b.width)))
+    gb = np.asarray(b.convert("L").resize(size, Image.BILINEAR), np.float32)
+    la = a.convert("L")
+    x0, y0, x1, y1 = max(0.0, box[0]), max(0.0, box[1]), min(float(a.width), box[2]), min(float(a.height), box[3])
+    ratio = (box[3] - box[1]) / (box[2] - box[0])
+    w0 = min(x1 - x0, (y1 - y0) / ratio)
+    x1 = x0 + w0
+
+    def err(x, y, w):
+        bx = (x, y, x + w, y + w * ratio)
+        if bx[0] < 0 or bx[1] < 0 or bx[2] > a.width or bx[3] > a.height:
+            return 1e9
+        ga = np.asarray(la.resize(size, Image.BILINEAR, box=bx), np.float32)
+        return float(np.mean(np.abs(ga - gb)[::2, ::2]))
+
+    x, y, w = x0, y0, x1 - x0
+    best = err(x, y, w)
+    for paso in (4.0, 1.0, .5):
+        for _ in range(8):
+            cambio = False
+            for dx, dy, dw in ((paso, 0, 0), (-paso, 0, 0), (0, paso, 0), (0, -paso, 0), (0, 0, paso), (0, 0, -paso)):
+                e = err(x + dx, y + dy, w + dw)
+                if e < best:
+                    best, x, y, w, cambio = e, x + dx, y + dy, w + dw, True
+            if not cambio:
+                break
+    return (x, y, x + w, y + w * ratio)
 
 
 def change_mask(original: Path, edited: Path, min_area: float = .0005) -> Image.Image | None:
@@ -256,7 +312,7 @@ def change_mask(original: Path, edited: Path, min_area: float = .0005) -> Image.
         box = _align(a, b)
         if box is None:
             return None
-        a = a.crop(box)
+        a = a.resize(b.size, Image.LANCZOS, box=box)
     w, h = b.size
     f = min(1.0, 1024 / max(w, h))                       # se compara a 1024 px como máximo
     sw, sh = max(1, round(w * f)), max(1, round(h * f))

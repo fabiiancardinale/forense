@@ -93,6 +93,36 @@ def remove(digest):
     return redirect(url_for("training.index"))
 
 
+def _original_path(e: dict):
+    """La foto original de una editada: en el banco si también se marcó, si no en su caso."""
+    d = e.get("original") or ""
+    if not TB.DIGEST.fullmatch(d):
+        return None
+    p = bank().photo(d)
+    if p is not None:
+        return p
+    case = service.find_case(cx.workdir, e.get("caso") or "")
+    if case is not None and service.has_evidence(case, d) and d not in case.purged() and (case.evidence_dir / d).exists():
+        return case.evidence_dir / d
+    return None
+
+
+@bp.post("/entrenamiento/recalcular")
+def remask_all():
+    """Vuelve a calcular la zona de todas las editadas que tienen su original."""
+    b, n, sin = bank(), 0, 0
+    for e in b.entries():
+        if e["etiqueta"] == "editada" and e.get("original"):
+            o = _original_path(e)
+            if o is None:
+                sin += 1
+            elif b.remask(e["digest"], o, actor_name() or "analista"):
+                n += 1
+    log_access("ensenar_modelo", f"recalculó {n} zonas")
+    flash(f"Zonas recalculadas: {n}." + (f" {sin} sin su original disponible." if sin else ""), "ok")
+    return redirect(url_for("training.index"))
+
+
 @bp.get("/entrenamiento/exportar")
 def export():
     b = bank()

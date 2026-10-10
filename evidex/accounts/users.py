@@ -68,7 +68,7 @@ ENDPOINTS = {
     "portfolio.import_demo": "cartera", "portfolio.template_download": "cartera", "portfolio.export_xlsx": "cartera",
     "tools.photo_check": "ver_siniestros",
     "training.mark": "ensenar_modelo", "training.index": "ensenar_modelo", "training.preview": "ensenar_modelo",
-    "training.remove": "ensenar_modelo", "training.export": "admin",
+    "training.remove": "ensenar_modelo", "training.export": "admin", "training.remask_all": "ensenar_modelo",
     "admin.settings": "admin", "admin.users_view": "admin", "admin.user_toggle": "admin", "admin.firm_add": "admin",
 }
 ROLE_HELP = {"administrador": "Todo, más usuarios, empresas de peritaje y configuración.",

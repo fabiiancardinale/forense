@@ -2,7 +2,7 @@
 {% block heading %}<h1>Banco de entrenamiento del modelo</h1>
 <p class="sub">Fotos que alguien marcó como «editada con IA» o «sin editar» desde la pestaña Fotos de un caso. Sirven para entrenar la próxima versión del modelo.
 El modelo no cambia solo: se exporta este banco, se entrena en Kaggle, se calibra y se instala a mano solo si mejora.</p>{% endblock %}
-{% block actions %}{% if can_export and entries %}<a class="btn" href="{{ url_for('training.export') }}">{{ icon('download') }}Exportar para entrenar (.zip)</a>{% endif %}{% endblock %}
+{% block actions %}{% if entries %}<form method="post" action="{{ url_for('training.remask_all') }}" style="display:inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn" type="submit">{{ icon('refresh') }}Recalcular zonas</button></form>{% endif %}{% if can_export and entries %}<a class="btn" href="{{ url_for('training.export') }}">{{ icon('download') }}Exportar para entrenar (.zip)</a>{% endif %}{% endblock %}
 {% block body %}
 <section class="block"><div class="tiles">
 <div class="tile accent-blue"><div class="lbl">{{ icon('camera', 14) }}Fotos en el banco</div><b>{{ s.total }}</b><span>{{ s.editadas }} editadas · {{ s.originales }} sin editar</span></div>

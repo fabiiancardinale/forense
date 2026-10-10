@@ -102,6 +102,10 @@ def test_mark_export_permissions_and_purge(tmp_path):
     e = bank.get(d_ed)
     assert e["mascara"] and 0 < e["cobertura"] < .05 and e["app"] == "Samsung Galaxy AI" and e["actor"] == "Admin"
     assert e["original"] == d_or and e["caso"] == "SIN-2026-9200"
+    # recalcular la zona con la original (que está en el caso): misma zona, queda la constancia
+    assert "Zonas recalculadas: 1" in c.post("/entrenamiento/recalcular", follow_redirects=True).get_data(as_text=True)
+    e2 = bank.get(d_ed)
+    assert e2["recalculada"] and e2["mascara"] and abs(e2["cobertura"] - e["cobertura"]) < .005 and e2["app"] == e["app"]
     assert any(x["action"] == "training_marked" and x["subject"] == d_ed for x in case.ledger.entries())
     assert case.verify_evidence() == (True, [])
     assert "Foto marcada para enseñar al modelo" in c.get(f"/caso/{cid}?tab=historial").get_data(as_text=True)
