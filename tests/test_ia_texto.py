@@ -163,3 +163,24 @@ def test_user_agent_propio(monkeypatch):
 def urllib_error():
     import urllib.error
     return urllib.error
+
+
+def test_modelo_no_disponible_usa_otro(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "gsk_x")
+    monkeypatch.delenv("GROQ_MODELO", raising=False)
+    ia_texto._elegido.clear()
+    pedidos = []
+
+    def post(url, data, headers):
+        m = json.loads(data)["model"]
+        pedidos.append(m)
+        if m == "llama-3.3-70b-versatile":
+            raise ia_texto.IAError("Groq respondió con un error (404). The model `llama-3.3-70b-versatile` does not exist", 404)
+        return {"choices": [{"message": {"content": '{"ok": true}'}}]}
+    monkeypatch.setattr(ia_texto, "_post", post)
+    monkeypatch.setattr(ia_texto, "modelos_disponibles", lambda: ["whisper-large-v3", "openai/gpt-oss-120b", "llama-3.1-8b-instant"])
+    assert ia_texto.chat_json("s", "u") == {"ok": True}
+    assert pedidos == ["llama-3.3-70b-versatile", "openai/gpt-oss-120b"] and ia_texto.modelo() == "openai/gpt-oss-120b"
+    ia_texto.chat_json("s", "u")
+    assert pedidos[-1] == "openai/gpt-oss-120b"            # ya no vuelve a probar el que no existe
+    ia_texto._elegido.clear()

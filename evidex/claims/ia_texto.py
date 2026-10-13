@@ -42,7 +42,9 @@ _CUENTA = re.compile(r"\b\d{8,20}\b")
 
 
 class IAError(RuntimeError):
-    pass
+    def __init__(self, msg: str, code: int | None = None):
+        super().__init__(msg)
+        self.code = code
 
 
 def clave() -> str:
@@ -53,8 +55,34 @@ def activa(cfg: dict) -> bool:
     return bool(clave()) and bool(cfg.get("ia_texto"))
 
 
+# si el modelo pedido no está disponible para la clave, se usa el primero de estos que la cuenta tenga
+PREFERIDOS = ("llama-3.3-70b-versatile", "openai/gpt-oss-120b", "moonshotai/kimi-k2-instruct", "qwen/qwen3-32b",
+              "openai/gpt-oss-20b", "llama-3.1-8b-instant")
+_elegido: list[str] = []
+
+
 def modelo() -> str:
-    return (os.environ.get("GROQ_MODELO") or MODELO).strip()
+    return (os.environ.get("GROQ_MODELO") or (_elegido[0] if _elegido else MODELO)).strip()
+
+
+def modelos_disponibles() -> list[str]:
+    req = urllib.request.Request(f"{API}/models", headers={"Authorization": f"Bearer {clave()}",
+                                                          "User-Agent": "Evidex/1.0", "Accept": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            data = json.loads(r.read().decode("utf-8"))
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError) as ex:
+        raise IAError("No se pudo consultar qué modelos tiene la cuenta de Groq.") from ex
+    return [m.get("id") for m in data.get("data") or [] if m.get("id") and m.get("active", True)]
+
+
+def _otro_modelo(actual: str) -> str | None:
+    disp = modelos_disponibles()
+    texto = [m for m in disp if not any(x in m for x in ("whisper", "guard", "tts", "playai", "orpheus"))]
+    for m in list(PREFERIDOS) + texto:
+        if m in disp and m != actual:
+            return m
+    return None
 
 
 def tapar(texto: str) -> str:
@@ -88,15 +116,26 @@ def _post(url: str, data: bytes, headers: dict) -> dict:
                           f"que su organización no tenga restricciones. Detalle: {detalle or 'sin detalle'}") from ex
         if ex.code == 429:
             raise IAError("Groq rechazó por exceso de uso. Espere un minuto e intente de nuevo.") from ex
-        raise IAError(f"Groq respondió con un error ({ex.code}). {detalle[:200]}") from ex
+        raise IAError(f"Groq respondió con un error ({ex.code}). {detalle[:200]}", ex.code) from ex
     except (urllib.error.URLError, TimeoutError, OSError) as ex:
         raise IAError("No se pudo conectar con Groq. Revise la conexión a internet del servidor.") from ex
 
 
 def chat_json(sistema: str, usuario: str) -> dict:
-    body = json.dumps({"model": modelo(), "temperature": 0.2, "response_format": {"type": "json_object"},
-                       "messages": [{"role": "system", "content": sistema}, {"role": "user", "content": usuario}]})
-    out = _post(f"{API}/chat/completions", body.encode("utf-8"), {"Content-Type": "application/json"})
+    def pedir(m):
+        body = json.dumps({"model": m, "temperature": 0.2, "response_format": {"type": "json_object"},
+                           "messages": [{"role": "system", "content": sistema}, {"role": "user", "content": usuario}]})
+        return _post(f"{API}/chat/completions", body.encode("utf-8"), {"Content-Type": "application/json"})
+    try:
+        out = pedir(modelo())
+    except IAError as ex:
+        if ex.code not in (400, 404) or "model" not in str(ex).lower():
+            raise
+        otro = _otro_modelo(modelo())                # el modelo no existe para esta cuenta: se usa otro disponible
+        if not otro:
+            raise IAError("La cuenta de Groq no tiene ningún modelo de texto disponible.") from ex
+        _elegido[:] = [otro]
+        out = pedir(otro)
     try:
         return json.loads(out["choices"][0]["message"]["content"])
     except (KeyError, IndexError, TypeError, ValueError) as ex:
@@ -106,16 +145,26 @@ def chat_json(sistema: str, usuario: str) -> dict:
 def transcribir_archivo(path: Path, nombre: str) -> str:
     if Path(path).stat().st_size > MAX_AUDIO:
         raise IAError("El audio pesa más de 25 MB: Groq no lo acepta.")
-    b = uuid.uuid4().hex
-    parts = []
-    for k, v in (("model", MODELO_AUDIO), ("language", "es"), ("response_format", "json"), ("temperature", "0")):
-        parts.append(f'--{b}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n'.encode())
+    audio = Path(path).read_bytes()
     safe = re.sub(r"[^\w.\-]", "_", nombre) or "audio.ogg"
-    parts.append(f'--{b}\r\nContent-Disposition: form-data; name="file"; filename="{safe}"\r\n'
-                 f"Content-Type: application/octet-stream\r\n\r\n".encode() + Path(path).read_bytes() + b"\r\n")
-    parts.append(f"--{b}--\r\n".encode())
-    out = _post(f"{API}/audio/transcriptions", b"".join(parts), {"Content-Type": f"multipart/form-data; boundary={b}"})
-    return str(out.get("text") or "").strip()
+    ultimo = None
+    for modelo_audio in (MODELO_AUDIO, "whisper-large-v3"):   # si la cuenta no tiene el primero, el otro
+        b = uuid.uuid4().hex
+        parts = [f'--{b}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n'.encode()
+                 for k, v in (("model", modelo_audio), ("language", "es"), ("response_format", "json"),
+                              ("temperature", "0"))]
+        parts.append(f'--{b}\r\nContent-Disposition: form-data; name="file"; filename="{safe}"\r\n'
+                     f"Content-Type: application/octet-stream\r\n\r\n".encode() + audio + b"\r\n")
+        parts.append(f"--{b}--\r\n".encode())
+        try:
+            out = _post(f"{API}/audio/transcriptions", b"".join(parts),
+                        {"Content-Type": f"multipart/form-data; boundary={b}"})
+            return str(out.get("text") or "").strip()
+        except IAError as ex:
+            if ex.code not in (400, 404) or "model" not in str(ex).lower():
+                raise
+            ultimo = ex
+    raise IAError("La cuenta de Groq no tiene un modelo de transcripción (Whisper) disponible.") from ultimo
 
 
 # ---- lo guardado en el caso ------------------------------------------------------------------------------
