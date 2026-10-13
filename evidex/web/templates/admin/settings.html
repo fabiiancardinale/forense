@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% block title %}Configuración{% endblock %}
 {% block heading %}<h1>Configuración</h1><p class="sub">Datos de su empresa y servicios externos opcionales para revisar fotos.</p>{% endblock %}
 {% block body %}
-<form method="post" class="cols2" style="align-items:start"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<form method="post" class="cols2" style="align-items:start" enctype="multipart/form-data"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <section class="panel"><div class="ph"><h2>Empresa</h2></div><div class="pb">
 <label for="empresa">Nombre en los informes de investigación</label><input id="empresa" name="empresa" value="{{ cfg.empresa or '' }}" placeholder="Nombre de la consultora o compañía">
 <label for="dp" style="margin-top:12px">Dirección pública del portal del asegurado</label><input id="dp" name="direccion_publica" value="{{ cfg.direccion_publica or '' }}" placeholder="https://siniestros.sucompania.cl" autocomplete="off">
@@ -17,6 +17,14 @@ y después de revisar la política de datos personales del proveedor. Son de pag
 <div><b>Búsqueda inversa en internet</b> <span class="hint">· Google Cloud Vision, detección web</span>
 <div style="margin-top:8px"><label for="gv">Clave de API</label><input id="gv" name="google_vision_key" type="password" value="{{ cfg.google_vision_key or '' }}" autocomplete="off"></div></div>
 <p class="hint" style="margin:0">Las claves se guardan en config.json, en la carpeta de casos de este equipo. Después de configurarlas, use Reanalizar en cada siniestro.</p>
+</div></section>
+<section class="panel"><div class="ph"><h2>Logo del cliente</h2></div><div class="pb" style="display:grid;gap:10px">
+<p class="hint" style="margin:0">Aparece en el menú, en el ingreso y en el portal del asegurado, junto a la marca Evidex. Use solo el logo que entregue la aseguradora, con su autorización escrita.</p>
+{% if client %}<div class="client" style="margin:0"><img src="{{ url_for('admin.client_logo', v=client.v) }}" alt="Logo de {{ client.name or 'el cliente' }}"><span>Logo actual</span></div>{% endif %}
+<div><label for="cn">Nombre del cliente</label><input id="cn" name="cliente_nombre" value="{{ cfg.cliente_nombre or '' }}" placeholder="Por ejemplo: BCI Seguros"></div>
+<div><label for="lc">Archivo del logo (PNG, JPG o WEBP, máximo 2 MB)</label><input id="lc" type="file" name="logo_cliente" accept="image/png,image/jpeg,image/webp"></div>
+<label class="check"><input type="checkbox" name="logo_autorizado" value="1"> Confirmo que la aseguradora autorizó por escrito usar su logo en Evidex.</label>
+{% if client %}<label class="check"><input type="checkbox" name="quitar_logo" value="1"> Quitar el logo</label>{% endif %}
 </div></section>
 <section class="panel"><div class="ph"><h2>Asistente de texto (IA)</h2>
 <span class="r">{% if ia_on %}<span class="badge ok">Activo</span>{% else %}<span class="badge none">Apagado</span>{% endif %}</span></div><div class="pb" style="display:grid;gap:10px">

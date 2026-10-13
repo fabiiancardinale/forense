@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Siniestro {{ numero }} · entrega de antecedentes</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='portal.css') }}"></head><body>
-<header><b>{{ empresa or 'Entrega de antecedentes' }}</b><div>Siniestro {{ numero }}{% if nombre %} · {{ nombre }}{% endif %}</div>
+<header>{% if client %}<img class="cli" src="{{ url_for('admin.client_logo', v=client.v) }}" alt="{{ client.name or '' }}">{% endif %}<b>{{ empresa or 'Entrega de antecedentes' }}</b><div>Siniestro {{ numero }}{% if nombre %} · {{ nombre }}{% endif %}</div>
 {% if not error %}<div class="bar"><i id="bar"></i></div><div class="bartxt" id="bartxt"></div>{% endif %}</header>
 <main>
 {% if error %}<div class="card"><div class="msg {{ 'ok' if finished else 'err' }}">{{ error }}</div></div>{% else %}

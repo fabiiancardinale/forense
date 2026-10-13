@@ -176,8 +176,8 @@ def test_portal_keeps_its_design_through_the_tunnel(page):
     ctx = pg.context.browser.new_context(extra_http_headers={"Cf-Ray": "prueba", "Cf-Connecting-Ip": "200.1.2.3"})
     phone = ctx.new_page()                                     # como el celular del asegurado, por el túnel
     assert phone.goto(f"{base}/c/{tok}").status == 200
-    bg = phone.evaluate("getComputedStyle(document.querySelector('header')).backgroundColor")
-    assert bg == "rgb(11, 31, 54)", bg                         # el diseño del portal cargó
+    bg = phone.evaluate("getComputedStyle(document.body).backgroundColor")
+    assert bg == "rgb(245, 244, 240)", bg                      # el diseño del portal cargó
     assert phone.goto(f"{base}/static/app.css").status == 404   # el resto de Evidex sigue cerrado
     assert phone.goto(f"{base}/ingresar").status == 404
     ctx.close()

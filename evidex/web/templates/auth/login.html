@@ -2,7 +2,7 @@
 <title>Ingresar · Evidex by Zelekpress</title>
 
 <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}"></head><body><form class="box" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<div class="brand"><span class="mark">{{ icon('shield', 20, '#fff') }}</span><span><b>EVIDEX</b><small>by Zelekpress</small></span></div>
+<div class="brand"><span class="mark">{{ brand_mark(22) }}</span><span><b>Evidex</b><small>by Zelekpress</small></span>{% if client %}<img class="cli" src="{{ url_for('admin.client_logo', v=client.v) }}" alt="{{ client.name or 'Cliente' }}">{% endif %}</div>
 <h1>Ingresar</h1><p class="sub">Use el usuario que le entregó el administrador.</p>
 {% if error %}<div class="err">{{ error }}</div>{% endif %}
 <label for="u">Usuario</label><input id="u" name="usuario" autocomplete="username" required autofocus value="{{ usuario or '' }}">

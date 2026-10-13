@@ -33,3 +33,11 @@ ICONS = {
 def icon(name: str, size: int = 17, color: str = "currentColor") -> Markup:
     return Markup(f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2" '
                   f'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{ICONS[name]}"/></svg>')
+
+
+def brand_mark(size: int = 20) -> Markup:
+    """Marca propia de Evidex: una lupa con un punto de luz (dibujo original)."""
+    return Markup(f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
+                  '<circle cx="10.5" cy="10.5" r="6" stroke="#fff" stroke-width="2.2"/>'
+                  '<path d="M15 15l5 5" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>'
+                  '<circle cx="10.5" cy="10.5" r="2.2" fill="#e8a33d"/></svg>')

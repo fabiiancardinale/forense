@@ -16,16 +16,17 @@ from evidex.accounts import users as U
 from evidex.claims import service
 from evidex.core.case import Case
 from evidex.web.common import LEVEL_TEXT, claim_visible, cx
-from evidex.web.icons import icon
+from evidex.web.icons import brand_mark, icon
 from evidex.web.views import admin, auth, claims, investigations, panel, portal, portfolio, tools, inspection, training
 
 BLUEPRINTS = (inspection.bp, panel.bp, claims.bp, portfolio.bp, investigations.bp, portal.bp, tools.bp, auth.bp, admin.bp, training.bp)
 # vistas que no exigen sesión: ingreso y el portal del asegurado (se protege con su enlace secreto)
-PUBLIC_ENDPOINTS = {"auth.login", "auth.logout", "static"} | {f"portal.{e}" for e in
+PUBLIC_ENDPOINTS = {"auth.login", "auth.logout", "static", "admin.client_logo"} | {f"portal.{e}" for e in
                                                               ("capture_page", "capture_upload", "portal_file",
                                                                "portal_story", "portal_finish", "portal_remove")}
 # lo único de /static que se puede abrir desde afuera: el diseño del portal del asegurado
-PORTAL_STATIC = {"/static/portal.css"}
+PORTAL_STATIC = {"/static/portal.css", "/static/fonts/manrope-latin-wght-normal.woff2",
+                 "/static/fonts/manrope-latin-ext-wght-normal.woff2", "/marca/cliente.png"}
 NO_NAV = PUBLIC_ENDPOINTS | {"claims.report", "investigations.inv_report"}
 
 
@@ -53,7 +54,7 @@ def create_app(workdir: Path, config: dict | None = None) -> Flask:
     app.extensions["evidex"] = {"workdir": workdir, "registry": workdir / "registro.jsonl", "store": U.Store(workdir)}
 
     from evidex.claims.guide import explain
-    app.jinja_env.globals.update(explain=explain, icon=icon, level_text=LEVEL_TEXT, roles=U.ROLES,
+    app.jinja_env.globals.update(explain=explain, icon=icon, brand_mark=brand_mark, level_text=LEVEL_TEXT, roles=U.ROLES,
                                  money=lambda n: f"{int(n or 0):,}".replace(",", "."))
     app.jinja_env.filters["extract"] = lambda k, d: d.get(k, k)
 
@@ -86,7 +87,9 @@ def create_app(workdir: Path, config: dict | None = None) -> Flask:
 
     @app.context_processor
     def security_context():
-        return {'csrf_token': csrf_token, 'csp_nonce': g.csp_nonce, 'legacy_modules':app.config['LEGACY_MODULES']}
+        from evidex.web.common import client_brand
+        return {'csrf_token': csrf_token, 'csp_nonce': g.csp_nonce, 'legacy_modules':app.config['LEGACY_MODULES'],
+                'client': client_brand()}
 
     app.before_request(auth_guard)
     app.context_processor(auth_context)

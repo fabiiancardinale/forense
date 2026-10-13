@@ -391,3 +391,19 @@ def send_evidence(case: Case, digest: str, mini: bool = False):
     mime = MIME.get(ext, "application/octet-stream")
     log_access("ver_archivo", name)
     return send_file(path, mimetype=mime, download_name=name, as_attachment=mime == "application/octet-stream")
+
+
+# ---- logo del cliente (la aseguradora) ---------------------------------------------------------------------
+def client_logo_path() -> Path:
+    return cx.workdir / "marca" / "cliente.png"
+
+
+def client_brand() -> dict | None:
+    """Logo y nombre de la aseguradora que usa Evidex (Configuración). Solo con su autorización escrita."""
+    try:
+        p = client_logo_path()
+        if not p.exists():
+            return None
+        return {"name": load_settings().get("cliente_nombre") or "", "v": int(p.stat().st_mtime)}
+    except Exception:
+        return None
