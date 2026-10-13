@@ -32,7 +32,7 @@ def users_view():
                 log_access("usuario", f"guardó {uname}")
                 flash(f"Usuario {uname} guardado.", "ok")
         return redirect(url_for("admin.users_view"))
-    return render_template("admin/users.html", users=cx.store.all(), log=cx.store.entries(), roles=U.ROLES,
+    return render_template("admin/users.html", users=cx.store.all(), log=_grouped(cx.store.entries()), roles=U.ROLES,
                            role_help=U.ROLE_HELP, actions=U.ACTION_LABELS, firms=assignment.firms(cx.workdir),
                            active="usuarios")
 
@@ -46,6 +46,18 @@ def firm_add():
     if not err:
         log_access("usuario", f"guardó la empresa {request.form.get('nombre', '').strip()}")
     return redirect(url_for("admin.users_view") + "#empresas")
+
+
+def _grouped(entries: list[dict]) -> list[dict]:
+    """Junta las filas seguidas iguales (mismo usuario, acción, detalle y equipo, mismo minuto): «Abrió el caso · 7 veces»."""
+    out: list[dict] = []
+    for e in entries:
+        last = out[-1] if out else None
+        if last and all(last.get(k) == e.get(k) for k in ("user", "action", "subject", "ip")) and last["ts"][:16] == e["ts"][:16]:
+            last["n"] += 1
+        else:
+            out.append({**e, "n": 1})
+    return out
 
 
 @bp.post("/usuarios/<username>/estado")

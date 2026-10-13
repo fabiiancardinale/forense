@@ -1,10 +1,10 @@
-{% extends "base.html" %}{% block title %}Cola de trabajo{% endblock %}
-{% block pagehead %}{% if not (cases or who) %}<header class="pagehead"><div class="tt"><h1>Cola de trabajo</h1></div></header>{% endif %}{% endblock %}
+{% extends "base.html" %}{% block title %}Siniestros{% endblock %}
+{% block pagehead %}{% if not (cases or who) %}<header class="pagehead"><div class="tt"><h1>Siniestros</h1></div></header>{% endif %}{% endblock %}
 {% block body %}
 {% if cases or who %}
 <div class="qsplit">
 <aside class="qlist">
-<div class="qhead"><div class="qtitle"><h1>Cola de trabajo</h1>
+<div class="qhead"><div class="qtitle"><h1>Siniestros</h1>
 <div class="qact">{% if can('cartera') %}<a class="btn sm" href="{{ url_for('portfolio.export_xlsx', what='cola') }}" title="Descargar en Excel">{{ icon('download', 14) }}Excel</a>{% endif %}
 {% if can('editar_siniestros') %}<a class="btn sm pri" href="{{ url_for('claims.new_claim') }}">{{ icon('plus', 14, '#fff') }}Nuevo</a>{% endif %}</div></div>
 <p class="sub">{{ 'Todos los siniestros' if everyone else 'Sus siniestros' }}, del mayor al menor riesgo.</p>

@@ -1,48 +1,24 @@
 {% extends "base.html" %}{% block title %}Nuevo siniestro{% endblock %}
-{% block crumbs %}<a href="{{ url_for('claims.index') }}">Cola de trabajo</a> / Nuevo{% endblock %}
-{% block heading %}<h1>Nuevo siniestro</h1><p class="sub">Solo el número, la fecha y la evidencia son obligatorios; mientras más datos, más verificaciones puede hacer Evidex. Todo queda bajo cadena de custodia desde este momento.</p>{% endblock %}
+{% block crumbs %}<a href="{{ url_for('claims.index') }}">Siniestros</a> / Nuevo{% endblock %}
+{% block heading %}<h1>Nuevo siniestro</h1><p class="sub">Obligatorio: número, fecha y evidencia. Mientras más datos, más revisa Evidex.</p>{% endblock %}
 {% block body %}
 {% if error %}<div class="flash bad">{{ error }}</div>{% endif %}
-<form class="card" method="post" enctype="multipart/form-data" data-busy="Analizando…" style="max-width:1100px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<form class="newclaim" method="post" enctype="multipart/form-data" data-busy="Analizando…"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<section class="nc-step"><div class="nc-h"><span class="n">1</span><div><h2>El siniestro</h2><p>Lo mínimo para empezar.</p></div></div>
 <div class="grid">
-<h3 class="sec">Siniestro</h3>
 <div><label>N° de siniestro *</label><input name="numero" required value="{{ f.numero }}" placeholder="SIN-2026-1234"></div>
 <div><label>Fecha y hora del siniestro *</label><input type="datetime-local" name="fecha_siniestro" required value="{{ f.fecha_siniestro }}"></div>
-<div><label>Fecha de denuncia</label><input type="date" name="fecha_denuncia" value="{{ f.fecha_denuncia }}"></div>
+<div><label>Asegurado</label><input name="asegurado" value="{{ f.asegurado }}" placeholder="Nombre y apellido"></div>
 <div><label>Patente</label><input name="patente" value="{{ f.patente }}" placeholder="ABCD-12"></div>
+<div><label>Monto reclamado ($)</label><input name="monto_reclamado" value="{{ f.monto_reclamado }}"></div>
 {% if assign_choice and team %}<div><label for="an">Analista responsable</label><select id="an" name="analista">{% for a in team %}<option value="{{ a.username }}" {{ 'selected' if (f.analista or (current_user.username if current_user)) == a.username }}>{{ a.name }}</option>{% endfor %}</select></div>
 {% elif not auth_on %}<div><label for="an">Analista responsable</label><input id="an" name="analista" value="{{ f.analista }}" placeholder="Nombre del analista" list="analistas">
 <datalist id="analistas">{% for a in team %}<option value="{{ a.name }}">{% endfor %}</datalist></div>{% endif %}
-<div class="full"><label>Lugar</label><input name="lugar" value="{{ f.lugar }}" placeholder="Dirección o referencia"></div>
-<div><label>Latitud <span class="hint">(opcional)</span></label><input name="lat" value="{{ f.lat }}" placeholder="-33.4263"></div>
-<div><label>Longitud <span class="hint">(opcional)</span></label><input name="lon" value="{{ f.lon }}" placeholder="-70.6167"></div>
-<div><label>Taller</label><input name="taller" value="{{ f.taller }}"></div>
-<div><label>Testigos</label><input type="number" min="0" name="testigos" value="{{ f.testigos }}" placeholder="0"></div>
-<div><label>N° parte policial</label><input name="parte_policial" value="{{ f.parte_policial }}"></div>
-<p class="hint full" style="margin:-6px 0 0">Con las coordenadas del lugar, Evidex compara dónde se tomó cada foto. Puede copiarlas desde Google Maps (clic derecho sobre el punto).</p>
+<div class="full"><label>Relato del asegurado</label><textarea name="descripcion" rows="3" placeholder="Cómo ocurrió, con sus palabras">{{ f.descripcion }}</textarea></div>
+</div></section>
 
-<h3 class="sec">Asegurado</h3>
-<div><label>Nombre</label><input name="asegurado" value="{{ f.asegurado }}"></div>
-<div><label>RUT</label><input name="rut" value="{{ f.rut }}" placeholder="12.345.678-9"></div>
-<div><label>Teléfono</label><input name="telefono" value="{{ f.telefono }}" placeholder="+56 9 1234 5678"></div>
-<div><label>Correo</label><input type="email" name="email" value="{{ f.email }}"></div>
-<div class="full"><label>Dirección</label><input name="direccion" value="{{ f.direccion }}"></div>
-<div><label>Cuenta bancaria para el pago</label><input name="cuenta_bancaria" value="{{ f.cuenta_bancaria }}"></div>
-
-<h3 class="sec">Póliza</h3>
-<div><label>N° de póliza</label><input name="poliza" value="{{ f.poliza }}"></div>
-<div><label>Inicio de vigencia</label><input type="date" name="inicio_poliza" value="{{ f.inicio_poliza }}"></div>
-<div><label>Vencimiento</label><input type="date" name="fin_poliza" value="{{ f.fin_poliza }}"></div>
-<div><label>Último cambio de cobertura</label><input type="date" name="cambio_cobertura" value="{{ f.cambio_cobertura }}"></div>
-<div><label>Suma asegurada ($)</label><input name="suma_asegurada" value="{{ f.suma_asegurada }}" placeholder="5.000.000"></div>
-<div><label>Deducible ($)</label><input name="deducible" value="{{ f.deducible }}"></div>
-<div><label>Monto reclamado ($)</label><input name="monto_reclamado" value="{{ f.monto_reclamado }}"></div>
-
-<h3 class="sec">Relato</h3>
-<div class="full"><label>Relato del asegurado</label><textarea name="descripcion" rows="4" placeholder="Cómo ocurrió, con las palabras del asegurado">{{ f.descripcion }}</textarea></div>
-
-<h3 class="sec">Evidencia</h3>
-<div class="full portalbox"><label style="display:flex;gap:10px;align-items:flex-start;font-size:14px;margin:0">
+<section class="nc-step"><div class="nc-h"><span class="n">2</span><div><h2>La evidencia</h2><p>Fotos y documentos: los pide al asegurado por un enlace, los sube usted, o ambas.</p></div></div>
+<div class="grid"><div class="full portalbox"><label style="display:flex;gap:10px;align-items:flex-start;font-size:14px;margin:0">
 <input type="checkbox" name="enviar_enlace" value="1" {{ 'checked' if not f or f.get('enviar_enlace') == '1' }} style="width:auto;margin-top:3px">
 <span><b>Pedirle al asegurado que suba todo por un enlace</b> (recomendado)<br><span class="hint">Se genera un enlace para enviarle por WhatsApp, SMS o correo.
 Toma las fotos con la cámara en vivo y sube los documentos originales: no se pierden la fecha ni el lugar, como pasa al reenviarlos por WhatsApp.</span></span></label>
@@ -55,9 +31,36 @@ Toma las fotos con la cámara en vivo y sube los documentos originales: no se pi
 <div class="drop" id="drop"><span id="droptxt">Arrastre aquí fotos y documentos PDF, o haga clic para elegirlos</span><br><span class="hint">Fotos JPG, PNG, WEBP, TIFF o HEIC y documentos PDF (presupuestos, facturas, partes) · se analizan los originales, sin modificarlos</span>
 <input type="file" id="fotos" name="fotos" multiple accept="image/*,.heic,.pdf,application/pdf,.txt,.zip" style="display:none"></div>
 <div class="thumbs" id="thumbs"></div><div class="files" id="files"></div></div>
-</div>
-<div class="toolbar" style="margin-top:18px"><button class="btn pri" type="submit">Registrar siniestro</button>
-<a class="btn" href="{{ url_for('claims.index') }}">Cancelar</a></div>
+</div></section>
+
+<details class="nc-step nc-more"{{ ' open' if f and (f.rut or f.poliza or f.lugar) }}><summary><div class="nc-h"><span class="n">3</span><div><h2>Más datos <span class="hint">(opcional)</span></h2><p>Lugar, contacto, cuenta y póliza: con ellos Evidex revisa ubicación de las fotos, redes y vigencia.</p></div></div></summary>
+<div class="grid">
+<h3 class="sec">Lugar</h3>
+<div class="full"><label>Lugar</label><input name="lugar" value="{{ f.lugar }}" placeholder="Dirección o referencia"></div>
+<div><label>Latitud</label><input name="lat" value="{{ f.lat }}" placeholder="-33.4263"></div>
+<div><label>Longitud</label><input name="lon" value="{{ f.lon }}" placeholder="-70.6167"></div>
+<div><label>Fecha de denuncia</label><input type="date" name="fecha_denuncia" value="{{ f.fecha_denuncia }}"></div>
+<div><label>N° parte policial</label><input name="parte_policial" value="{{ f.parte_policial }}"></div>
+<div><label>Taller</label><input name="taller" value="{{ f.taller }}"></div>
+<div><label>Testigos</label><input type="number" min="0" name="testigos" value="{{ f.testigos }}" placeholder="0"></div>
+<p class="hint full" style="margin:-6px 0 0">Las coordenadas se copian desde Google Maps (clic derecho sobre el punto): Evidex compara dónde se tomó cada foto.</p>
+<h3 class="sec">Contacto y pago</h3>
+<div><label>RUT</label><input name="rut" value="{{ f.rut }}" placeholder="12.345.678-9"></div>
+<div><label>Teléfono</label><input name="telefono" value="{{ f.telefono }}" placeholder="+56 9 1234 5678"></div>
+<div><label>Correo</label><input type="email" name="email" value="{{ f.email }}"></div>
+<div><label>Cuenta bancaria para el pago</label><input name="cuenta_bancaria" value="{{ f.cuenta_bancaria }}"></div>
+<div class="full"><label>Dirección</label><input name="direccion" value="{{ f.direccion }}"></div>
+<h3 class="sec">Póliza</h3>
+<div><label>N° de póliza</label><input name="poliza" value="{{ f.poliza }}"></div>
+<div><label>Inicio de vigencia</label><input type="date" name="inicio_poliza" value="{{ f.inicio_poliza }}"></div>
+<div><label>Vencimiento</label><input type="date" name="fin_poliza" value="{{ f.fin_poliza }}"></div>
+<div><label>Último cambio de cobertura</label><input type="date" name="cambio_cobertura" value="{{ f.cambio_cobertura }}"></div>
+<div><label>Suma asegurada ($)</label><input name="suma_asegurada" value="{{ f.suma_asegurada }}" placeholder="5.000.000"></div>
+<div><label>Deducible ($)</label><input name="deducible" value="{{ f.deducible }}"></div>
+</div></details>
+
+<div class="nc-foot"><button class="btn pri" type="submit">Registrar siniestro</button><a class="btn" href="{{ url_for('claims.index') }}">Cancelar</a>
+<span class="hint">Todo queda bajo cadena de custodia desde este momento.</span></div>
 </form>
 <script nonce="{{ csp_nonce }}">
 const drop=document.getElementById('drop'),inp=document.getElementById('fotos'),th=document.getElementById('thumbs');

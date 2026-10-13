@@ -241,7 +241,11 @@ No es "taller externo = sospechoso": se mira cada taller, en convenio o no, sobr
 - [ ] Búsqueda global por RUT, patente, teléfono o taller (rápida).
 - [ ] Panel de tendencias: fraudes por mes, comuna, taller y tipo de señal (media).
 
-## Diseño (estructura, no colores) — ideas sacadas de Linear, bandejas lista+detalle y gestores de siniestros
+## Diseño (estructura, no colores)
+- [x] Estilo A (elegido entre 3 maquetas, 14-10-2026): menú lateral oscuro, acento violeta #5b5bd6, grises fríos.
+      Menú ordenado (Inicio, Siniestros, Expedientes · Herramientas · Cartera · Administración), contenido centrado,
+      tarjetas y listas iguales en todas las páginas, ficha del caso compacta con la decisión arriba, Nuevo siniestro
+      en 3 bloques, Configuración en una columna, accesos repetidos agrupados, Peritaje empieza por la derivación. — ideas sacadas de Linear, bandejas lista+detalle y gestores de siniestros
 - [x] Caso con el veredicto arriba: anillo de riesgo, una frase de conclusión, conteo alta/media/baja y el siguiente
       paso como botón; alertas de la misma regla agrupadas en una línea («× 3», miniaturas) que se despliega.
 - [x] Barra superior oscura en lugar del menú lateral: secciones principales, «Más» con el resto, buscador (Ctrl K), logo del

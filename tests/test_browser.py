@@ -177,7 +177,7 @@ def test_portal_keeps_its_design_through_the_tunnel(page):
     phone = ctx.new_page()                                     # como el celular del asegurado, por el túnel
     assert phone.goto(f"{base}/c/{tok}").status == 200
     bg = phone.evaluate("getComputedStyle(document.body).backgroundColor")
-    assert bg == "rgb(245, 244, 240)", bg                      # el diseño del portal cargó
+    assert bg == "rgb(246, 247, 249)", bg                      # el diseño del portal cargó
     assert phone.goto(f"{base}/static/app.css").status == 404   # el resto de Evidex sigue cerrado
     assert phone.goto(f"{base}/ingresar").status == 404
     ctx.close()

@@ -1,7 +1,6 @@
 {% extends "base.html" %}{% block title %}{{ 'Mis casos' if mine else 'Panel' }}{% endblock %}
-{% block heading %}<h1>{{ 'Mis casos' if mine else 'Panel' }}</h1><p class="sub">Al {{ today }} · {{ cases|length }} siniestro(s) {{ 'a su cargo' if mine else 'en la cartera' }}</p>{% endblock %}
-{% block actions %}{% if can('equipo') %}<a class="btn" href="{{ url_for('panel.team') }}">{{ icon('users', 15) }}Equipo</a>{% endif %}
-{% if can('editar_siniestros') %}<a class="btn pri" href="{{ url_for('claims.new_claim') }}">{{ icon('plus', 15, '#fff') }}Nuevo siniestro</a>{% endif %}{% endblock %}
+{% block heading %}<h1>{{ 'Mis casos' if mine else 'Inicio' }}</h1><p class="sub">{{ today|capitalize }} · {{ cases|length }} siniestro(s) {{ 'a su cargo' if mine else 'en la cartera' }}</p>{% endblock %}
+{% block actions %}{% if can('editar_siniestros') %}<a class="btn pri" href="{{ url_for('claims.new_claim') }}">{{ icon('plus', 15, '#fff') }}Nuevo siniestro</a>{% endif %}{% endblock %}
 {% block body %}
 {% if cases %}
 <section class="block"><div class="tiles">
@@ -13,18 +12,15 @@
 
 <div class="layout-side">
 <div class="stack">
-<section class="block"><div class="bh"><div><h2>Para revisar</h2><p>Casos con alertas y sin decisión, del mayor al menor riesgo</p></div>
-<div class="r"><a class="btn sm" href="{{ url_for('claims.index') }}">Ver cola completa</a></div></div>
-<div class="panel">{% if priority %}<table class="queue"><colgroup><col style="width:34%"><col style="width:18%"><col style="width:18%"><col></colgroup>
-<thead><tr><th>Siniestro</th><th>Riesgo</th><th class="num">Monto</th><th>Recomendación</th></tr></thead>
-<tbody>{% for c in priority %}<tr class="row" data-href="{{ url_for('claims.case_view', cid=c.id) }}">
-<td><a class="strong" href="{{ url_for('claims.case_view', cid=c.id) }}">{{ c.numero }}</a><div class="line2">{{ c.asegurado }}{% if not mine %} · {{ c.owner_name }}{% endif %}</div></td>
-<td><span class="risk {{ c.level }}" style="--w:{{ c.score if c.score is number else 0 }}%"><i></i>{{ c.score }}</span></td>
-<td class="num nowrap">{{ '$' ~ money(c.monto) if c.monto else '—' }}</td>
-<td><span class="badge {{ c.level }}">{{ level_text.get(c.level, c.rec) }}</span></td></tr>{% endfor %}</tbody></table>
-{% else %}<div class="pb"><p class="hint" style="margin:0">No hay casos con alertas pendientes de decisión.</p></div>{% endif %}</div></section>
+<section><div class="sec-title"><h2>Para revisar</h2><p>con alertas y sin decisión, del mayor al menor riesgo</p>
+<a class="r btn sm" href="{{ url_for('claims.index') }}">Ver todos los siniestros →</a></div>
+<div class="clist">{% for c in priority %}{% set sc = c.score if c.score is number else 0 %}<a class="crow" href="{{ url_for('claims.case_view', cid=c.id) }}">
+<span class="ring sm {{ c.level }}" style="--p:{{ sc }}"><b>{{ c.score if c.score is number else '—' }}</b></span>
+<span class="m"><b>{{ c.numero }}</b><small>{{ c.asegurado }}{% if not mine %} · {{ c.owner_name }}{% endif %}</small></span>
+<span class="amt">{{ '$' ~ money(c.monto) if c.monto else '—' }}</span>
+<span class="tag {{ c.level }}">{{ level_text.get(c.level, c.rec) }}</span></a>{% else %}<div class="empty">No hay casos con alertas pendientes de decisión.</div>{% endfor %}</div></section>
 
-<section class="block"><div class="bh"><div><h2>En curso</h2><p>Lo que depende de otros: el perito o el asegurado</p></div></div>
+<section><div class="sec-title"><h2>En curso</h2><p>lo que depende del perito o del asegurado</p></div>
 <div class="cols2">
 <div class="panel"><div class="ph"><h2>{{ icon('folder', 15) }} En peritaje</h2><span class="r hint">{{ expert|length }}</span></div>
 {% if expert %}<table class="mini">{% for c in expert %}<tr class="row" data-href="{{ url_for('claims.case_view', cid=c.id, tab='peritaje') }}">

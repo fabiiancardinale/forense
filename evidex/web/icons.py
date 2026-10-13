@@ -28,6 +28,8 @@ ICONS = {
     'users': 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8',
     'lock': 'M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4',
     'arrow': 'M5 12h14M13 6l6 6-6 6',
+    'home': 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10',
+    'brain': 'M12 5a3 3 0 0 0-5.9-.8A3 3 0 0 0 4 9a3 3 0 0 0 .6 5.6A3 3 0 0 0 9 19a3 3 0 0 0 3-1V5zM12 5a3 3 0 0 1 5.9-.8A3 3 0 0 1 20 9a3 3 0 0 1-.6 5.6A3 3 0 0 1 15 19a3 3 0 0 1-3-1',
 }
 
 
@@ -41,4 +43,4 @@ def brand_mark(size: int = 20) -> Markup:
     return Markup(f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
                   '<circle cx="10.5" cy="10.5" r="6" stroke="#fff" stroke-width="2.2"/>'
                   '<path d="M15 15l5 5" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>'
-                  '<circle cx="10.5" cy="10.5" r="2.2" fill="#e8a33d"/></svg>')
+                  '<circle cx="10.5" cy="10.5" r="2.2" fill="#c7d2fe"/></svg>')

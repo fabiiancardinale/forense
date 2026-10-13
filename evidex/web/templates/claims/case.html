@@ -5,41 +5,35 @@
 {% set sc = c.score if c.score is number else 0 %}
 <div class="exp">
 <aside class="ficha" aria-label="Ficha del siniestro">
-<div class="f-head"><a class="f-back" href="{{ url_for('claims.index') }}">← Cola de trabajo</a>
-<h1>{{ c.numero }}</h1><span class="badge {{ c.level }}">{{ c.rec }}</span></div>
+<div class="f-head"><a class="f-back" href="{{ url_for('claims.index') }}">← Siniestros</a>
+<h1>{{ c.numero }}</h1><p class="f-sub">{{ c.asegurado }}{% if c.patente and c.patente != '—' %} · {{ c.patente }}{% endif %}</p></div>
 
 <div class="f-risk"><div class="ring {{ c.level }}" style="--p:{{ sc }}"><b>{{ c.score if c.score is number else '—' }}</b><small>riesgo</small></div>
-<div class="f-counts">{% for k in ('alta', 'media', 'baja') %}<span class="{{ k }}{{ ' zero' if not verdict.counts[k] }}"><b>{{ verdict.counts[k] }}</b> {{ k }}{{ 's' if verdict.counts[k] != 1 }}</span>{% endfor %}</div></div>
+<div><span class="tag {{ c.level }}">{{ c.rec }}</span>
+<div class="f-counts">{% for k in ('alta', 'media', 'baja') %}<span class="{{ k }}{{ ' zero' if not verdict.counts[k] }}"><b>{{ verdict.counts[k] }}</b> {{ k }}{{ 's' if verdict.counts[k] != 1 }}</span>{% endfor %}</div></div></div>
 
-<dl class="f-kv">
-<dt>Asegurado</dt><dd>{{ c.asegurado }}</dd>
-<dt>Patente</dt><dd>{{ c.patente }}</dd>
-<dt>Monto</dt><dd>{{ '$' ~ money(c.monto) if c.monto else '—' }}</dd>
-<dt>Ocurrido</dt><dd>{{ c.fecha or '—' }}</dd>
-<dt>Analista</dt><dd>{{ c.owner_name }}</dd>
-<dt>Peritaje</dt><dd>{% if c.derivation %}<a href="{{ url_for('claims.case_view', cid=c.id, tab='peritaje') }}" class="st {{ c.derivation.state }}">{{ c.derivation.state_label }}</a>{% else %}<span class="muted">No derivado</span>{% endif %}</dd>
-<dt>Portal</dt><dd>{% if c.portal %}<a href="{{ url_for('claims.case_view', cid=c.id, tab='asegurado') }}" class="st p-{{ c.portal }}">{{ {'enviado': 'Enlace enviado', 'abierto': 'Abrió el enlace', 'recibido': 'Entregó todo', 'vencido': 'Enlace vencido'}[c.portal] }}</a>{% else %}<span class="muted">Sin enlace</span>{% endif %}</dd>
-<dt>Decisión</dt><dd><span class="dec {{ c.decision or '' }}">{{ c.decision_label or 'Pendiente' }}</span></dd>
-</dl>
+{% if can('editar_siniestros') %}<section class="f-dec" id="decision">
+<form method="post" action="{{ url_for('claims.decide', cid=c.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<div class="f-dec-h"><b>Decisión</b>{% if history %}{% set h = history[-1] %}<span class="hint" title="{{ h.actor }} · {{ h.ts[:16]|replace('T',' ') }} UTC">{{ h.data.label }} · {{ h.actor }}</span>{% else %}<span class="hint">pendiente</span>{% endif %}</div>
+<div class="f-opts" role="radiogroup" aria-label="Decisión">{% for k, v in decisions.items() %}
+<label class="{{ k }}" title="{{ v }}"><input type="radio" name="decision" value="{{ k }}" required {{ 'checked' if (c.decision or 'en_revision') == k }}><span>{{ short.get(k, v) }}</span></label>{% endfor %}</div>
+{% if current_user %}<input type="hidden" name="actor" value="{{ current_user.name }}">{% else %}<input name="actor" placeholder="Su nombre" required aria-label="Su nombre">{% endif %}
+<div class="f-dec-row"><input name="nota" placeholder="Nota (opcional)" aria-label="Nota"><button class="btn pri sm" type="submit">Registrar</button></div></form>
+</section>{% endif %}
 
 <nav class="f-idx" aria-label="Secciones del caso">{% for k, label in tabs %}
 <a href="{{ url_for('claims.case_view', cid=c.id, tab=k if k != 'resumen' else None) }}" class="{{ 'on' if tab == k }}"{{ ' aria-current=page' if tab == k }}>{{ label }}
-{%- if k == 'fotos' %}<span>{{ n_photos }}</span>{% elif k == 'documentos' %}<span>{{ n_docs }}</span>{% elif k == 'resumen' and n_findings %}<span>{{ n_findings }}</span>{% endif %}</a>{% endfor %}</nav>
+{%- if k == 'fotos' %}<span>{{ n_photos }}</span>{% elif k == 'documentos' %}<span>{{ n_docs }}</span>{% elif k == 'resumen' and n_findings %}<span>{{ n_findings }}</span>{% elif k == 'peritaje' and c.derivation %}<span class="st {{ c.derivation.state }}">{{ c.derivation.state_label|lower }}</span>{% elif k == 'asegurado' and c.portal %}<span>{{ {'enviado': 'enviado', 'abierto': 'subiendo', 'recibido': 'listo', 'vencido': 'vencido'}[c.portal] }}</span>{% endif %}</a>{% endfor %}</nav>
+
+<dl class="f-kv">
+<dt>Monto</dt><dd>{{ '$' ~ money(c.monto) if c.monto else '—' }}</dd>
+<dt>Ocurrido</dt><dd>{{ c.fecha or '—' }}</dd>
+<dt>Analista</dt><dd>{{ c.owner_name }}</dd>
+</dl>
 
 <div class="f-actions">
 {% if can('editar_siniestros') %}<form method="post" action="{{ url_for('claims.reanalyze', cid=c.id) }}" data-busy="Analizando…"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="tab" value="{{ tab }}"><button class="btn sm" type="submit">{{ icon('refresh', 14) }}Reanalizar</button></form>{% endif %}
 <a class="btn sm" href="{{ url_for('claims.export_zip', cid=c.id) }}">{{ icon('download', 14) }}Paquete verificable</a></div>
-
-{% if can('editar_siniestros') %}<section class="f-dec" id="decision"><h2>Decisión</h2>
-<form method="post" action="{{ url_for('claims.decide', cid=c.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<div class="f-opts" role="radiogroup" aria-label="Decisión">{% for k, v in decisions.items() %}
-<label class="{{ k }}" title="{{ v }}"><input type="radio" name="decision" value="{{ k }}" required {{ 'checked' if (c.decision or 'en_revision') == k }}><span>{{ short.get(k, v) }}</span></label>{% endfor %}</div>
-{% if current_user %}<input type="hidden" name="actor" value="{{ current_user.name }}">{% else %}<input name="actor" placeholder="Su nombre" required aria-label="Su nombre">{% endif %}
-<input name="nota" placeholder="Nota (opcional)" aria-label="Nota">
-<button class="btn pri" type="submit">Registrar decisión</button></form>
-{% if history %}{% set h = history[-1] %}<p class="hint">Última: <b class="dec {{ h.subject }}">{{ h.data.label }}</b> · {{ h.actor }} · {{ h.ts[:16]|replace('T',' ') }} UTC{% if history|length > 1 %} · <a href="{{ url_for('claims.case_view', cid=c.id, tab='historial') }}">{{ history|length }} en total</a>{% endif %}</p>
-{% else %}<p class="hint">Queda en la cadena de custodia con su autor.</p>{% endif %}
-</section>{% endif %}
 </aside>
 
 <section class="cont">

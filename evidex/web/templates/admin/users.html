@@ -23,7 +23,7 @@
 <button class="btn" type="submit">Agregar empresa</button></form></div></section>
 <section class="panel"><div class="ph"><h2>Registro de accesos</h2><span class="hint">últimos {{ log|length }}</span></div>
 {% if log %}<div class="scroll" style="max-height:520px"><table><tr><th>Hora (UTC)</th><th>Usuario</th><th>Acción</th><th>Caso o detalle</th><th>Equipo</th></tr>
-{% for e in log %}<tr><td class="nowrap">{{ e.ts[:16]|replace('T',' ') }}</td><td>{{ e.user }}</td><td>{{ actions.get(e.action, e.action) }}</td>
+{% for e in log %}<tr><td class="nowrap">{{ e.ts[:16]|replace('T',' ') }}{% if e.n > 1 %}<span class="hint"> · {{ e.n }} veces</span>{% endif %}</td><td>{{ e.user }}</td><td>{{ actions.get(e.action, e.action) }}</td>
 <td>{{ e.subject }}</td><td class="mono">{{ e.ip }}</td></tr>{% endfor %}</table></div>
 {% else %}<div class="pb"><p class="hint" style="margin:0">Aún no hay registros.</p></div>{% endif %}</section>
 </div>
