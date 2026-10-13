@@ -274,7 +274,7 @@ Zelekpress es el encargado y BCI el responsable de los datos. Revisar todo con a
 ## Seguridad y requisitos de TI
 - [x] Verificación en dos pasos (TOTP, app del teléfono, QR), exigible a todos desde Configuración; el admin la quita.
 - [x] Respaldo fuera del VPS: deploy/bajar_respaldo.ps1 (verifica sha256, guarda 8). Instrucciones para llave SSH propia.
-- [ ] Desactivar contraseña de root en SSH cuando Fabián entre con su llave.
+- [x] SSH solo con llave (contraseña de root desactivada el 13-10-2026; /etc/ssh/sshd_config.d/00-evidex.conf). Si se pierde la llave: consola web de Hostinger.
 - [ ] Dominio propio (en vez de sslip.io).
 - [ ] Cifrado de los casos en el disco (media).
 - [ ] Inicio de sesión con las cuentas corporativas (Microsoft o Google) (media).
@@ -282,7 +282,6 @@ Zelekpress es el encargado y BCI el responsable de los datos. Revisar todo con a
 - [ ] Sello de tiempo externo (RFC 3161) para la evidencia (media).
 - [x] **Evidex en un VPS Ubuntu** (13 de octubre de 2026): `deploy/instalar.sh` instala y actualiza (Caddy con HTTPS automático, gunicorn, worker, firewall, fail2ban, parches automáticos, respaldo diario); modo servidor con IP real del visitante y opción de permitir solo las redes de la oficina (`EVIDEX_IPS_PERMITIDAS`). Se quitaron los `.bat`.
 - [ ] Segundo factor de ingreso (código por app o correo) ahora que Evidex está en internet (media).
-- [ ] SSH solo con llave y sin contraseña en el VPS (rápida, la hace Fabián).
 - [ ] Dominio propio (evidex.zelekpress.cl o similar) en vez de sslip.io (rápida).
 
 ## Para crecer después de BCI
