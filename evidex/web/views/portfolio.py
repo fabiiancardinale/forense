@@ -8,6 +8,7 @@ from pathlib import Path
 from flask import Blueprint, abort, flash, redirect, render_template, request, send_file, url_for
 
 from evidex.claims import service
+from evidex.web.common import claim_visible
 from evidex.web.common import LEVEL_TEXT, actor_name, claim_list, cx, log_access, network_components, save_checked
 
 bp = Blueprint("portfolio", __name__)
@@ -15,16 +16,25 @@ bp = Blueprint("portfolio", __name__)
 
 def _import_file(path: Path, actor: str, name: str):
     from evidex.claims import importer
-    rep = importer.import_history(cx.workdir, path, actor=actor, original_name=name)
+    from evidex.web.common import is_admin, user_client
+    from evidex.accounts import clients as CL
+    slug = request.form.get("cliente") if is_admin() else user_client()
+    slug = slug if slug in CL.all_clients(cx.workdir) else None
+    rep = importer.import_history(cx.workdir, path, actor=actor, original_name=name, cliente=slug)
     return render_template("portfolio/import.html", report=rep, nets=len(network_components()) if not rep.get("error") else 0, active="importar")
 
 
 @bp.get("/redes")
 def networks():
-    comps = network_components()
+    from evidex.web.common import is_admin
+    from evidex.accounts import clients as CL
+    all_c = CL.all_clients(cx.workdir) if is_admin() else {}
+    sel = request.args.get("cliente") if is_admin() else None
+    comps = network_components(sel if sel in all_c else None) if is_admin() else network_components()
     rings = [c for c in comps if len(c["members"]) >= 3]
     pairs = [c for c in comps if len(c["members"]) == 2]
     return render_template("portfolio/networks.html", comps=comps, rings=rings, pairs=pairs, active="redes",
+                           client_choices=all_c, client_sel=sel if sel in all_c else "",
                            involved=sum(len(c["members"]) for c in comps), total=sum(c["monto"] for c in comps),
                            level_text={"bad": "Derivar", "warn": "Revisión", "ok": "Sin alertas", None: "Sin analizar"})
 
@@ -32,13 +42,16 @@ def networks():
 @bp.get("/metricas")
 def metrics_view():
     from evidex.claims.report import RULE_NAMES
-    return render_template("portfolio/metrics.html", m=service.metrics(cx.workdir), rule_names=RULE_NAMES, active="metricas")
+    return render_template("portfolio/metrics.html", m=service.metrics(cx.workdir, include=claim_visible), rule_names=RULE_NAMES, active="metricas")
 
 
 @bp.route("/importar", methods=["GET", "POST"])
 def import_view():
     if request.method == "GET":
-        return render_template("portfolio/import.html", report=None, active="importar")
+        from evidex.web.common import is_admin
+        from evidex.accounts import clients as CL
+        return render_template("portfolio/import.html", report=None, active="importar",
+                               client_choices=CL.all_clients(cx.workdir) if is_admin() else {})
     fs = request.files.get("archivo")
     actor = actor_name() or "importación"
     if not fs or not fs.filename or Path(fs.filename).suffix.lower() not in (".csv", ".xlsx", ".xlsm"):
@@ -81,7 +94,7 @@ def export_xlsx(what):
         data = excel.networks(network_components(), LEVEL_TEXT)
     elif what == "metricas":
         from evidex.claims.report import RULE_NAMES
-        data = excel.metrics(service.metrics(cx.workdir), RULE_NAMES)
+        data = excel.metrics(service.metrics(cx.workdir, include=claim_visible), RULE_NAMES)
     else:
         abort(404)
     return send_file(io.BytesIO(data), as_attachment=True, download_name=f"evidex_{what}_{date.today():%Y-%m-%d}.xlsx",

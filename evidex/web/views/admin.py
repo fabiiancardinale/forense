@@ -9,32 +9,78 @@ from evidex.accounts import users as U
 from evidex.web.security import start_session
 from evidex.core.storage import atomic_json
 from evidex.claims import assignment
-from evidex.web.common import client_logo_path, cx, load_settings, log_access
+from evidex.accounts import clients as CL
+from evidex.web.common import client_logo_path, current_user, cx, is_admin, load_settings, log_access, user_client
 
 bp = Blueprint("admin", __name__)
+
+
+def _manageable(username: str) -> bool:
+    """El administrador maneja a todos; el jefe, solo a los analistas e investigadores de su empresa."""
+    if is_admin():
+        return True
+    t = cx.store.get(username)
+    return bool(t and t["role"] in U.JEFE_CREA and (t.get("cliente") or None) == user_client())
 
 
 @bp.route("/usuarios", methods=["GET", "POST"])
 def users_view():
     first = not cx.store.enabled()
+    admin = first or is_admin()
+    all_clients = CL.all_clients(cx.workdir)
     if request.method == "POST":
-        err = cx.store.add(request.form.get("usuario", ""), request.form.get("nombre", ""), request.form.get("rol", ""),
-                           request.form.get("clave", ""), request.form.get("empresa", ""))
+        uname = request.form.get("usuario", "").strip().lower()
+        role = request.form.get("rol", "")
+        existing = cx.store.get(uname)
+        if admin:
+            cliente = request.form.get("cliente", "").strip() or None
+            if cliente and cliente not in all_clients:
+                cliente = None
+            if role in ("jefe", "analista", "investigador") and all_clients and not cliente:
+                flash("Elija la empresa cliente de este usuario.", "bad")
+                return redirect(url_for("admin.users_view"))
+        else:                                   # jefe: solo su gente, solo en su empresa
+            cliente = user_client()
+            if role not in U.JEFE_CREA:
+                flash("Usted puede crear analistas e investigadores de su empresa.", "bad")
+                return redirect(url_for("admin.users_view"))
+            if existing and not _manageable(uname):
+                flash("Ese nombre de usuario ya está en uso. Elija otro.", "bad")
+                return redirect(url_for("admin.users_view"))
+        err = cx.store.add(uname, request.form.get("nombre", ""), role, request.form.get("clave", ""),
+                           request.form.get("empresa", ""), cliente=cliente)
         if err:
             flash(err, "bad")
         else:
-            uname = request.form.get("usuario", "").strip().lower()
             if first:
                 start_session(cx.store.get(uname))
                 cx.store.log(uname, "usuario", f"creó el administrador {uname}", request.remote_addr or "")
                 flash("Administrador creado. Desde ahora Evidex pide usuario y contraseña.", "ok")
             else:
-                log_access("usuario", f"guardó {uname}")
+                log_access("usuario", f"guardó {uname} ({CL.name_of(cx.workdir, cliente)})")
                 flash(f"Usuario {uname} guardado.", "ok")
         return redirect(url_for("admin.users_view"))
-    return render_template("admin/users.html", users=cx.store.all(), log=_grouped(cx.store.entries()), roles=U.ROLES,
-                           role_help=U.ROLE_HELP, actions=U.ACTION_LABELS, firms=assignment.firms(cx.workdir),
-                           active="usuarios")
+    users = cx.store.all()
+    if not admin:
+        mine = user_client()
+        users = {k: v for k, v in users.items() if (v.get("cliente") or None) == mine and v["role"] != "administrador"}
+    names = set(users)
+    log = [e for e in cx.store.entries() if admin or e.get("user") in names]
+    roles = U.ROLES if admin else {k: v for k, v in U.ROLES.items() if k in U.JEFE_CREA}
+    return render_template("admin/users.html", users=users, log=_grouped(log), role_choices=roles, is_admin_view=admin, role_names=U.ROLES,
+                           role_help=U.ROLE_HELP, actions=U.ACTION_LABELS, firms=assignment.firms(cx.workdir) if admin else [],
+                           clients=all_clients, client_name=lambda s: CL.name_of(cx.workdir, s),
+                           my_client=CL.name_of(cx.workdir, user_client()) if not admin else "", active="usuarios")
+
+
+@bp.post("/usuarios/clientes")
+def client_add():
+    """Empresas cliente (aseguradoras). Solo el administrador."""
+    slug, err = CL.add(cx.workdir, request.form.get("nombre", ""))
+    flash(err or f"Empresa cliente creada: {request.form.get('nombre', '').strip()}. Ahora cree a su jefe.", "bad" if err else "ok")
+    if not err:
+        log_access("usuario", f"creó la empresa cliente {slug}")
+    return redirect(url_for("admin.users_view"))
 
 
 @bp.post("/usuarios/empresas")
@@ -63,7 +109,7 @@ def _grouped(entries: list[dict]) -> list[dict]:
 @bp.post("/usuarios/<username>/estado")
 def user_toggle(username):
     u = cx.store.get(username)
-    if not u:
+    if not u or not _manageable(username):
         abort(404)
     err = cx.store.set_active(username, u.get("active", True) is False)
     flash(err or f"Usuario {username} {'activado' if u.get('active', True) is False else 'desactivado'}.", "bad" if err else "ok")
@@ -75,7 +121,7 @@ def user_toggle(username):
 @bp.post("/usuarios/<username>/quitar-2fa")
 def user_reset_2fa(username):
     """Si alguien perdió el teléfono: el administrador le quita la verificación en dos pasos (queda registrado)."""
-    if not cx.store.get(username):
+    if not cx.store.get(username) or not _manageable(username):
         abort(404)
     cx.store.set_totp(username, None)
     log_access("2fa_quitada", f"el administrador la quitó a {username}")

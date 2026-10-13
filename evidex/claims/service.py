@@ -294,7 +294,7 @@ def current_decision(case: Case) -> dict | None:
 
 
 # ---- métricas ------------------------------------------------------------------
-def metrics(workdir: Path) -> dict:
+def metrics(workdir: Path, include=None) -> dict:
     """Desempeño de Evidex contra las decisiones finales de los liquidadores.
 
     Se considera "alerta" la recomendación de derivar a investigación. Solo cuentan los casos
@@ -304,6 +304,8 @@ def metrics(workdir: Path) -> dict:
     from evidex.forensics.policy import parse_amount
     rows = []
     for c in claim_cases(workdir):
+        if include is not None and not include(c):
+            continue                                    # otra empresa: no se mezcla
         last = last_analysis(c) or {}
         dec = current_decision(c)
         decl = declaration(c) or {}
@@ -379,19 +381,23 @@ def add_file(case: Case, path: Path, note: str | None = None, analyst: str | Non
     return out
 
 
-def create_claim(workdir: Path, cid: str, decl_path: Path, files: list[Path]) -> Case:
+def create_claim(workdir: Path, cid: str, decl_path: Path, files: list[Path], cliente: str | None = None) -> Case:
     case = Case.create(Path(workdir) / cid, f"Siniestro {cid}", kind="claim")
+    if cliente:
+        from evidex.accounts import clients
+        clients.set_case(case, cliente)
     case.add_evidence(decl_path, note="declaracion")
     for f in files:
         add_file(case, f)
     return case
 
 
-def load_demo(workdir: Path) -> list[tuple[str, dict]]:
+def load_demo(workdir: Path, cliente: str | None = None) -> list[tuple[str, dict]]:
     """Genera el ejemplo (siniestros históricos + uno sospechoso + uno limpio) y lo analiza en orden."""
+    from evidex.accounts import clients
     workdir = Path(workdir)
     workdir.mkdir(parents=True, exist_ok=True)
-    registry = workdir / "registro.jsonl"
+    registry = clients.registry(workdir, cliente)
     results = []
     with tempfile.TemporaryDirectory() as td:
         d = Path(td) / "demo"
@@ -402,6 +408,6 @@ def load_demo(workdir: Path) -> list[tuple[str, dict]]:
             if (workdir / numero / "case.json").exists():
                 continue
             files = sorted(p for sub in ("fotos", "documentos") if (src / sub).exists() for p in (src / sub).iterdir())
-            case = create_claim(workdir, numero, src / "declaracion.json", files)
+            case = create_claim(workdir, numero, src / "declaracion.json", files, cliente=cliente)
             results.append((numero, analyze_claim(case, registry)))
     return results

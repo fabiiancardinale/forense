@@ -61,9 +61,22 @@ def inv_settings():
     return redirect(url_for("investigations.investigations"))
 
 
+def _own(case):
+    """Lo que crea un jefe o investigador queda en su empresa."""
+    from evidex.web.common import user_client
+    from evidex.accounts import clients
+    if user_client():
+        clients.set_case(case, user_client(), actor_name() or "investigador")
+    return case
+
+
 @bp.post("/investigaciones/ejemplo")
 def inv_demo():
     done = INV.load_demo(cx.workdir)
+    from evidex.core.case import Case
+    for cid in done:
+        if (cx.workdir / cid / "case.json").exists():
+            _own(Case(cx.workdir / cid))
     flash("Ejemplo ficticio cargado: " + ", ".join(done) if done else "El ejemplo ya estaba cargado.", "info")
     return redirect(url_for("investigations.investigations"))
 
@@ -97,7 +110,7 @@ def inv_new():
         if bad:
             return render_template("investigations/new.html", f=f, error="Archivos rechazados: " + "; ".join(bad),
                                    active="inv_new"), 400
-        INV.create(cx.workdir, cid, data, ivs, saved, actor=actor)
+        _own(INV.create(cx.workdir, cid, data, ivs, saved, actor=actor))
     flash("Expediente creado y analizado.", "ok")
     return redirect(url_for("investigations.inv_view", cid=cid))
 
@@ -252,7 +265,7 @@ def audit_upload():
         if (cx.workdir / aid / "case.json").exists():
             flash("Ese informe ya estaba auditado; se muestra el resultado.", "info")
             return redirect(url_for("investigations.audit_view", cid=aid))
-        case = INV.create_audit(cx.workdir, aid, path, actor=actor, original_name=fs.filename)
+        case = _own(INV.create_audit(cx.workdir, aid, path, actor=actor, original_name=fs.filename))
     try:
         r = INV.run_audit(case)
     except Exception as ex:  # PDF escaneado, protegido o con otro formato

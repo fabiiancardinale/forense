@@ -9,6 +9,8 @@ from flask import flash, g, redirect, render_template, request, url_for
 
 from evidex.claims import assignment, service
 from evidex.portal.links import DEFAULT_DOCS, DOC_TYPES
+from evidex.accounts import clients as CL
+from evidex.web.common import is_admin, user_client
 from evidex.web.common import (FORM_FIELDS, run_claim_analysis, actor_name, analysts, claim_list, current_user, cx, has_perm, level_counts,
                                 save_uploads, sees_all_claims)
 from evidex.web.views.claims import bp
@@ -35,7 +37,16 @@ def index():
 
 def _new_form(f, error=None, status=200):
     return render_template("claims/new.html", f=f, error=error, active="new", doc_types=DOC_TYPES,
-                           default_docs=DEFAULT_DOCS, team=analysts(), assign_choice=has_perm("equipo")), status
+                           default_docs=DEFAULT_DOCS, team=analysts(), assign_choice=has_perm("equipo"),
+                           client_choices=CL.all_clients(cx.workdir) if is_admin() else {}), status
+
+
+def _client_for_new(f) -> str | None:
+    """Empresa del siniestro nuevo: la del usuario; el administrador la elige."""
+    if is_admin():
+        slug = f.get("cliente", "").strip()
+        return slug if slug in CL.all_clients(cx.workdir) else None
+    return user_client()
 
 
 @bp.route("/nuevo", methods=["GET", "POST"])
@@ -55,7 +66,7 @@ def new_claim():
     if not cid:
         return fail("El número de siniestro debe contener letras o números.")
     if (cx.workdir / cid / "case.json").exists():
-        return fail(f"Ya existe un siniestro con el número {numero}.")
+        return fail(f"El número de siniestro {numero} ya está registrado en Evidex.")
     decl = {k: f.get(k, "").strip() for k in FORM_FIELDS}
     decl["fecha_siniestro"] = fecha if len(fecha) > 16 else fecha + ":00"
     lat, lon = f.get("lat", "").strip(), f.get("lon", "").strip()
@@ -77,7 +88,7 @@ def new_claim():
             return fail("Agregue al menos una foto o documento del siniestro, o marque la opción de enviar el enlace al asegurado.")
         dpath = td / "declaracion.json"
         dpath.write_text(json.dumps(decl, indent=2, ensure_ascii=False), encoding="utf-8")
-        case = service.create_claim(cx.workdir, cid, dpath, photos)
+        case = service.create_claim(cx.workdir, cid, dpath, photos, cliente=_client_for_new(f))
     if owner:
         assignment.assign(case, owner[0], owner[1], actor_name() or owner[1], "registro del caso")
     if send_link:
@@ -117,7 +128,7 @@ def load_demo():
     if not service.DEMO_SCRIPT.exists():
         flash("No se encontró el generador de ejemplo (demo/make_claim_demo.py).", "bad")
         return redirect(url_for("claims.index"))
-    done = service.load_demo(cx.workdir)
+    done = service.load_demo(cx.workdir, cliente=_client_for_new(request.form))
     u = g.get("user")
     me = (u["username"], u["name"]) if u and u["role"] == "analista" else None
     assignment.seed_demo_team(cx.workdir, [n for n, _ in done], actor_name() or "ejemplo", me)

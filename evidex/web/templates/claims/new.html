@@ -6,6 +6,7 @@
 <form class="newclaim" method="post" enctype="multipart/form-data" data-busy="Analizando…"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <section class="nc-step"><div class="nc-h"><span class="n">1</span><div><h2>El siniestro</h2><p>Lo mínimo para empezar.</p></div></div>
 <div class="grid">
+{% if client_choices %}<div><label for="cli">Empresa cliente</label><select id="cli" name="cliente">{% for k, v in client_choices.items() %}<option value="{{ k }}" {{ 'selected' if f.cliente == k }}>{{ v.nombre }}</option>{% endfor %}<option value="" {{ 'selected' if f and not f.cliente }}>Sin empresa (solo administrador)</option></select></div>{% endif %}
 <div><label>N° de siniestro *</label><input name="numero" required value="{{ f.numero }}" placeholder="SIN-2026-1234"></div>
 <div><label>Fecha y hora del siniestro *</label><input type="datetime-local" name="fecha_siniestro" required value="{{ f.fecha_siniestro }}"></div>
 <div><label>Asegurado</label><input name="asegurado" value="{{ f.asegurado }}" placeholder="Nombre y apellido"></div>

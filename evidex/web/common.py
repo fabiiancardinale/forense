@@ -66,22 +66,55 @@ def has_perm(perm: str) -> bool:
 
 
 def sees_all_claims() -> bool:
+    """Ve todos los siniestros de su empresa (jefe, investigador) o de todas (administrador)."""
     return has_perm("ver_todos")
 
 
+def is_admin() -> bool:
+    u = current_user()
+    return demo_open() or bool(u and u["role"] == "administrador")
+
+
+def user_client() -> str | None:
+    """Empresa cliente del usuario actual (None para el administrador)."""
+    u = current_user()
+    return (u or {}).get("cliente") or None
+
+
 def claim_visible(case: Case) -> bool:
-    """Un analista solo ve sus casos; jefe, administrador e investigador ven todos."""
-    if sees_all_claims():
+    """El administrador ve todo. Los demás, solo siniestros de su empresa: el jefe y el investigador todos los de
+    ella; el analista, solo los que tiene asignados."""
+    if is_admin():
         return True
-    o, u = assignment.owner(case), current_user()
-    return bool(o and u and o["user"] == u["username"])
+    from evidex.accounts import clients
+    u = current_user()
+    if not u or clients.of_case(case) != (u.get("cliente") or None):
+        return False                     # otra empresa (los casos sin empresa son de usuarios sin empresa)
+    if has_perm("ver_todos"):
+        return True
+    o = assignment.owner(case)
+    return bool(o and o["user"] == u["username"])
+
+
+def registry_for(case: Case | None = None, slug: str | None = "__user__") -> Path:
+    """Registro de redes de la empresa del caso (o del usuario): las redes no se cruzan entre empresas."""
+    from evidex.accounts import clients
+    if case is not None:
+        slug = clients.of_case(case)
+    elif slug == "__user__":
+        slug = user_client()
+    return clients.registry(cx.workdir, slug)
 
 
 def dossier_visible(case: Case) -> bool:
-    """Un perito solo ve los expedientes derivados a su empresa (y a él, si se nombró a un perito)."""
-    if has_perm("investigaciones"):
+    """Un perito solo ve los expedientes derivados a su empresa (y a él, si se nombró a un perito). Jefes e
+    investigadores, solo los de su empresa cliente."""
+    if is_admin():
         return True
     u = current_user()
+    if has_perm("investigaciones"):
+        from evidex.accounts import clients
+        return bool(u and clients.of_case(case) == (u.get("cliente") or None))
     if not u or u["role"] != "perito":
         return False
     data = INV.load(case)["data"]
@@ -129,8 +162,14 @@ def summarize(case: Case) -> dict:
         "analyzed": last.get("ts", "—").replace("T", " ").rstrip("Z")[:16] + " UTC" if last else "—",
         "created": case.ledger.entries()[0]["ts"],
         "monto": amount(decl.get("monto_reclamado")),
+        "cliente": _client_of(case),
         **_work_state(case),
     }
+
+
+def _client_of(case: Case) -> str | None:
+    from evidex.accounts import clients
+    return clients.of_case(case)
 
 
 def _work_state(case: Case) -> dict:
@@ -180,7 +219,7 @@ def run_claim_analysis(case: Case, notify: bool = True) -> dict | None:
     from flask import flash
     from evidex.claims import isolated
     from evidex.web import background
-    mark, registry = analysis_mark(case), cx.registry
+    mark, registry = analysis_mark(case), registry_for(case)
     isolate = current_app.config.get("ISOLATED_ANALYSIS", True)
 
     def run() -> dict:
@@ -253,7 +292,7 @@ def claim_list(everyone: bool = False) -> list[dict]:
     for d in sorted(cx.workdir.iterdir()):
         if (d / "case.json").exists():
             c = Case(d)
-            if c.kind == "claim" and ((everyone and sees_all_claims()) or claim_visible(c)):
+            if c.kind == "claim" and claim_visible(c):
                 cases.append(summarize(c))
     # cola de trabajo: primero el mayor riesgo, luego los más recientes
     cases.sort(key=lambda c: c["created"], reverse=True)
@@ -267,11 +306,11 @@ def level_counts(cases):
     return counts
 
 
-def network_components():
+def network_components(slug: str | None = "__user__"):
     from evidex.claims import analysis as _claims
     from evidex.forensics import network
     from evidex.claims.report import _net_svg
-    comps = network.components(_claims.load_registry(cx.registry))
+    comps = network.components(_claims.load_registry(registry_for(slug=slug)))
     for c in comps:
         for m in c["members"]:
             case = service.find_case(cx.workdir, m)
@@ -331,6 +370,8 @@ def dossier_lists():
                      "answered": sum(1 for r in a["responses"].values() if r.get("estado")), "pending": len(INV.review(a))})
     audits = []
     for c in (INV.list_cases(cx.workdir, "auditoria") if has_perm("investigaciones") else []):
+        if not dossier_visible(c):
+            continue
         run = next((e for e in reversed(c.ledger.entries()) if e["action"] == "audit_run"), None)
         first = c.ledger.entries()[0]
         audits.append({"id": c.root.name, "name": run["subject"] if run else c.name, "ts": first["ts"][:16].replace("T", " "),
@@ -349,7 +390,9 @@ def portal_case(token):
 def analysts() -> list[dict]:
     """Personas que pueden tener casos: usuarios analistas (y jefes), o en modo demo, los nombres ya usados."""
     if cx.store.enabled():
-        return [{"username": u["username"], "name": u["name"]} for u in cx.store.by_role("analista", "jefe")]
+        mine = user_client()
+        return [{"username": u["username"], "name": u["name"]} for u in cx.store.by_role("analista", "jefe")
+                if is_admin() or (u.get("cliente") or None) == mine]
     seen = {}
     for d in sorted(cx.workdir.iterdir()):
         if (d / "case.json").exists() and Case(d).kind == "claim":

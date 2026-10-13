@@ -7,6 +7,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from evidex.claims import assignment
 from evidex.core.case import Case
+from evidex.web.common import claim_visible
 from evidex.web.common import (SAFE_ID, actor_name, analysts, claim_list, current_user, cx, dossier_lists, has_perm,
                                 level_counts, log_access, network_components, sees_all_claims)
 
@@ -158,7 +159,12 @@ def reassign():
         if not SAFE_ID.fullmatch(cid):
             continue
         case = Case(cx.workdir / cid)
-        if not case.meta_path.exists() or case.kind != "claim":
+        if not case.meta_path.exists() or case.kind != "claim" or not claim_visible(case):
+            continue
+        from evidex.accounts import clients as CL
+        pu = cx.store.get(person["username"]) if cx.store.enabled() else None
+        if pu and pu.get("role") != "administrador" and (pu.get("cliente") or None) != CL.of_case(case):
+            flash(f"{person['name']} es de otra empresa: no puede tener el siniestro {cid}.", "bad")
             continue
         o = assignment.owner(case)
         if o and o["user"] == person["username"]:

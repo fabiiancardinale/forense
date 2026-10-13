@@ -96,6 +96,20 @@ def _word_image(case, d, digest) -> dict:
     return word.details_for_image(case.evidence_dir / d["from_word"], digest)
 
 
+@bp.post("/caso/<cid>/empresa")
+def set_client(cid):
+    """El administrador cambia la empresa cliente de un siniestro (queda en la cadena de custodia)."""
+    from evidex.accounts import clients
+    case = load_claim(cid)
+    slug = request.form.get("cliente", "").strip() or None
+    if slug and slug not in clients.all_clients(cx.workdir):
+        abort(400)
+    clients.set_case(case, slug, actor_name() or "administrador")
+    log_access("usuario", f"{cid} → {clients.name_of(cx.workdir, slug)}")
+    flash(f"El siniestro quedó en {clients.name_of(cx.workdir, slug)}.", "ok")
+    return redirect(url_for("claims.case_view", cid=cid))
+
+
 @bp.get("/caso/<cid>")
 def case_view(cid):
     case = load_claim(cid)
@@ -113,7 +127,8 @@ def case_view(cid):
            "n_photos": sum(1 for i in items if i["kind"] == "foto" and not i["excluded"]),
            "n_docs": sum(1 for i in items if i["kind"] != "foto" and not i["excluded"]),
            "n_findings": len(snap["findings"]), **_overview(case, c, snap, items),
-           "decisions": service.DECISIONS, "history": service.decision_history(case)}
+           "decisions": service.DECISIONS, "history": service.decision_history(case),
+           "client_choices": __import__("evidex.accounts.clients", fromlist=["x"]).all_clients(cx.workdir) if has_perm("admin") else {}}
     builder = {"resumen": _tab_summary, "fotos": _tab_photos, "documentos": _tab_docs, "peritaje": _tab_expert,
                "asegurado": _tab_portal, "informe": lambda case, snap, items: {}, "historial": _tab_history,
                "linea": _tab_timeline}[tab]

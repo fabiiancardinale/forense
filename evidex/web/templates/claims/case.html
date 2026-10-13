@@ -31,6 +31,8 @@
 <dt>Analista</dt><dd>{{ c.owner_name }}</dd>
 </dl>
 
+{% if client_choices %}<form class="f-client" method="post" action="{{ url_for('claims.set_client', cid=c.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<label for="fcli">Empresa cliente</label><div class="f-dec-row"><select id="fcli" name="cliente">{% for k, v in client_choices.items() %}<option value="{{ k }}" {{ 'selected' if c.cliente == k }}>{{ v.nombre }}</option>{% endfor %}<option value="" {{ 'selected' if not c.cliente }}>Sin empresa</option></select><button class="btn sm" type="submit">Cambiar</button></div></form>{% endif %}
 <div class="f-actions">
 {% if can('editar_siniestros') %}<form method="post" action="{{ url_for('claims.reanalyze', cid=c.id) }}" data-busy="Analizando…"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="tab" value="{{ tab }}"><button class="btn sm" type="submit">{{ icon('refresh', 14) }}Reanalizar</button></form>{% endif %}
 <a class="btn sm" href="{{ url_for('claims.export_zip', cid=c.id) }}">{{ icon('download', 14) }}Paquete verificable</a></div>

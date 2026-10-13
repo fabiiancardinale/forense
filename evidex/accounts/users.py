@@ -42,7 +42,10 @@ PERMS = {
     "redes": {"administrador", "jefe", "analista"},
     "cartera": {"administrador", "jefe"},
     "admin": {"administrador"},
+    "usuarios": {"administrador", "jefe"},                         # el jefe crea a la gente de su empresa
 }
+# roles que un jefe puede crear (solo dentro de su propia empresa)
+JEFE_CREA = ("analista", "investigador")
 # endpoint -> permiso necesario (los que no están aquí son públicos: ingreso y portal del asegurado)
 ENDPOINTS = {
     **{f"inspection.{e}": "ver_siniestros" for e in ("index","result","status","artifact","retry")},
@@ -68,14 +71,14 @@ ENDPOINTS = {
     "portfolio.import_demo": "cartera", "portfolio.template_download": "cartera", "portfolio.export_xlsx": "cartera",
     "tools.photo_check": "ver_siniestros",
     "training.mark": "ensenar_modelo", "training.index": "ensenar_modelo", "training.preview": "ensenar_modelo",
-    "training.remove": "ensenar_modelo", "training.export": "admin", "training.remask_all": "ensenar_modelo",
-    "auth.account": None, "admin.user_reset_2fa": "admin",
-    "admin.settings": "admin", "admin.users_view": "admin", "admin.user_toggle": "admin", "admin.firm_add": "admin",
+    "training.remove": "ensenar_modelo", "training.export": "admin", "training.remask_all": "admin",
+    "auth.account": None, "claims.set_client": "admin", "admin.user_reset_2fa": "usuarios", "admin.client_add": "admin",
+    "admin.settings": "admin", "admin.users_view": "usuarios", "admin.user_toggle": "usuarios", "admin.firm_add": "admin",
 }
-ROLE_HELP = {"administrador": "Todo, más usuarios, empresas de peritaje y configuración.",
-             "jefe": "Ve todos los casos y el panel de equipo, reasigna casos; redes, métricas e importación.",
-             "analista": "Sus propios casos: registrar, evidencia, portal del asegurado, derivar a perito y decidir.",
-             "investigador": "Investigador interno: expedientes y auditorías de informes.",
+ROLE_HELP = {"administrador": "Zelekpress: todas las empresas, empresas cliente, peritos y configuración.",
+             "jefe": "Todos los siniestros de su empresa; crea a sus analistas e investigadores; reasigna; redes y métricas de su empresa.",
+             "analista": "Solo los siniestros que tiene asignados: evidencia, portal del asegurado, derivar a perito y decidir.",
+             "investigador": "Investigador interno de su empresa: expedientes y auditorías de informes.",
              "perito": "Perito o empresa externa: solo los expedientes derivados a su empresa."}
 ACTION_LABELS = {"ingreso": "Ingresó", "ingreso_fallido": "Ingreso fallido", "salida": "Salió", "ver_caso": "Abrió el caso",
                  "decision": "Registró decisión", "descarga": "Descargó", "ver_expediente": "Abrió expediente",
@@ -138,7 +141,8 @@ class Store:
         return {**u, "username": username} if u else None
 
     @serialized(lambda self, *a, **kw: self.path)
-    def add(self, username: str, name: str, role: str, password: str, empresa: str = "") -> str | None:
+    def add(self, username: str, name: str, role: str, password: str, empresa: str = "",
+            cliente: str | None = None) -> str | None:
         """Crea o actualiza un usuario. Devuelve un mensaje de error o None."""
         username = username.strip().lower()
         role = LEGACY_ROLES.get(role, role)
@@ -160,7 +164,8 @@ class Store:
             return "Un perito debe pertenecer a una empresa de peritaje."
         u["auth_version"] = secrets.token_hex(16)
         u.update({"name": name.strip() or username, "role": role, "active": True,
-                  "empresa": empresa.strip() if role == "perito" else ""})
+                  "empresa": empresa.strip() if role == "perito" else "",
+                  "cliente": (cliente or None) if role not in ("administrador", "perito") else None})
         if password:
             u["pw"] = generate_password_hash(password)
         users[username] = u

@@ -275,6 +275,15 @@ Zelekpress es el encargado y BCI el responsable de los datos. Revisar todo con a
 - [ ] **Borrar o anonimizar al vencer el plazo** (media): aviso al jefe con botón para borrar o anonimizar (reemplazar nombre, RUT, teléfono y patente por códigos; quitar GPS y metadatos de las fotos; borrar documentos), con registro de quién lo hizo. Lo anonimizado de verdad deja de ser dato personal y sirve para estadísticas.
 - [ ] **Pedido de borrado del asegurado** (rápida): procedimiento para cuando una persona pide borrar sus datos antes del plazo (lo decide BCI).
 
+## Empresas cliente (hecho 14-10-2026)
+- [x] Cada siniestro y usuario pertenecen a una aseguradora. Administrador (solo Zelekpress): todo; crea empresas y jefes.
+      Jefe: todos los siniestros de su empresa, crea analistas e investigadores de su empresa («Mi equipo»).
+      Analista: solo lo asignado. Redes de fraude con un registro por empresa (no se cruzan entre aseguradoras).
+      Expedientes, banco de entrenamiento, métricas, reasignación e importación también separados.
+      Casos anteriores: «sin empresa», solo los ve el administrador; se mueven desde la ficha del caso.
+- [ ] Logo y configuración por empresa cliente (hoy el logo es uno solo).
+- [ ] Números de siniestro repetidos entre aseguradoras (hoy el número es único en todo Evidex).
+
 ## Seguridad y requisitos de TI
 - [x] Verificación en dos pasos (TOTP, app del teléfono, QR), exigible a todos desde Configuración; el admin la quita.
 - [x] Respaldo fuera del VPS: deploy/bajar_respaldo.ps1 (verifica sha256, guarda 8). Instrucciones para llave SSH propia.

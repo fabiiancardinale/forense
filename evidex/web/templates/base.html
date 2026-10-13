@@ -26,7 +26,7 @@
 <a href="{{ url_for('portfolio.import_view') }}" class="{{ 'on' if active=='importar' }}">{{ icon('download') }}Importar historial</a>{% endif %}{% endif %}
 {% if (legacy_modules and can('equipo')) or can('admin') %}<div class="grp">Administración</div>
 {% if legacy_modules and can('equipo') %}<a href="{{ url_for('panel.team') }}" class="{{ 'on' if active=='team' }}">{{ icon('users') }}Equipo y carga</a>{% endif %}
-{% if can('admin') %}<a href="{{ url_for('admin.users_view') }}" class="{{ 'on' if active=='usuarios' }}">{{ icon('users') }}Usuarios y empresas</a>
+{% if can('usuarios') %}<a href="{{ url_for('admin.users_view') }}" class="{{ 'on' if active=='usuarios' }}">{{ icon('users') }}{{ 'Usuarios y empresas' if can('admin') else 'Mi equipo' }}</a>{% endif %}{% if can('admin') %}
 <a href="{{ url_for('admin.settings') }}" class="{{ 'on' if active=='config' }}">{{ icon('gear') }}Configuración</a>{% endif %}{% endif %}
 </nav>
 {% if current_user %}<details class="me"><summary><span class="av">{{ current_user.name[:1]|upper }}</span><span class="who"><b>{{ current_user.name }}</b><small>{{ roles[current_user.role] }}</small></span><span class="chev" aria-hidden="true"></span></summary>

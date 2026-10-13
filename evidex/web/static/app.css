@@ -839,3 +839,5 @@ a{color:var(--accent)}
 .me-menu a:hover,.me-menu button:hover{background:var(--bg);color:var(--ink)}
 @media (max-width:900px){.mtop{background:#fff;color:var(--ink);border-bottom:1px solid var(--line)}.mtop button{color:var(--ink)}
  .side.open{box-shadow:0 0 0 100vmax rgba(16,24,40,.35)}}
+.chips-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.f-client{display:grid;gap:4px;font-size:12px}.f-client label{color:var(--muted)}.f-client select{flex:1;min-width:0;font-size:13px;padding:5px 8px}

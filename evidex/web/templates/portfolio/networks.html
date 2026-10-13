@@ -4,6 +4,7 @@ fotos, documentos o relatos compartidos. Ordenados por tamaño y monto reclamado
 {% block actions %}<a class="btn" href="{{ url_for('portfolio.export_xlsx', what='redes') }}">{{ icon('download', 15) }}Excel</a>
 <a class="btn" href="{{ url_for('portfolio.import_view') }}">{{ icon('upload', 15) }}Importar historial</a>{% endblock %}
 {% block body %}
+{% if client_choices %}<form method="get" class="toolbar" style="margin-bottom:12px"><label for="rc" class="hint">Redes de</label><select id="rc" name="cliente" data-auto-submit><option value="">Sin empresa (casos anteriores)</option>{% for k, v in client_choices.items() %}<option value="{{ k }}" {{ 'selected' if client_sel == k }}>{{ v.nombre }}</option>{% endfor %}</select></form>{% endif %}
 <div class="tiles">
 <div class="tile accent-red"><div class="lbl">Redes</div><b>{{ rings|length }}</b><span>de 3 o más siniestros</span></div>
 <div class="tile"><div class="lbl">Pares vinculados</div><b>{{ pairs|length }}</b><span>2 siniestros conectados</span></div>

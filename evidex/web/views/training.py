@@ -18,6 +18,12 @@ def bank() -> TB.Bank:
     return TB.Bank(cx.workdir)
 
 
+def _visible(e: dict | None) -> bool:
+    """El banco es de Zelekpress; cada empresa ve solo las fotos que marcó su gente."""
+    from evidex.web.common import is_admin, user_client
+    return bool(e) and (is_admin() or (e.get("cliente") or None) == user_client() and user_client() is not None)
+
+
 def _model_result(case, digest: str) -> dict:
     from evidex.web.views.claims.evidence import _content
     return _content(case, digest).get("learned") or {}
@@ -46,7 +52,8 @@ def mark(cid, digest):
         row = bank().mark(case.evidence_dir / digest, digest, etiqueta=f.get("etiqueta", ""), origen=f.get("origen", ""),
                           actor=actor_name() or "analista", caso=(service.declaration(case) or {}).get("numero") or cid,
                           nombre=name, app=f.get("app", ""), alcance=f.get("alcance", "zona"), original=orig_path,
-                          original_digest=original, modelo=_model_result(case, digest), nota=f.get("nota", ""))
+                          original_digest=original, modelo=_model_result(case, digest), nota=f.get("nota", ""),
+                          cliente=__import__("evidex.accounts.clients", fromlist=["x"]).of_case(case))
     except ValueError as ex:
         flash(str(ex), "bad")
         return back
@@ -70,7 +77,8 @@ def mark(cid, digest):
 @bp.get("/entrenamiento")
 def index():
     b = bank()
-    return render_template("training/index.html", entries=b.entries(), s=b.summary(), etiquetas=TB.ETIQUETAS,
+    es = [e for e in b.entries() if _visible(e)]
+    return render_template("training/index.html", entries=es, s=b.summary(es), etiquetas=TB.ETIQUETAS,
                            origenes=TB.ORIGENES, alcances=TB.ALCANCES, can_export=has_perm("admin"), active="entrenar")
 
 
@@ -78,7 +86,7 @@ def index():
 def preview(digest):
     b = bank()
     p = b.photo(digest)
-    if p is None:
+    if p is None or not _visible(b.get(digest)):
         abort(404)
     return send_file(io.BytesIO(TB.overlay(p, b.mask(digest))), mimetype="image/jpeg", max_age=0)
 
@@ -86,7 +94,7 @@ def preview(digest):
 @bp.post("/entrenamiento/<digest>/quitar")
 def remove(digest):
     e = bank().get(digest)
-    if not e or not bank().remove(digest, actor_name() or "analista", request.form.get("motivo", "")):
+    if not _visible(e) or not bank().remove(digest, actor_name() or "analista", request.form.get("motivo", "")):
         abort(404)
     log_access("ensenar_modelo", f"quitó {e.get('nombre', digest[:12])} del banco")
     flash(f"«{e.get('nombre', digest[:12])}» quitada del banco de entrenamiento (su copia se borró; el caso no cambia).", "ok")

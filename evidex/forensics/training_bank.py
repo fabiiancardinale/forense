@@ -69,8 +69,8 @@ class Bank:
     def get(self, digest: str) -> dict | None:
         return next((e for e in self.entries() if e["digest"] == digest), None)
 
-    def summary(self) -> dict:
-        es = self.entries()
+    def summary(self, es: list[dict] | None = None) -> dict:
+        es = self.entries() if es is None else es
         ed = [e for e in es if e["etiqueta"] == "editada"]
         return {"total": len(es), "editadas": len(ed), "originales": len(es) - len(ed),
                 "con_zona": sum(1 for e in ed if e.get("mascara") or e.get("alcance") == "completa"),
@@ -94,7 +94,7 @@ class Bank:
 
     def mark(self, src: Path, digest: str, *, etiqueta: str, origen: str, actor: str, caso: str, nombre: str,
              app: str = "", alcance: str = "zona", original: Path | None = None, original_digest: str = "",
-             modelo: dict | None = None, nota: str = "") -> dict:
+             modelo: dict | None = None, nota: str = "", cliente: str | None = None) -> dict:
         if etiqueta not in ETIQUETAS:
             raise ValueError("Indique si la foto está editada o no.")
         if origen not in ORIGENES:
@@ -128,6 +128,7 @@ class Bank:
         score, thr = modelo.get("score"), modelo.get("threshold")
         dijo = None if score is None or thr is None else bool(score >= thr)
         row = {"accion": "marcar", "ts": _now(), "actor": actor, "digest": digest, "caso": caso, "nombre": nombre,
+               "cliente": cliente,
                "archivo": dest.name, "etiqueta": etiqueta, "origen": origen,
                "app": (app if app in APPS else "") if etiqueta == "editada" else "",
                "alcance": alcance if etiqueta == "editada" else "", "original": original_digest if mascara else "",

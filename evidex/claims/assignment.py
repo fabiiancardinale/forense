@@ -98,6 +98,9 @@ def derive(workdir: Path, case: Case, decl: dict, empresa: str, perito: str, pla
             "alertas": alertas, "siniestro_id": case.root.name, "empresa": empresa, "perito": perito,
             "plazo": plazo, "instrucciones": instrucciones}
     inv = dossier.create(workdir, cid, data, [], [], actor=actor)
+    from evidex.accounts import clients
+    if clients.of_case(case):
+        clients.set_case(inv, clients.of_case(case), actor)        # el expediente es de la misma empresa
     case.ledger.append(actor, "case_derived", empresa, {"empresa": empresa, "perito": perito, "plazo": plazo,
                                                          "instrucciones": instrucciones, "dossier": cid})
     return inv

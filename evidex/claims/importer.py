@@ -176,11 +176,13 @@ def row_to_declaration(row: dict, mapping: dict[str, str]) -> tuple[dict | None,
     return {k: (v if isinstance(v, (int, float)) else str(v)) for k, v in d.items()}, resultado, None
 
 
-def import_history(workdir: Path, path: Path, actor: str = "importación", original_name: str | None = None) -> dict:
+def import_history(workdir: Path, path: Path, actor: str = "importación", original_name: str | None = None,
+                   cliente: str | None = None) -> dict:
     """Crea un siniestro por fila y los analiza en orden cronológico. Devuelve un resumen."""
+    from evidex.accounts import clients
     workdir = Path(workdir)
     workdir.mkdir(parents=True, exist_ok=True)
-    registry = workdir / "registro.jsonl"
+    registry = clients.registry(workdir, cliente)
     name = original_name or Path(path).name
     sha = sha256_file(path)
     store = workdir / "importaciones"
@@ -215,6 +217,8 @@ def import_history(workdir: Path, path: Path, actor: str = "importación", origi
             dpath = Path(td) / "declaracion.json"
             dpath.write_text(json.dumps(decl, indent=2, ensure_ascii=False), encoding="utf-8")
             case = Case.create(workdir / cid, f"Siniestro {decl['numero']}", analyst=actor, kind="claim")
+            if cliente:
+                clients.set_case(case, cliente, actor)
             case.add_evidence(dpath, analyst=actor, note="declaracion")
             case.ledger.append(actor, "imported_from", name, {"sha256": sha, "row": i})
             result = service.analyze_claim(case, registry)

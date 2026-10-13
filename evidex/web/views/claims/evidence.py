@@ -10,7 +10,7 @@ from flask import abort, flash, redirect, request, send_file, url_for
 
 from evidex.claims import service
 from evidex.core.case import sha256_file
-from evidex.web.common import actor_name, load_claim, log_access, run_claim_analysis, save_uploads, send_evidence
+from evidex.web.common import actor_name, load_claim, log_access, registry_for, run_claim_analysis, save_uploads, send_evidence
 from evidex.web.views.claims import bp
 
 DIGEST = re.compile(r"[0-9a-f]{64}")
@@ -92,7 +92,7 @@ def evidence_purge(cid, digest):
         return _back(cid)
     numero = (service.declaration(case) or {}).get("numero")
     if numero:
-        analysis.purge_from_registry(cx.registry, numero, digest)
+        analysis.purge_from_registry(registry_for(case), numero, digest)
     from evidex.forensics.training_bank import Bank
     Bank(cx.workdir).purge(digest, actor_name() or "administrador")      # la copia del banco también se borra
     from evidex.claims import ia_texto
