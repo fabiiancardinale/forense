@@ -149,6 +149,8 @@ Hallazgo central: no hay un detector que reconozca todos los editores. Cada edit
 - [x] Alerta nueva «Imagen del Word con fecha anterior al siniestro (por su nombre)» (media).
 - [x] Sin una alerta «sin fecha» por cada imagen del Word (queda una sola del documento); la misma foto suelta y en el
       Word baja a «baja».
+- [x] Servidor: modelo de IA (ronda 4) instalado con onnxruntime; OCR cambiado a rapidocr 3.10 (Python 3.14, modelos
+      PP-OCR Apache-2.0 incluidos) para leer patentes y documentos escaneados.
 - [ ] Detectar imágenes que son capturas de documentos (tablas, formularios) y mostrarlas aparte de las fotos.
 
 ## Inteligencia artificial de texto (Groq u otro)

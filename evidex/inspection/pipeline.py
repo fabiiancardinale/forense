@@ -19,7 +19,7 @@ def analyze(path, name, output, config=None):
               'coverage': info, 'findings': [], 'detectors': [], 'artifacts': [],
               'limitations': ['La ausencia de señales no certifica originalidad. Una edición no implica fraude.'],
               'versions': {}}
-    for package in ('pillow','numpy','pdfplumber','c2pa-python','rapidocr_onnxruntime','pyHanko'):
+    for package in ('pillow','numpy','pdfplumber','c2pa-python','rapidocr','pyHanko'):
         try:
             result['versions'][package] = importlib.metadata.version(package)
         except importlib.metadata.PackageNotFoundError:

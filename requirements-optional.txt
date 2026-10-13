@@ -2,6 +2,7 @@
 c2pa-python==0.38.0
 pillow-heif==1.8.0
 pyHanko==0.37.0
-rapidocr_onnxruntime==1.4.4
+# lectura de texto (OCR): patentes en fotos y documentos escaneados. Modelos PP-OCR (Apache-2.0) incluidos.
+rapidocr==3.10.0
 # ejecuta el modelo de IA (zonas editadas); sin él, Evidex funciona sin el modelo
 onnxruntime>=1.20,<2

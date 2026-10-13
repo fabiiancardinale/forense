@@ -174,7 +174,7 @@ def test_chat_place_contradicts_crash(loaded):
 def test_ocr_reads_plate_and_scanned_document(loaded):
     from evidex.forensics import ocr
     if not ocr.available():
-        pytest.skip("OCR no instalado (pip install rapidocr_onnxruntime)")
+        pytest.skip("OCR no instalado (pip install rapidocr)")
     work, _ = loaded
     _, _, photos, docs, findings, _, _ = analysis_of(work, ACTUAL)
     rules = {f.rule: f for f in findings}
