@@ -54,8 +54,7 @@ def test_word_peligrosos_se_rechazan(tmp_path):
     ok = tmp_path / "ok.docx"
     ok.write_bytes(_docx())
     assert upload_guard.inspect(ok, "ok.docx", "evidencia") == {"kind": "word"}
-    with pytest.raises(InvalidFile):
-        upload_guard.inspect(ok, "ok.docx", "portal")             # el portal no recibe Word (por ahora)
+    assert upload_guard.inspect(ok, "ok.docx", "portal") == {"kind": "word"}      # el asegurado también puede subirlo
 
 
 def test_word_en_el_caso(tmp_path):
@@ -92,3 +91,17 @@ def test_word_en_el_caso(tmp_path):
     nombres = [e["data"]["original_name"] for e in case.active_evidence()]
     assert "otro.docx" in nombres and nombres.count("fotos_choque_imagen1.jpg") == 1
     assert not any(n.startswith("otro_imagen") for n in nombres)      # mismas fotos: no se repiten
+
+
+def test_word_desde_el_portal(tmp_path):
+    from evidex.portal import links
+    from evidex.core.case import Case
+    case = Case.create(tmp_path / "casos" / "SIN-1", "Siniestro SIN-1", kind="claim")
+    data = links.create_link(case, actor="prueba") if hasattr(links, "create_link") else None
+    data = links.load(case)
+    rec = links.receive_file(case, data, "fotos.docx", _docx(), "documento", title="Fotos del choque")
+    assert rec["kind"] == "doc"
+    ev = {e["data"]["original_name"]: e for e in case.active_evidence()}
+    assert ev[rec["name"]]["data"]["note"] == "word"
+    sacadas = [e for e in ev.values() if e["data"].get("from_word") == rec["sha256"]]
+    assert len(sacadas) == 2 and all(e["actor"] == "asegurado (portal)" for e in sacadas)

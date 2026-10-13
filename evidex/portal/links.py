@@ -51,7 +51,7 @@ DOC_TYPES = {
     "otro": "Otro documento que quiera agregar",
 }
 DEFAULT_DOCS = ["licencia", "padron", "constancia", "presupuesto"]
-FILE_EXT = {".jpg", ".jpeg", ".png", ".heic", ".heif", ".webp", ".pdf"}
+FILE_EXT = {".jpg", ".jpeg", ".png", ".heic", ".heif", ".webp", ".pdf", ".docx"}
 MAX_PHOTOS = 20
 MAX_FILES = 40
 MAX_BYTES = 12_000_000
@@ -215,10 +215,10 @@ def receive_file(case, data: dict, filename: str, blob: bytes, kind: str, title:
         raise ValueError("El archivo es demasiado grande (máximo 25 MB).")
     ext = Path(filename or "").suffix.lower()
     if ext not in FILE_EXT:
-        raise ValueError("Solo se aceptan fotos (JPG, PNG, HEIC) o documentos PDF.")
+        raise ValueError("Solo se aceptan fotos (JPG, PNG, HEIC), documentos PDF o Word (.docx).")
     _guard(blob, ext)        # contenido real (foto que se abre, PDF sano), en un proceso aparte
-    if kind == "photo" and ext == ".pdf":
-        kind = "doc"                      # un PDF siempre es un documento
+    if kind == "photo" and ext in (".pdf", ".docx"):
+        kind = "doc"                      # un PDF o un Word siempre es un documento
     if kind == "photo" and sum(1 for f in data.get("files", []) if f["kind"] in ("photo", "extra")) >= MAX_PHOTOS:
         raise ValueError("Ya se recibió el máximo de fotos para este enlace (20).")
     local, utc = _now_pair()
@@ -234,8 +234,9 @@ def receive_file(case, data: dict, filename: str, blob: bytes, kind: str, title:
         # el nombre guardado lleva el título que dio el asegurado; el nombre original queda en la custodia
         p = Path(td) / f"{prefix}_{n:02d}_{_slug(title)}{ext}"
         p.write_bytes(blob)
-        note = "documento" if kind == "doc" else "foto"
-        digest = case.add_evidence(p, analyst="asegurado (portal)", note=note, extra={"portal": rec})
+        note = "word" if ext == ".docx" else "documento" if kind == "doc" else "foto"
+        from evidex.claims import service           # un Word trae además sus fotos: entran al caso solas
+        digest = service.add_file(case, p, note=note, analyst="asegurado (portal)", extra={"portal": rec})[0]
     rec.update({"sha256": digest, "name": p.name})
     data.setdefault("files", []).append(rec)
     _save(case, data)

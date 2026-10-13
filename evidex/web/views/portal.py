@@ -26,9 +26,9 @@ def capture_page(token):
          "lead": "Fotos del vehículo y del daño. Si las tomó el día del choque, súbalas desde la galería de su teléfono: "
                  "así conservamos la fecha y el lugar en que las sacó. Si no tiene, puede tomarlas ahora.",
          "button": "Elegir o tomar fotos", "hint": "Después escriba un título para cada foto"},
-        {"kind": "doc", "title": "Documentos", "files": pr["docs"], "accept": "application/pdf,.pdf,image/*,.heic",
-         "lead": "PDF o foto del documento. Si lo tiene en papel, tómele una foto donde se lea bien; si es un PDF que le "
-                 "enviaron, súbalo tal cual.",
+        {"kind": "doc", "title": "Documentos", "files": pr["docs"], "accept": "application/pdf,.pdf,image/*,.heic,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+         "lead": "PDF, Word o foto del documento. Si lo tiene en papel, tómele una foto donde se lea bien; si es un PDF o un "
+                 "Word que le enviaron, súbalo tal cual.",
          "button": "Elegir documentos", "hint": "Después escriba un título para cada documento"},
     ]
     return render_template("portal/upload.html", error=capture.status(data), finished=bool(data.get("finished")),

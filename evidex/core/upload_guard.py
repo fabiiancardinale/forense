@@ -34,7 +34,7 @@ MAX_AUDIO = 25_000_000
 # qué se acepta en cada carga
 PURPOSES = {
     "evidencia": set(IMAGES) | set(PDF) | CHAT | AUDIO | WORD,   # fotos, documentos, chats, audios y Word del caso
-    "portal": set(IMAGES) | set(PDF),               # lo que sube el asegurado
+    "portal": set(IMAGES) | set(PDF) | WORD,        # lo que sube el asegurado
     "documento": set(IMAGES) | set(PDF),            # documentos de una investigación
     "informe": set(PDF),                            # informe del perito para auditar
     "historial": TABLE,                             # importación de siniestros anteriores

@@ -55,7 +55,7 @@
 {% set tot = cases|length %}
 <div class="dist">{% for lv in ('bad','warn','ok','none') %}{% if counts[lv] %}<i class="d-{{ lv }}" style="width:{{ 100 * counts[lv] / tot }}%" title="{{ level_text[lv] }}: {{ counts[lv] }}"></i>{% endif %}{% endfor %}</div>
 <div class="legend"><span><i style="background:var(--red)"></i>Derivar {{ counts.bad }}</span><span><i style="background:var(--amber)"></i>Revisión {{ counts.warn }}</span>
-<span><i style="background:var(--grn)"></i>Sin alertas {{ counts.ok }}</span>{% if counts.none %}<span><i style="background:#b8c2cf"></i>Sin analizar {{ counts.none }}</span>{% endif %}</div>
+<span><i style="background:var(--grn)"></i>Sin alertas {{ counts.ok }}</span>{% if counts.none %}<span><i style="background:#c9c4b8"></i>Sin analizar {{ counts.none }}</span>{% endif %}</div>
 <dl class="kv" style="margin-top:14px"><dt>Fraudes confirmados</dt><dd>{{ k.fraude }}</dd><dt>Legítimos</dt><dd>{{ k.legitimo }}</dd><dt>Sin decisión</dt><dd>{{ k.sin_decision }}</dd></dl>
 </div></section>
 {% if can('redes') and comps %}<section class="panel"><div class="ph"><h2>Redes de fraude</h2><a class="r btn sm" href="{{ url_for('portfolio.networks') }}">Ver redes</a></div>
