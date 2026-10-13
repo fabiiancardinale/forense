@@ -31,13 +31,13 @@ O todo junto: `powershell -ExecutionPolicy Bypass -File deploy\subir_al_servidor
 1. Crear el administrador (en el servidor):
 
    ```bash
-   sudo -u evidex /opt/evidex/venv/bin/python -m evidex.accounts.setup --dir /var/lib/evidex/casos
+   evidex-admin
    ```
 
 2. Subir el modelo de IA (desde el PC):
 
    ```powershell
-   scp veritas\modelos\evidex_ia.* root@179.236.75.148:/var/lib/evidex/modelos/
+   scp modelos\evidex_ia.* root@179.236.75.148:/var/lib/evidex/modelos/
    ssh root@179.236.75.148 "chown -R evidex:evidex /var/lib/evidex/modelos && systemctl restart evidex-web evidex-worker"
    ```
 
@@ -50,6 +50,7 @@ systemctl status evidex-web            # ¿está corriendo?
 journalctl -u evidex-web -n 100        # últimos mensajes (errores)
 systemctl restart evidex-web evidex-worker
 evidex-respaldo                        # respaldo en el momento
+evidex-admin --reset                   # recuperar la contraseña de un administrador
 ```
 
 Copie de vez en cuando un respaldo fuera del servidor (`scp root@...:/var/backups/evidex/<archivo> .`): si el servidor se pierde, los respaldos que están en él también.

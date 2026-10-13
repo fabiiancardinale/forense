@@ -141,6 +141,13 @@ echo "Respaldo: \$f"
 EOF
 chmod 750 /usr/local/bin/evidex-respaldo
 
+cat > /usr/local/bin/evidex-admin <<EOF
+#!/usr/bin/env bash
+# Crea el primer administrador de Evidex (o, con --reset, recupera uno existente).
+cd $APP && exec sudo -u evidex $VENV/bin/python -m evidex.accounts.setup --dir $DATOS/casos "\$@"
+EOF
+chmod 750 /usr/local/bin/evidex-admin
+
 cat > /etc/systemd/system/evidex-respaldo.service <<EOF
 [Unit]
 Description=Respaldo de Evidex
@@ -192,7 +199,7 @@ if systemctl is-active --quiet evidex-web; then echo "==> Evidex está corriendo
 if [ ! -f "$DATOS/casos/usuarios.json" ]; then
   echo
   echo "Falta crear el administrador. Corra:"
-  echo "  sudo -u evidex $VENV/bin/python -m evidex.accounts.setup --dir $DATOS/casos"
+  echo "  evidex-admin"
 fi
 [ -f "$DATOS/modelos/evidex_ia.onnx" ] || echo "Aviso: no hay modelo de IA en $DATOS/modelos (Evidex funciona sin él). Ver deploy/LEEME.md."
 echo
