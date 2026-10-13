@@ -52,7 +52,7 @@ ENDPOINTS = {
     "claims.evidence_zones": "ver_siniestros", "claims.evidence_zones_image": "ver_siniestros", "claims.export_zip": "ver_siniestros",
     "claims.verify": "ver_siniestros", "claims.new_claim": "editar_siniestros", "claims.add_photos": "editar_siniestros",
     "claims.reanalyze": "editar_siniestros", "claims.decide": "editar_siniestros", "claims.capture_link": "editar_siniestros",
-    "claims.capture_sent": "editar_siniestros",
+    "claims.capture_sent": "editar_siniestros", "claims.ia_tarea": "editar_siniestros", "claims.ia_transcribir": "editar_siniestros",
     "claims.load_demo": "editar_siniestros", "claims.evidence_exclude": "editar_siniestros",
     "claims.evidence_restore": "editar_siniestros", "claims.evidence_purge": "eliminar_evidencia", "claims.derive": "editar_siniestros",
     "claims.derive_cancel": "editar_siniestros", "claims.dossier_report": "ver_siniestros",
@@ -80,7 +80,8 @@ ACTION_LABELS = {"ingreso": "Ingresó", "ingreso_fallido": "Ingreso fallido", "s
                  "decision": "Registró decisión", "descarga": "Descargó", "ver_expediente": "Abrió expediente",
                  "usuario": "Cambió un usuario", "exporta_excel": "Exportó a Excel", "reasignar": "Reasignó un caso",
                  "derivar": "Derivó a perito", "entregar_informe": "Entregó informe final", "quitar_archivo": "Quitó un archivo",
-                 "ensenar_modelo": "Marcó una foto para el modelo", "exporta_entrenamiento": "Exportó el banco de entrenamiento"}
+                 "ensenar_modelo": "Marcó una foto para el modelo", "exporta_entrenamiento": "Exportó el banco de entrenamiento",
+                 "ia_texto": "Usó el asistente de texto (IA)"}
 MAX_FAILS, LOCK_SECONDS = 5, 300
 DUMMY_HASH = generate_password_hash("not-a-user-password")
 USERNAME = re.compile(r"^[a-z0-9._-]{3,32}$")

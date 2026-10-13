@@ -74,6 +74,8 @@ EVIDEX_DIR=$DATOS/casos
 EVIDEX_MODELO=$DATOS/modelos
 # Opcional: solo estas redes pueden entrar a Evidex (el portal del asegurado queda abierto). Ej: 200.1.2.0/24,190.5.6.7
 EVIDEX_IPS_PERMITIDAS=
+# Opcional: asistente de texto con IA (Groq). Se activa además en Configuración.
+# GROQ_API_KEY=
 EOF
 else
   sed -i "s/^EVIDEX_DOMINIO=.*/EVIDEX_DOMINIO=$DOMINIO/" "$CONF"

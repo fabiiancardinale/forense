@@ -18,6 +18,14 @@ y después de revisar la política de datos personales del proveedor. Son de pag
 <div style="margin-top:8px"><label for="gv">Clave de API</label><input id="gv" name="google_vision_key" type="password" value="{{ cfg.google_vision_key or '' }}" autocomplete="off"></div></div>
 <p class="hint" style="margin:0">Las claves se guardan en config.json, en la carpeta de casos de este equipo. Después de configurarlas, use Reanalizar en cada siniestro.</p>
 </div></section>
+<section class="panel"><div class="ph"><h2>Asistente de texto (IA)</h2>
+<span class="r">{% if ia_on %}<span class="badge ok">Activo</span>{% else %}<span class="badge none">Apagado</span>{% endif %}</span></div><div class="pb" style="display:grid;gap:10px">
+<p class="hint" style="margin:0">Groq ({{ ia_modelo }} y Whisper): revisa el relato contra el caso, propone preguntas para la entrevista,
+resume el caso y transcribe audios. No mira fotos. El texto del caso sale a Groq (EE. UU.) sin RUT, teléfono, correo, dirección ni cuentas.
+Active «Zero Data Retention» en la consola de Groq.</p>
+<p style="margin:0">Clave en el servidor (GROQ_API_KEY): {% if ia_key %}<span class="badge ok">detectada</span>{% else %}<span class="badge warn">falta</span> <span class="hint">agréguela en /etc/evidex/evidex.env y reinicie Evidex</span>{% endif %}</p>
+<label class="check"><input type="checkbox" name="ia_texto" value="1" {{ 'checked' if cfg.ia_texto }}> Activar. Confirmo que la aseguradora autorizó enviar el texto de los casos a este servicio.</label>
+</div></section>
 <div class="full"><button class="btn pri" type="submit">Guardar configuración</button></div>
 </form>
 {% endblock %}

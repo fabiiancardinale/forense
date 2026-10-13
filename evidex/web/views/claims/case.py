@@ -30,7 +30,7 @@ from evidex.web.views.claims import bp
 TABS = [("resumen", "Resumen"), ("fotos", "Fotos"), ("documentos", "Documentos"), ("peritaje", "Peritaje"),
         ("asegurado", "Asegurado"), ("informe", "Informe"), ("historial", "Historial")]
 SEV_ORDER = {"alta": 0, "media": 1, "baja": 2}
-KIND_LABEL = {"foto": "Foto", "documento": "Documento", "chat": "Chat de WhatsApp"}
+KIND_LABEL = {"foto": "Foto", "documento": "Documento", "chat": "Chat de WhatsApp", "audio": "Audio"}
 
 
 def _refresh_if_needed(case: Case) -> None:
@@ -122,7 +122,13 @@ def _tab_summary(case, snap, items):
         top.append({**f, "ref": ref})
     return {"decl": decl, "top": top, "decisions": service.DECISIONS, "history": service.decision_history(case),
             "todo": _todo(case, items), "team": analysts() if has_perm("equipo") else [],
-            "can_reassign": has_perm("equipo")}
+            "can_reassign": has_perm("equipo"), **_ia(case)}
+
+
+def _ia(case) -> dict:
+    from evidex.claims import ia_texto
+    return {"ia": ia_texto.cargar(case), "ia_on": ia_texto.activa(load_settings()), "ia_key": bool(ia_texto.clave()),
+            "ia_tareas": ia_texto.TAREAS}
 
 
 def _todo(case, items) -> list[tuple[str, str, str]]:
@@ -157,7 +163,7 @@ def _tab_photos(case, snap, items):
 
 
 def _tab_docs(case, snap, items):
-    return {"items": [i for i in items if i["kind"] != "foto"]}
+    return {"items": [i for i in items if i["kind"] != "foto"], **_ia(case)}
 
 
 def _tab_expert(case, snap, items):
@@ -174,7 +180,7 @@ def _tab_expert(case, snap, items):
             "default_due": (date.today() + timedelta(days=10)).isoformat(),
             "alerts": sorted(snap["findings"], key=lambda f: SEV_ORDER[f["severity"]]),
             "past": [e for e in case.ledger.entries() if e["action"] in ("case_derived", "derivation_cancelled",
-                                                                         "derivation_delivered")]}
+                                                                         "derivation_delivered")], **_ia(case)}
 
 
 def _tab_portal(case, snap, items):
@@ -219,6 +225,7 @@ def _tab_history(case, snap, items):
                   "derivation_cancelled": d.get("reason", ""), "decision": d.get("label", ""),
                   "evidence_excluded": d.get("reason", ""),
                   "evidence_purged": f"{d.get('original_name', '')} · motivo: {d.get('reason', '')}",
+                  "llm_used": f"{d.get('tarea', '')} · {d.get('servicio', '')} ({d.get('modelo', '')})",
                   "training_marked": f"{d.get('original_name', '')}: {'editada con IA' if d.get('label') == 'editada' else 'sin editar'}"
                                      + (f" ({d['app']})" if d.get("app") else ""),
                   "claim_analyzed": f"{d.get('findings', 0)} hallazgo(s), riesgo {d.get('score', '—')}"}.get(e["action"], "")

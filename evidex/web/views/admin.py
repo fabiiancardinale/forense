@@ -67,7 +67,13 @@ def settings():
     if request.method == "POST":
         for k in ("empresa", "direccion_publica", "sightengine_user", "sightengine_secret", "google_vision_key"):
             cfg[k] = request.form.get(k, "").strip()
+        antes = bool(cfg.get("ia_texto"))
+        cfg["ia_texto"] = request.form.get("ia_texto") == "1"
+        if antes != cfg["ia_texto"]:
+            log_access("ia_texto", "activó el asistente de texto" if cfg["ia_texto"] else "apagó el asistente de texto")
         atomic_json(cx.workdir / "config.json", cfg)
         flash("Configuración guardada.", "ok")
         return redirect(url_for("admin.settings"))
-    return render_template("admin/settings.html", cfg=cfg, on=external.configured(cfg), active="config")
+    from evidex.claims import ia_texto
+    return render_template("admin/settings.html", cfg=cfg, on=external.configured(cfg), active="config",
+                           ia_on=ia_texto.activa(cfg), ia_key=bool(ia_texto.clave()), ia_modelo=ia_texto.modelo())

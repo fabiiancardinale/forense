@@ -1,0 +1,23 @@
+{# Asistente de texto con IA (Groq). Variables: ia, ia_on, ia_key, ia_tareas; mostrar = lista de tareas a mostrar #}
+<section class="panel" id="ia"><div class="ph"><h2>Asistente de texto (IA)</h2><span class="r"><span class="badge {{ 'ok' if ia_on else 'none' }}">{{ 'Activo' if ia_on else 'Apagado' }}</span></span></div><div class="pb iabox">
+{% if not ia_on %}<p class="hint" style="margin:0">{% if not ia_key %}Falta la clave de Groq en el servidor (GROQ_API_KEY).{% else %}Está apagado.{% endif %}
+{% if can('admin') %}Se activa en <a href="{{ url_for('admin.settings') }}">Configuración</a>.{% endif %}
+Revisa el relato contra el caso, propone preguntas para la entrevista, resume el caso y transcribe audios. No mira fotos.</p>
+{% else %}<p class="hint" style="margin:0 0 10px">Sugerencias de la IA: revíselas con la evidencia antes de usarlas. Se envía el texto del caso sin RUT, teléfono, correo, dirección ni cuentas; cada uso queda en el historial.</p>
+{% if can('editar_siniestros') %}<div class="toolbar">{% for t in mostrar %}<form method="post" action="{{ url_for('claims.ia_tarea', cid=c.id, tarea=t) }}" data-busy="Consultando…"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn sm" type="submit">{{ 'Actualizar' if ia[t] else 'Generar' }}: {{ ia_tareas[t]|lower }}</button></form>{% endfor %}</div>{% endif %}
+{% endif %}
+{% for t in mostrar %}{% set r = ia[t] %}{% if r %}<div class="iares"><h3 class="sec">{{ ia_tareas[t] }} <span class="hint">· {{ r.actor }} · {{ r.ts[:16]|replace('T',' ') }} UTC · {{ r.modelo }}</span></h3>
+{% set x = r.resultado or {} %}
+{% if t == 'relato' %}
+{% if x.inconsistencias %}<ul class="flinks">{% for i in x.inconsistencias %}<li class="{{ 'media' if i.importancia == 'media' else 'baja' }}"><b>{{ i.tema }}:</b> el relato dice «{{ i.dice_el_relato }}»; {{ i.fuente or 'otra fuente' }} dice «{{ i.dice_otra_fuente }}».{% if i.que_revisar %} <span class="hint">Revisar: {{ i.que_revisar }}</span>{% endif %}</li>{% endfor %}</ul>
+{% else %}<p class="muted" style="margin:0">La IA no encontró contradicciones entre el relato, el formulario y los documentos.</p>{% endif %}
+{% set dr = x.datos_del_relato or {} %}{% if dr %}<details class="why"><summary>Lo que la IA entendió del relato</summary><dl class="kv sm">
+{% for k, v in dr.items() if v %}<dt>{{ k|replace('_', ' ')|capitalize }}</dt><dd>{{ v|join(', ') if v is iterable and v is not string else v }}</dd>{% endfor %}</dl></details>{% endif %}
+{% elif t == 'preguntas' %}
+{% if x.preguntas %}<ol class="iaq">{% for q in x.preguntas %}<li><b>{{ q.pregunta }}</b> <span class="hint">({{ q.para }}{% if q.por_que %}: {{ q.por_que }}{% endif %})</span></li>{% endfor %}</ol>{% endif %}
+{% elif t == 'resumen' %}
+<p style="margin:0 0 6px">{{ x.resumen }}</p>
+{% if x.puntos_clave %}<p class="hint" style="margin:0"><b>Puntos clave:</b> {{ x.puntos_clave|join(' · ') }}</p>{% endif %}
+{% if x.falta_para_decidir %}<p class="hint" style="margin:4px 0 0"><b>Falta para decidir:</b> {{ x.falta_para_decidir|join(' · ') }}</p>{% endif %}
+{% endif %}</div>{% endif %}{% endfor %}
+</div></section>

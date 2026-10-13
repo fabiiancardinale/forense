@@ -27,10 +27,12 @@ IMAGES = {**{k: v for k, v in FORMATS.items() if k != ".pdf"}, ".tif": "TIFF", "
 PDF = {".pdf": "PDF"}
 CHAT = {".txt", ".zip"}
 TABLE = {".csv", ".xlsx", ".xlsm"}
+AUDIO = {".ogg", ".opus", ".mp3", ".m4a", ".wav", ".webm", ".aac"}   # notas de voz (WhatsApp) y entrevistas
+MAX_AUDIO = 25_000_000
 
 # qué se acepta en cada carga
 PURPOSES = {
-    "evidencia": set(IMAGES) | set(PDF) | CHAT,     # fotos, documentos y chats de WhatsApp del caso
+    "evidencia": set(IMAGES) | set(PDF) | CHAT | AUDIO,   # fotos, documentos, chats y audios del caso
     "portal": set(IMAGES) | set(PDF),               # lo que sube el asegurado
     "documento": set(IMAGES) | set(PDF),            # documentos de una investigación
     "informe": set(PDF),                            # informe del perito para auditar
@@ -76,6 +78,22 @@ def _zip(path: Path, needs: tuple[str, ...] = ()) -> None:
         raise InvalidFile("El archivo comprimido está dañado o no es un ZIP.") from ex
 
 
+def _audio(path: Path, ext: str) -> dict:
+    """Que sea de verdad un audio (por su cabecera), sin abrirlo con ningún decodificador."""
+    if path.stat().st_size > MAX_AUDIO:
+        raise InvalidFile("Audio mayor a 25 MB.")
+    head = path.read_bytes()[:64]
+    ok = (head[:4] == b"OggS" if ext in (".ogg", ".opus") else
+          head[:3] == b"ID3" or (len(head) > 1 and head[0] == 0xFF and head[1] & 0xE0 == 0xE0) if ext == ".mp3" else
+          head[4:8] == b"ftyp" if ext == ".m4a" else
+          head[:4] == b"RIFF" and head[8:12] == b"WAVE" if ext == ".wav" else
+          head[:4] == b"\x1aE\xdf\xa3" if ext == ".webm" else
+          len(head) > 1 and head[0] == 0xFF and head[1] & 0xF6 == 0xF0 if ext == ".aac" else False)
+    if not ok:
+        raise InvalidFile("El archivo no es un audio válido.")
+    return {"kind": "audio"}
+
+
 def _text(path: Path, limit: int) -> None:
     if path.stat().st_size > limit:
         raise InvalidFile("Archivo de texto demasiado grande.")
@@ -105,6 +123,8 @@ def inspect(path, name: str, purpose: str) -> dict:
         return validate(path, name, formats=IMAGES)
     if ext in PDF:
         return validate(path, name, max_pages=DOC_MAX_PAGES)
+    if ext in AUDIO:
+        return _audio(path, ext)
     if ext == ".txt":
         _text(path, MAX_TEXT)
         return {"kind": "text"}

@@ -96,6 +96,8 @@ def evidence_purge(cid, digest):
         analysis.purge_from_registry(cx.registry, numero, digest)
     from evidex.forensics.training_bank import Bank
     Bank(cx.workdir).purge(digest, actor_name() or "administrador")      # la copia del banco también se borra
+    from evidex.claims import ia_texto
+    ia_texto.olvidar_archivo(case, digest)                                 # y la transcripción, si era un audio
     log_access("eliminar_archivo", f"{name} ({digest[:12]})")
     r = run_claim_analysis(case)
     flash(f"«{name}» eliminado definitivamente. Queda la constancia en el historial del caso"

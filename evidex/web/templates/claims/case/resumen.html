@@ -15,6 +15,7 @@
 <details class="why"><summary>Qué significa, por qué es {{ f.severity }} y qué hacer</summary>{% set show_found = false %}{% include "claims/case/_explain.html" %}</details>
 </div></article>{% endfor %}</div>
 {% else %}<p class="muted" style="margin:0">Evidex no encontró alertas en este caso.</p>{% endif %}</div></section>
+{% set mostrar = ['relato', 'resumen'] %}{% include "claims/case/_ia.html" %}
 </div>
 
 <aside>

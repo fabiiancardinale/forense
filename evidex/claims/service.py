@@ -20,6 +20,7 @@ from evidex.forensics import policy
 from evidex.claims import report
 from evidex.forensics import whatsapp
 from evidex.core.case import Case
+from evidex.core.upload_guard import AUDIO as AUDIO_EXT
 from evidex.core.timeline import Timeline
 
 SEV_ORDER = {"alta": 0, "media": 1, "baja": 2}
@@ -65,13 +66,15 @@ def has_evidence(case: Case, digest: str) -> bool:
 
 
 def evidence_note(filename) -> str | None:
-    """Clasifica un archivo: 'foto', 'documento', 'chat' o None si no se admite.
+    """Clasifica un archivo: 'foto', 'documento', 'chat', 'audio' o None si no se admite.
     Los .txt y .zip solo se aceptan si el archivo existe y es un chat de WhatsApp exportado."""
     ext = Path(filename).suffix.lower()
     if ext in claims.IMAGE_EXT:
         return "foto"
     if ext in documents.DOC_EXT:
         return "documento"
+    if ext in AUDIO_EXT:
+        return "audio"
     if ext in whatsapp.CHAT_EXT:
         return "chat" if Path(filename).is_file() and whatsapp.looks_like_chat(Path(filename)) else None
     return None

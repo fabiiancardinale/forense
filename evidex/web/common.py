@@ -359,7 +359,9 @@ def analysts() -> list[dict]:
     return [{"username": k, "name": v} for k, v in sorted(seen.items(), key=lambda kv: kv[1].lower())]
 
 
-MIME = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".pdf": "application/pdf", ".webp": "image/webp"}
+MIME = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".pdf": "application/pdf", ".webp": "image/webp",
+        ".ogg": "audio/ogg", ".opus": "audio/ogg", ".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".wav": "audio/wav",
+        ".webm": "audio/webm", ".aac": "audio/aac"}
 
 
 def send_evidence(case: Case, digest: str, mini: bool = False):

@@ -1,4 +1,4 @@
-{% set upload_label = 'Agregar documentos o chats' %}{% include "claims/case/_upload.html" %}
+{% set upload_label = 'Agregar documentos, chats o audios' %}{% include "claims/case/_upload.html" %}
 {% if items %}<section class="panel"><table class="queue doctable">
 <colgroup><col style="width:38%"><col style="width:16%"><col><col style="width:96px"></colgroup>
 <thead><tr><th>Documento</th><th>Subió</th><th>Alertas</th><th></th></tr></thead>
@@ -6,9 +6,13 @@
 <td><div class="docname">{% if i.is_image %}<img class="docthumb" src="{{ url_for('claims.evidence_file', cid=c.id, digest=i.digest, mini=1) }}" alt="" loading="lazy">{% else %}<span class="docicon">{{ (i.name.rsplit('.', 1)[-1] if '.' in i.name else '')|upper }}</span>{% endif %}
 <div style="min-width:0"><a class="strong ellip" style="display:block" href="{{ url_for('claims.evidence_file', cid=c.id, digest=i.digest) }}" target="_blank" rel="noopener" title="{{ i.name }}">{{ i.title }}</a>
 <div class="line2">{{ i.kind_label }}{% if i.info.scanned %} · leído con OCR{% endif %}{% if i.info.producer %} · {{ i.info.producer }}{% endif %}</div>
+{% if i.kind == 'audio' %}<audio controls preload="none" src="{{ url_for('claims.evidence_file', cid=c.id, digest=i.digest) }}" style="width:100%;max-width:320px;margin-top:6px" id="a-{{ i.digest[:12] }}"></audio>
+{% set tr = (ia.transcripciones or {}).get(i.digest) %}
+{% if tr %}<details class="why" open><summary>Transcripción (IA) · {{ tr.ts[:10] }}</summary><p class="iatext">{{ tr.texto or '(sin texto: el audio parece vacío)' }}</p></details>{% endif %}
+{% if ia_on and can('editar_siniestros') and not i.excluded %}<form method="post" action="{{ url_for('claims.ia_transcribir', cid=c.id, digest=i.digest) }}" data-busy="Transcribiendo…"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="linkbtn" type="submit">{{ 'Transcribir de nuevo' if tr else 'Transcribir con IA' }}</button></form>{% endif %}{% endif %}
 {% if i.info.versions %}<div class="line2">{{ i.info.versions }} versión(es) anterior(es):{% for n in range(1, i.info.versions + 1) %} <a href="{{ url_for('claims.doc_version', cid=c.id, digest=i.digest, n=n) }}">v{{ n }}</a>{% endfor %}</div>{% endif %}</div></div></td>
 <td>{{ i.who }}<div class="line2">{{ i.received[8:10] }}-{{ i.received[5:7] }}-{{ i.received[:4] }} {{ i.received[11:16] }}</div></td>
 <td>{% if i.findings %}<ul class="flinks">{% for f in i.findings %}<li class="{{ f.severity }}">{{ f.title|replace(' (' ~ i.name ~ ')', '') }}</li>{% endfor %}</ul>{% else %}<span class="muted">Sin alertas</span>{% endif %}</td>
 <td class="num">{% include "claims/case/_remove.html" %}</td></tr>{% endfor %}</tbody>
 </table></section>
-{% else %}<div class="card empty"><h2>Aún no hay documentos</h2><p>Agregue presupuestos, facturas, partes o chats arriba, o pídaselos al asegurado en la pestaña Asegurado.</p></div>{% endif %}
+{% else %}<div class="card empty"><h2>Aún no hay documentos</h2><p>Agregue presupuestos, facturas, partes, chats o audios (notas de voz) arriba, o pídaselos al asegurado en la pestaña Asegurado.</p></div>{% endif %}
