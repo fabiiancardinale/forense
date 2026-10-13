@@ -27,7 +27,7 @@ from evidex.web.common import (actor_name, analysis_mark, analysts, cx, has_perm
                                log_access, needs_analysis, run_claim_analysis, summarize)
 from evidex.web.views.claims import bp
 
-TABS = [("resumen", "Resumen"), ("fotos", "Fotos"), ("documentos", "Documentos"), ("peritaje", "Peritaje"),
+TABS = [("resumen", "Resumen"), ("fotos", "Fotos"), ("documentos", "Documentos"), ("linea", "Línea de tiempo"), ("peritaje", "Peritaje"),
         ("asegurado", "Asegurado"), ("informe", "Informe"), ("historial", "Historial")]
 SEV_ORDER = {"alta": 0, "media": 1, "baja": 2}
 KIND_LABEL = {"foto": "Foto", "documento": "Documento", "chat": "Chat de WhatsApp", "audio": "Audio", "word": "Word"}
@@ -115,7 +115,8 @@ def case_view(cid):
            "n_findings": len(snap["findings"]), **_overview(case, c, snap, items),
            "decisions": service.DECISIONS, "history": service.decision_history(case)}
     builder = {"resumen": _tab_summary, "fotos": _tab_photos, "documentos": _tab_docs, "peritaje": _tab_expert,
-               "asegurado": _tab_portal, "informe": lambda case, snap, items: {}, "historial": _tab_history}[tab]
+               "asegurado": _tab_portal, "informe": lambda case, snap, items: {}, "historial": _tab_history,
+               "linea": _tab_timeline}[tab]
     ctx.update(builder(case, snap, items))
     return render_template("claims/case.html", **ctx)
 
@@ -190,7 +191,9 @@ def _verdict(c, findings, groups) -> dict:
                   f"tipo{'s' if len(groups) != 1 else ''} ({', '.join(partes)}).")
     else:
         detail = "Sin alertas." if c["level"] != "none" else ""
-    titles = [t[0].lower() + t[1:] if t[1:2].islower() else t for t in (g["title"].split(" (")[0] for g in groups[:3])]
+    keep = {"Word", "PDF", "RUT", "IA", "WhatsApp", "Galaxy", "Google", "Samsung", "iPhone"}
+    titles = [t[0].lower() + t[1:] if t[1:2].islower() and t.split(" ")[0] not in keep else t
+              for t in (g["title"].split(" (")[0] for g in groups[:3])]
     why = ""
     if titles:
         lista = titles[0] if len(titles) == 1 else ", ".join(titles[:-1]) + " y " + titles[-1]
@@ -228,6 +231,30 @@ def _todo(case, items) -> list[tuple[str, str, str]]:
     if not d and c["level"] != "bad" and c["decision"] in (None, "en_revision") and items:
         out.append(("info", "Revise las alertas y registre la decisión.", "resumen"))
     return out
+
+
+def _tab_timeline(case, snap, items):
+    """Todo lo que pasó, en orden: antes del siniestro, el siniestro y después. Lo anterior al choque se marca."""
+    from datetime import datetime
+    t0 = snap.get("t0") or (service.declaration(case) or {}).get("fecha_siniestro")
+    thumbs = {i["digest"][:8]: i for i in items if i["is_image"]}
+    days, cur = [], None
+    for e in snap.get("timeline") or []:
+        try:
+            ts = datetime.fromisoformat(e["ts"][:16])
+        except (TypeError, ValueError):
+            continue
+        phase = ("antes" if t0 and e["ts"][:16] < t0[:16] and e["kind"] != "siniestro" else
+                 "siniestro" if e["kind"] == "siniestro" else "despues")
+        if e["kind"] == "poliza":
+            phase = "contexto"
+        day = ts.strftime("%d-%m-%Y")
+        if not cur or cur["day"] != day:
+            cur = {"day": day, "events": []}
+            days.append(cur)
+        cur["events"].append({**e, "time": ts.strftime("%H:%M"), "phase": phase, "thumb": thumbs.get(e.get("ev") or "")})
+    n_before = sum(1 for d in days for e in d["events"] if e["phase"] == "antes")
+    return {"days": days, "n_before": n_before, "t0": t0, "has_timeline": "timeline" in snap}
 
 
 def _tab_photos(case, snap, items):

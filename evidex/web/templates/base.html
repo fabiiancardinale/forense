@@ -37,6 +37,7 @@
 {% if client %}<span class="tb-client"><img src="{{ url_for('admin.client_logo', v=client.v) }}" alt="{{ client.name or 'Cliente' }}"></span>{% endif %}
 {% if current_user %}<details class="tb-user"><summary aria-label="Cuenta"><span class="av">{{ current_user.name[:1]|upper }}</span></summary><div class="tb-drop right">
 <div class="who"><b>{{ current_user.name }}</b><span>{{ roles[current_user.role] }}</span></div>
+<a href="{{ url_for('auth.account') }}" class="{{ 'on' if active=='cuenta' }}">{{ icon('lock', 16) }}Mi cuenta y verificación en dos pasos</a>
 <form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">Salir</button></form></div></details>
 {% elif not auth_on %}<a class="tb-demo" href="{{ url_for('admin.users_view') }}">Modo demo · crear administrador</a>{% endif %}
 </header>

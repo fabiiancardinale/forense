@@ -824,13 +824,15 @@ def load_case(case, timeline) -> tuple[dict, str, list[Photo]]:
                         cache[e["subject"]] = {"error": type(ex).__name__}
                     cache[e["subject"]]["_v"] = content_version()
                     dirty = True
-                if "ocr" not in cache[e["subject"]] and ocr.available():
+                if ocr.available() and ("ocr" not in cache[e["subject"]] or "n_lines" not in (cache[e["subject"]].get("ocr") or {})):
                     try:
                         cache[e["subject"]]["ocr"] = ocr.analyze_photo(path)
                     except Exception as ex:
                         cache[e["subject"]]["ocr"] = {"error": type(ex).__name__, "plates": []}
                     dirty = True
                 meta["content"] = cache[e["subject"]]
+                if (cache[e["subject"]].get("ocr") or {}).get("document"):
+                    meta["doc_image"] = True        # formulario, presupuesto o captura: se revisa como documento
                 if e["data"].get("portal"):
                     meta["portal"] = e["data"]["portal"]
                 if e["data"].get("from_word"):

@@ -23,8 +23,9 @@ from evidex.claims.analysis import km_between
 
 MAX_KMH = 130
 MIN_KM = 5
-COST_DOC = re.compile(r"presupuest|cotizaci|factura|boleta|reparaci|repuesto", re.I)
-TEXT_DATE = re.compile(r"\bfecha\s*(?:de\s+emisi[oó]n)?\s*:?\s*(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})", re.I)
+COST_DOC = re.compile(r"presupuest|cotizaci|factura|boleta|reparaci|repuesto|recepci[oó]n de veh|orden de trabajo|ingreso de veh", re.I)
+# «Fecha: 12/09/2026», «Fecha de emisión 12-09-26» o, en formularios leídos con OCR, «FECHA/HORA RECEPCION: … 24/09/26»
+TEXT_DATE = re.compile(r"\bfecha[^\d]{0,60}?(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})\b", re.I | re.S)
 
 KIND_LABEL = {"siniestro": "Siniestro declarado", "denuncia": "Denuncia", "poliza": "Póliza", "foto": "Foto",
               "documento": "Documento", "version": "Versión de documento", "chat": "Mensaje", "captura": "Captura segura"}
@@ -77,6 +78,10 @@ def build(decl: dict, decl_ev: str, photos, docs, chats=()) -> list[Event]:
         cap = m.get("secure_capture")
         t = _dt(m.get("taken"))
         trust = "hora del servidor (captura segura)" if cap else "hora de la cámara" if m.get("taken") else ""
+        wi = m.get("word_image") or {}
+        if not t and wi.get("name_date"):
+            t = _dt(wi["name_date"])
+            trust = f"según el nombre original en el Word ({wi.get('original_name')})"
         if not t:
             continue
         gps = tuple(m["gps"]) if m.get("gps") else None

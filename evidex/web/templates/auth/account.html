@@ -1,0 +1,27 @@
+{% extends "base.html" %}{% block title %}Mi cuenta{% endblock %}
+{% block heading %}<h1>Mi cuenta</h1><p class="sub">{{ current_user.name }} · {{ roles[current_user.role] }}</p>{% endblock %}
+{% block body %}
+{% if required and not has_2fa %}<div class="flash warn"><b>La compañía exige la verificación en dos pasos.</b> Actívela para seguir usando Evidex.</div>{% endif %}
+{% if error %}<div class="flash bad">{{ error }}</div>{% endif %}
+<section class="panel" style="max-width:720px"><div class="ph"><h2>Verificación en dos pasos</h2>
+<span class="r">{% if has_2fa %}<span class="badge ok">Activa</span>{% else %}<span class="badge none">No activada</span>{% endif %}</span></div><div class="pb" style="display:grid;gap:12px">
+{% if has_2fa %}
+<p style="margin:0">Al ingresar, además de la contraseña, Evidex le pide el código de su app de autenticación.</p>
+<form method="post" class="toolbar"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="accion" value="quitar">
+<input name="codigo" inputmode="numeric" autocomplete="one-time-code" placeholder="Código actual" required aria-label="Código actual" style="max-width:160px">
+<button class="btn" type="submit">Quitar la verificación</button></form>
+{% elif secret %}
+<p style="margin:0"><b>1.</b> Instale en su teléfono <b>Google Authenticator</b> o <b>Microsoft Authenticator</b>.<br>
+<b>2.</b> En la app, agregue una cuenta y escanee este código:</p>
+<div class="qrbox">{{ qr|safe if qr else '' }}<div><p class="hint" style="margin:0 0 4px">¿No puede escanear? Escriba esta clave en la app:</p><code class="mono secret">{{ secret }}</code></div></div>
+<p style="margin:0"><b>3.</b> Escriba el código de 6 dígitos que muestra la app:</p>
+<form method="post" class="toolbar"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="accion" value="confirmar">
+<input name="codigo" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" required aria-label="Código" style="max-width:160px" autofocus>
+<button class="btn pri" type="submit">Activar</button></form>
+<form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="accion" value="cancelar"><button class="linkbtn" type="submit">Cancelar</button></form>
+{% else %}
+<p style="margin:0">Protege su cuenta aunque alguien conozca su contraseña: al ingresar se pide también un código de 6 dígitos que solo muestra su teléfono.</p>
+<form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="accion" value="iniciar"><button class="btn pri" type="submit">Activar la verificación en dos pasos</button></form>
+{% endif %}
+</div></section>
+{% endblock %}

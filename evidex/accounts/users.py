@@ -69,6 +69,7 @@ ENDPOINTS = {
     "tools.photo_check": "ver_siniestros",
     "training.mark": "ensenar_modelo", "training.index": "ensenar_modelo", "training.preview": "ensenar_modelo",
     "training.remove": "ensenar_modelo", "training.export": "admin", "training.remask_all": "ensenar_modelo",
+    "auth.account": None, "admin.user_reset_2fa": "admin",
     "admin.settings": "admin", "admin.users_view": "admin", "admin.user_toggle": "admin", "admin.firm_add": "admin",
 }
 ROLE_HELP = {"administrador": "Todo, más usuarios, empresas de peritaje y configuración.",
@@ -81,7 +82,8 @@ ACTION_LABELS = {"ingreso": "Ingresó", "ingreso_fallido": "Ingreso fallido", "s
                  "usuario": "Cambió un usuario", "exporta_excel": "Exportó a Excel", "reasignar": "Reasignó un caso",
                  "derivar": "Derivó a perito", "entregar_informe": "Entregó informe final", "quitar_archivo": "Quitó un archivo",
                  "ensenar_modelo": "Marcó una foto para el modelo", "exporta_entrenamiento": "Exportó el banco de entrenamiento",
-                 "ia_texto": "Usó el asistente de texto (IA)"}
+                 "ia_texto": "Usó el asistente de texto (IA)", "2fa_activada": "Activó la verificación en dos pasos",
+                 "2fa_quitada": "Quitó la verificación en dos pasos", "2fa_fallida": "Código de verificación incorrecto"}
 MAX_FAILS, LOCK_SECONDS = 5, 300
 DUMMY_HASH = generate_password_hash("not-a-user-password")
 USERNAME = re.compile(r"^[a-z0-9._-]{3,32}$")
@@ -178,6 +180,45 @@ class Store:
             return "Debe quedar al menos un administrador activo."
         self._save(users)
         return None
+
+    @serialized(lambda self, *a, **kw: self.path)
+    def set_totp(self, username: str, secret: str | None) -> None:
+        """Activa (con su secreto) o quita la verificación en dos pasos de un usuario."""
+        users = self.all()
+        if username not in users:
+            return
+        u = users[username]
+        if secret:
+            u.update({"totp": secret, "totp_since": _now()})
+        else:
+            for k in ("totp", "totp_since", "totp_step"):
+                u.pop(k, None)
+        u["auth_version"] = secrets.token_hex(16)            # cierra las sesiones abiertas
+        self._save(users)
+
+    def check_totp(self, username: str, code: str, ip: str = "local"):
+        """Segundo paso del ingreso. Mismos límites de intentos que la contraseña."""
+        from evidex.accounts import totp
+        username = (username or "").strip().lower()[:128]
+
+        def verify():
+            u = self.get(username)
+            if not u or not u.get("totp") or not u.get("active", True):
+                return None
+            step = totp.verify(u["totp"], code, u.get("totp_step"))
+            if step is None:
+                return None
+            self._save_step(username, step)
+            return self.get(username)
+        u, err = self.state.check(username + "#2fa", ip, verify)
+        return u, (err.replace("Usuario o contraseña incorrectos.", "Código incorrecto o vencido.") if err else None)
+
+    @serialized(lambda self, *a, **kw: self.path)
+    def _save_step(self, username: str, step: int) -> None:
+        users = self.all()
+        if username in users:
+            users[username]["totp_step"] = step
+            self._save(users)
 
     def check(self, username: str, password: str, ip: str = "local"):
         username = (username or "").strip().lower()[:128]

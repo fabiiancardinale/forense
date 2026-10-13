@@ -30,7 +30,7 @@ class _Done(Exception):
 PDF_EDITORS = ["ilovepdf", "smallpdf", "sejda", "pdfescape", "pdf-xchange editor", "pdfelement",
                "foxit pdf editor", "foxit phantompdf", "nitro pro", "canva", "photoshop", "pdf candy",
                "pdffiller", "dochub", "soda pdf", "sodapdf", "pdf24", "adobe acrobat pro"]
-COST_DOC = re.compile(r"presupuest|cotizaci|factura|boleta|reparaci|repuesto|liquidaci", re.I)
+COST_DOC = re.compile(r"presupuest|cotizaci|factura|boleta|reparaci|repuesto|liquidaci|recepci[oó]n de veh|orden de trabajo|ingreso de veh", re.I)
 EDIT_GAP = timedelta(days=1)
 
 _STR = rb"\(((?:\\.|[^\\)])*)\)"
@@ -169,6 +169,41 @@ def load(case, timeline) -> list[Document]:
     if dirty:
         cache_path.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
     return docs
+
+
+# reglas de foto de cámara que no tienen sentido en la imagen de un documento (formulario, presupuesto, captura)
+CAMERA_RULES = {"no_metadata", "taken_before", "taken_late", "gps_mismatch", "ai_dimensions", "odd_ratio",
+                "multiple_devices", "plate_photo_mismatch", "daylight_at_night", "makernote_missing",
+                "resized_after_capture"}
+
+
+def from_photos(photos, timeline) -> list:
+    """Las imágenes que son documentos (mucho texto legible) entran también como documentos: su texto se revisa
+    igual que el de un PDF (RUT, patente, fechas)."""
+    out = []
+    for p in photos:
+        o = ((p.meta.get("content") or {}).get("ocr") or {})
+        if not p.meta.get("doc_image") or not o.get("full_text"):
+            continue
+        meta = {"is_pdf": False, "image_doc": True, "from_photo": True, "revisions": 0, "tools": [], "created": None,
+                "modified": None, "text": o["full_text"], "ocr": True}
+        d = Document(p.digest, p.name, meta, p.ts)
+        out.append(d)
+        timeline.add_event(d.ev, d.ts, p.name, "documento", None, None,
+                           f"Imagen de documento {p.name}: {o['full_text'][:200]}")
+    return out
+
+
+def drop_camera_rules(findings, photos) -> list:
+    docs = {p.digest[:8] for p in photos if p.meta.get("doc_image")}
+    if not docs:
+        return findings
+    return [f for f in findings if not (f.rule in CAMERA_RULES and {e.split(":")[0] for e in f.evidence} & docs
+                                        and all(e.split(":")[0] in docs or not _is_photo_ev(e, photos) for e in f.evidence))]
+
+
+def _is_photo_ev(ev: str, photos) -> bool:
+    return any(p.digest[:8] == ev.split(":")[0] for p in photos)
 
 
 def _fmt(dt: datetime) -> str:

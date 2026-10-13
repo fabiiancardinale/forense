@@ -151,7 +151,12 @@ Hallazgo central: no hay un detector que reconozca todos los editores. Cada edit
       Word baja a «baja».
 - [x] Servidor: modelo de IA (ronda 4) instalado con onnxruntime; OCR cambiado a rapidocr 3.10 (Python 3.14, modelos
       PP-OCR Apache-2.0 incluidos) para leer patentes y documentos escaneados.
-- [ ] Detectar imágenes que son capturas de documentos (tablas, formularios) y mostrarlas aparte de las fotos.
+- [x] Imágenes de documentos (formularios, presupuestos, capturas): se reconocen por su texto (OCR, 10+ renglones),
+      se revisan como documento (RUT, patente, fecha impresa vs. choque, también «FECHA/HORA RECEPCION … 24/09/26»)
+      y no se les aplican las pruebas de cámara. RUT leído por OCR inválido → media (puede ser error de lectura).
+- [ ] Adulteración a nivel de píxel en documentos fotografiados: probado con el formulario ficticio (textura del papel
+      y color de la tinta en las zonas cambiadas): sin señal confiable. Hace falta un modelo entrenado (p. ej. con
+      documentos propios adulterados) o pedir el original al emisor.
 
 ## Inteligencia artificial de texto (Groq u otro)
 No sirve para detectar ediciones en fotos (adivina con buena redacción). Sí para:
@@ -248,7 +253,9 @@ No es "taller externo = sospechoso": se mira cada taller, en convenio o no, sobr
 - [x] Resumen ordenado: veredicto + una frase, bloque «Qué hacer ahora», alertas agrupadas por gravedad (todas cerradas,
       archivos afectados en gris), IA y datos completos plegados; ficha al costado desde 760 px.
 - [x] Tarjetas de fotos: etiqueta «Del Word» que no se desborda, acciones en botones y menú «⋯».
-- [ ] Fotos como visor forense: foto grande, tira de miniaturas, panel de datos, deslizador foto/mapa de zonas, lado a lado.
+- [x] Visor de fotos (foto grande, tira con alertas, comparar lado a lado, ← →) y pestaña «Línea de tiempo»
+      (fotos, documentos, chats, póliza; lo anterior al choque en rojo; fecha por nombre del Word incluida).
+- [ ] (resto) Fotos como visor forense: foto grande, tira de miniaturas, panel de datos, deslizador foto/mapa de zonas, lado a lado.
 - [ ] Línea de tiempo del siniestro: choque, fecha de cada foto, PDF/Word y denuncia en un eje; lo anterior al choque en rojo.
 - [ ] Menú lateral contraíble a íconos y buscador rápido Ctrl+K (siniestro, patente, página).
 - [ ] Celular: el caso apilado con la decisión abajo, al alcance del pulgar.
@@ -265,6 +272,10 @@ Zelekpress es el encargado y BCI el responsable de los datos. Revisar todo con a
 - [ ] **Pedido de borrado del asegurado** (rápida): procedimiento para cuando una persona pide borrar sus datos antes del plazo (lo decide BCI).
 
 ## Seguridad y requisitos de TI
+- [x] Verificación en dos pasos (TOTP, app del teléfono, QR), exigible a todos desde Configuración; el admin la quita.
+- [x] Respaldo fuera del VPS: deploy/bajar_respaldo.ps1 (verifica sha256, guarda 8). Instrucciones para llave SSH propia.
+- [ ] Desactivar contraseña de root en SSH cuando Fabián entre con su llave.
+- [ ] Dominio propio (en vez de sslip.io).
 - [ ] Cifrado de los casos en el disco (media).
 - [ ] Inicio de sesión con las cuentas corporativas (Microsoft o Google) (media).
 - [x] Respaldo automático diario en el servidor (`evidex-respaldo`, 14 días). Falta: copia fuera del servidor y auditoría exportable.

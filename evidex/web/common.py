@@ -381,7 +381,8 @@ def send_evidence(case: Case, digest: str, mini: bool = False):
             with Image.open(path) as img:
                 img = ImageOps.exif_transpose(img).convert("RGB")
                 if mini:
-                    img.thumbnail((360, 360))
+                    side = 1600 if mini == "visor" else 360
+                    img.thumbnail((side, side))
                 buf = io.BytesIO()
                 img.save(buf, "JPEG", quality=82)
             return send_file(io.BytesIO(buf.getvalue()), mimetype="image/jpeg", max_age=3600)

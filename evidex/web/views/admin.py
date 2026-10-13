@@ -60,6 +60,17 @@ def user_toggle(username):
     return redirect(url_for("admin.users_view"))
 
 
+@bp.post("/usuarios/<username>/quitar-2fa")
+def user_reset_2fa(username):
+    """Si alguien perdió el teléfono: el administrador le quita la verificación en dos pasos (queda registrado)."""
+    if not cx.store.get(username):
+        abort(404)
+    cx.store.set_totp(username, None)
+    log_access("2fa_quitada", f"el administrador la quitó a {username}")
+    flash(f"Se quitó la verificación en dos pasos de {username}. Al ingresar podrá activarla de nuevo.", "ok")
+    return redirect(url_for("admin.users_view"))
+
+
 @bp.route("/configuracion", methods=["GET", "POST"])
 def settings():
     from evidex.forensics import external
@@ -72,6 +83,10 @@ def settings():
                             request.form.get("quitar_logo") == "1")
         if err:
             flash(err, "bad")
+        exigir = request.form.get("exigir_2fa") == "1"
+        if exigir != bool(cfg.get("exigir_2fa")):
+            log_access("usuario", "exige la verificación en dos pasos" if exigir else "ya no exige la verificación en dos pasos")
+        cfg["exigir_2fa"] = exigir
         antes = bool(cfg.get("ia_texto"))
         cfg["ia_texto"] = request.form.get("ia_texto") == "1"
         if antes != cfg["ia_texto"]:

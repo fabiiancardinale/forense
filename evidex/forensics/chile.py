@@ -112,7 +112,13 @@ def analyze(decl: dict, decl_ev: str, docs) -> list:
         if not text:
             continue
         bad = [r for r, ok in ruts_in(text) if not ok]
-        if bad:
+        if bad and d.meta.get("ocr"):
+            # leído de una imagen o un escaneado: un 1 manuscrito leído como 7 basta para invalidarlo
+            add("doc_rut_invalid", "media", f"RUT inválido en un documento ({d.name})",
+                f"En {d.name} se leyó automáticamente {'el RUT' if len(bad) == 1 else 'los RUT'} {', '.join(bad)}, con dígito "
+                "verificador incorrecto. Como se leyó de una imagen, confirme mirando el documento: si el RUT escrito "
+                "realmente es inválido, el documento pudo llenarse a mano con datos inventados.", [d.ev])
+        elif bad:
             add("doc_rut_invalid", "alta", f"RUT inválido en un documento ({d.name})",
                 f"El documento {d.name} contiene {'el RUT' if len(bad) == 1 else 'los RUT'} {', '.join(bad)} con dígito verificador "
                 "incorrecto. Los sistemas de facturación y el SII lo calculan solos: un RUT inválido indica un "

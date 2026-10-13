@@ -107,7 +107,8 @@ def evidence_purge(cid, digest):
 @bp.get("/caso/<cid>/archivo/<digest>")
 def evidence_file(cid, digest):
     """Archivo recibido (foto o documento), para verlo desde el caso. mini=1 entrega una miniatura."""
-    return send_evidence(load_claim(cid), digest, bool(request.args.get("mini")))
+    mini = request.args.get("mini")
+    return send_evidence(load_claim(cid), digest, "visor" if mini == "visor" else bool(mini))
 
 
 @bp.get("/caso/<cid>/archivo/<digest>/metadatos")

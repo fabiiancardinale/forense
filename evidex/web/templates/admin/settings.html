@@ -34,6 +34,11 @@ Active «Zero Data Retention» en la consola de Groq.</p>
 <p style="margin:0">Clave en el servidor (GROQ_API_KEY): {% if ia_key %}<span class="badge ok">detectada</span>{% else %}<span class="badge warn">falta</span> <span class="hint">agréguela en /etc/evidex/evidex.env y reinicie Evidex</span>{% endif %}</p>
 <label class="check"><input type="checkbox" name="ia_texto" value="1" {{ 'checked' if cfg.ia_texto }}> Activar. Confirmo que la aseguradora autorizó enviar el texto de los casos a este servicio.</label>
 </div></section>
+<section class="panel"><div class="ph"><h2>Verificación en dos pasos</h2></div><div class="pb" style="display:grid;gap:10px">
+<p class="hint" style="margin:0">Además de la contraseña, al ingresar se pide un código de 6 dígitos de una app del teléfono
+(Google Authenticator, Microsoft Authenticator). Cada usuario la activa en «Mi cuenta». Si alguien pierde el teléfono, se la quita en Usuarios.</p>
+<label class="check"><input type="checkbox" name="exigir_2fa" value="1" {{ 'checked' if cfg.exigir_2fa }}> Exigirla a todos los usuarios (quien no la tenga deberá activarla antes de seguir).</label>
+</div></section>
 <div class="full"><button class="btn pri" type="submit">Guardar configuración</button></div>
 </form>
 {% endblock %}

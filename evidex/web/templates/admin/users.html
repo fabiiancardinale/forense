@@ -6,10 +6,12 @@
 <div class="layout-side" style="grid-template-columns:minmax(0,1fr) 380px">
 <div style="display:grid;gap:20px">
 <section class="panel"><div class="ph"><h2>Usuarios</h2><span class="hint">{{ users|length }}</span></div>
-{% if users %}<div class="scroll"><table><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Estado</th><th></th></tr>
+{% if users %}<div class="scroll"><table><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>2 pasos</th><th></th></tr>
 {% for u, d in users.items() %}<tr><td class="mono">{{ u }}</td><td>{{ d.name }}</td><td>{{ roles.get(d.role, d.role) }}{% if d.empresa %}<div class="hint">{{ d.empresa }}</div>{% endif %}</td>
 <td>{% if d.active is not sameas false %}<span class="badge ok">Activo</span>{% else %}<span class="badge none">Desactivado</span>{% endif %}</td>
-<td style="text-align:right"><form method="post" action="{{ url_for('admin.user_toggle', username=u) }}" style="display:inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<td>{% if d.totp %}<span class="badge ok">Activa</span>{% else %}<span class="badge none">No</span>{% endif %}</td>
+<td style="text-align:right">{% if d.totp %}<form method="post" action="{{ url_for('admin.user_reset_2fa', username=u) }}" style="display:inline" data-confirm="¿Quitar la verificación en dos pasos de {{ u }}? Úselo solo si perdió el teléfono."><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn sm ghost" type="submit">Quitar 2 pasos</button></form>{% endif %}
+<form method="post" action="{{ url_for('admin.user_toggle', username=u) }}" style="display:inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <button class="btn sm ghost" type="submit">{{ 'Desactivar' if d.active is not sameas false else 'Activar' }}</button></form></td></tr>{% endfor %}</table></div>
 {% else %}<div class="pb"><p class="hint" style="margin:0">Sin usuarios.</p></div>{% endif %}</section>
 <section class="panel" id="empresas"><div class="ph"><h2>Empresas de peritaje</h2><span class="hint">A ellas se derivan las entrevistas. Cree después un usuario «Perito externo» para cada perito.</span></div><div class="pb">

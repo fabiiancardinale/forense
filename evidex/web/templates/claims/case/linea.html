@@ -1,0 +1,21 @@
+{% set kicon = {'siniestro': 'alert', 'denuncia': 'filecheck', 'poliza': 'shield', 'foto': 'camera', 'captura': 'camera',
+               'documento': 'filecheck', 'version': 'refresh', 'chat': 'link'} %}
+{% if not has_timeline %}<div class="flash info">La línea de tiempo aparece después del próximo análisis. Use <b>Reanalizar</b>.</div>
+{% elif not days %}<div class="card empty"><h2>Sin fechas para ordenar</h2><p>Ninguna foto ni documento trae fecha propia todavía.</p></div>
+{% else %}
+<p class="lead tl-lead">Cada hecho con su fecha y de dónde sale esa fecha.
+{% if n_before %}<b class="bad-t">{{ n_before }} hecho{{ 's' if n_before != 1 }} anterior{{ 'es' if n_before != 1 }} al siniestro</b>, marcados en rojo.{% else %}Nada aparece antes del siniestro.{% endif %}</p>
+<div class="tl">
+{% for d in days %}<div class="tl-day"><div class="tl-date">{{ d.day }}</div>
+{% for e in d.events %}<div class="tl-ev {{ e.phase }} k-{{ e.kind }}">
+<span class="tl-dot">{{ icon(kicon.get(e.kind, 'clock'), 14) }}</span>
+<span class="tl-time">{{ e.time }}</span>
+<div class="tl-body"><b>{{ e.title }}</b>{% if e.phase == 'antes' %} <span class="tag bad">antes del siniestro</span>{% endif %}
+{% for fl in e.flags %} <span class="tag bad">{{ fl }}</span>{% endfor %}
+{% if e.detail %}<div class="tl-det">{{ e.detail }}</div>{% endif %}
+{% if e.trust %}<div class="tl-trust">{{ e.trust }}</div>{% endif %}</div>
+{% if e.thumb %}<a class="tl-pic" href="{{ url_for('claims.case_view', cid=c.id, tab='fotos') }}#f-{{ e.thumb.digest[:12] }}"><img src="{{ url_for('claims.evidence_file', cid=c.id, digest=e.thumb.digest, mini=1) }}" alt="{{ e.thumb.title }}" loading="lazy"></a>{% endif %}
+</div>{% endfor %}</div>{% endfor %}
+</div>
+<p class="hint">Fotos sin fecha propia (WhatsApp, capturas, Word sin nombre original) no aparecen: no hay cómo ubicarlas en el tiempo.</p>
+{% endif %}

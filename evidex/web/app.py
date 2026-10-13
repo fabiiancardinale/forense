@@ -21,7 +21,7 @@ from evidex.web.views import admin, auth, claims, investigations, panel, portal,
 
 BLUEPRINTS = (inspection.bp, panel.bp, claims.bp, portfolio.bp, investigations.bp, portal.bp, tools.bp, auth.bp, admin.bp, training.bp)
 # vistas que no exigen sesión: ingreso y el portal del asegurado (se protege con su enlace secreto)
-PUBLIC_ENDPOINTS = {"auth.login", "auth.logout", "static", "admin.client_logo"} | {f"portal.{e}" for e in
+PUBLIC_ENDPOINTS = {"auth.login", "auth.logout", "auth.second_factor", "static", "admin.client_logo"} | {f"portal.{e}" for e in
                                                               ("capture_page", "capture_upload", "portal_file",
                                                                "portal_story", "portal_finish", "portal_remove")}
 # lo único de /static que se puede abrir desde afuera: el diseño del portal del asegurado
@@ -148,6 +148,10 @@ def auth_guard():
         return redirect(url_for("auth.login", next=request.full_path if request.method == "GET" else None))
     if not U.allowed(g.user["role"], request.endpoint):
         return render_template("auth/denied.html", active=""), 403
+    if not g.user.get("totp") and request.endpoint not in ("auth.account", "auth.logout"):
+        from evidex.web.common import load_settings
+        if load_settings().get("exigir_2fa"):          # la compañía exige el segundo paso: primero hay que activarlo
+            return redirect(url_for("auth.account"))
     return None
 
 

@@ -123,7 +123,8 @@ def run_analysis(case: Case, registry_path: Path | None = None, use_llm: bool = 
         docs = documents.load(case, tl)
         registry = claims.load_registry(registry_path)
         others = claims.registry_claims(registry)
-        findings = claims.analyze(decl, decl_ev, photos, registry)
+        docs += documents.from_photos(photos, tl)       # fotos que son documentos: su texto se revisa como documento
+        findings = documents.drop_camera_rules(claims.analyze(decl, decl_ev, photos, registry), photos)
         findings += documents.analyze(decl, decl_ev, docs, registry)
         findings += policy.analyze(decl, decl_ev)
         findings += narrative.analyze(decl, decl_ev, others)
@@ -203,7 +204,7 @@ def _analyze_claim(case: Case, registry_path: Path | None = None, use_llm: bool 
         result["trigger"] = f"reanálisis por vínculo con {trigger}"
     case.ledger.append("evidex", "claim_analyzed", decl["numero"], result)
     case.ledger.seal()
-    write_snapshot(case, photos, docs, findings)
+    write_snapshot(case, photos, docs, findings, net.get("timeline") or [], decl)
     (case.root / "informe.html").write_text(
         report.build_claim(case, decl, decl_ev, photos, findings, verified, rec, docs=docs, net=net, score=score),
         encoding="utf-8")
@@ -221,10 +222,10 @@ def _analyze_claim(case: Case, registry_path: Path | None = None, use_llm: bool 
 
 # ---- resumen para la ficha del caso ----------------------------------------------------
 SNAPSHOT = "analisis.json"
-ANALYSIS_VERSION = "2026-10-07c"   # súbalo al agregar pruebas: los casos abiertos se reanalizan
+ANALYSIS_VERSION = "2026-10-14a"   # súbalo al agregar pruebas: los casos abiertos se reanalizan
 
 
-def write_snapshot(case: Case, photos, docs, findings) -> None:
+def write_snapshot(case: Case, photos, docs, findings, events=(), decl=None) -> None:
     """Guarda fotos, documentos y hallazgos del último análisis, para mostrarlos sin volver a analizar.
     Es un derivado del análisis (la fuente de verdad es la evidencia y la cadena de custodia)."""
     def ev_of(f):
@@ -236,7 +237,8 @@ def write_snapshot(case: Case, photos, docs, findings) -> None:
         return {"digest": p.digest, "name": p.name, "title": portal.get("title") or p.name, "taken": m.get("taken"),
                 "camera": " ".join(filter(None, [m.get("make"), m.get("model")])) or None, "gps": m.get("gps"),
                 "received": m.get("received"), "origin": "asegurado (portal)" if portal or m.get("secure_capture") else "analista",
-                "secure": bool(m.get("secure_capture"))}
+                "secure": bool(m.get("secure_capture")), "doc_image": bool(m.get("doc_image")),
+                "doc_text": (((m.get("content") or {}).get("ocr") or {}).get("full_text") or "")[:600] if m.get("doc_image") else ""}
 
     def doc(d):
         m = d.meta
@@ -257,7 +259,11 @@ def write_snapshot(case: Case, photos, docs, findings) -> None:
         row = photo(p)
         row["checks"] = photo_checks.run(p.meta, cited.get(p.digest[:8], []))
         shots.append(row)
-    data = {"photos": shots, "docs": [doc(d) for d in docs],
+    t0 = (decl or {}).get("fecha_siniestro")
+    timeline = [{"ts": e.ts.isoformat(timespec="minutes") if hasattr(e.ts, "isoformat") else str(e.ts), "kind": e.kind,
+                 "title": e.title, "detail": e.detail, "ev": (e.ev or "").split(":")[0], "trust": e.trust,
+                 "flags": list(e.flags)} for e in list(events)[:400]]
+    data = {"photos": shots, "docs": [doc(d) for d in docs], "timeline": timeline, "t0": t0,
             "findings": [{"rule": f.rule, "severity": f.severity, "title": f.title, "summary": f.summary,
                           "category": f.category, "evidence": ev_of(f)} for f in findings]}
     (case.root / SNAPSHOT).write_text(json.dumps(data, ensure_ascii=False, indent=1, default=str), encoding="utf-8")

@@ -112,7 +112,19 @@ def _looks_like_text(p: str) -> bool:
     return letters in COMMON or 1950 <= digits <= 2039
 
 
+DOC_MIN_LINES = 10          # una foto del choque casi nunca tiene 10 renglones de texto legible; un documento sí
+
+
 def analyze_photo(path) -> dict:
+    """Patentes visibles y, si la imagen tiene mucho texto (formulario, presupuesto, captura de un documento),
+    su texto completo para revisarlo como documento."""
+    from PIL import ImageOps
     with Image.open(path) as img:
-        lines = read_image(img)
-    return {"plates": plates(lines), "text": " | ".join(t for t, s in lines if s >= 0.6)[:500]}
+        lines = read_image(ImageOps.exif_transpose(img))
+    good = [t for t, s in lines if s >= 0.6]
+    n = sum(1 for t in good if len(t.strip()) >= 3)
+    out = {"plates": plates(lines), "text": " | ".join(good)[:500], "n_lines": n}
+    if n >= DOC_MIN_LINES:
+        out["document"] = True
+        out["full_text"] = "\n".join(t for t, s in lines if s >= 0.5)[:20000]
+    return out

@@ -53,7 +53,29 @@ evidex-respaldo                        # respaldo en el momento
 evidex-admin --reset                   # recuperar la contraseña de un administrador
 ```
 
-Copie de vez en cuando un respaldo fuera del servidor (`scp root@...:/var/backups/evidex/<archivo> .`): si el servidor se pierde, los respaldos que están en él también.
+### Respaldo fuera del servidor
+
+Si el servidor se pierde, los respaldos que están en él también. Una vez por semana, desde el PC:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File deploy\bajar_respaldo.ps1
+```
+
+Crea un respaldo nuevo, lo baja a `forense\respaldos_servidor`, comprueba que la copia sea idéntica (sha256) y
+deja los últimos 8. Trae datos personales: guárdelo en un disco cifrado (BitLocker), nunca en GitHub ni en el correo.
+
+### Entrar al servidor con llave (y no con contraseña)
+
+1. En el PC (PowerShell), cree su llave. Ponga una frase de paso cuando la pida; si ya tiene una, responda «n» a sobrescribir:
+
+   ```powershell
+   ssh-keygen -t ed25519
+   type $env:USERPROFILE\.ssh\id_ed25519.pub | ssh root@179.236.75.148 "cat >> ~/.ssh/authorized_keys"
+   ```
+
+2. Pruebe: `ssh root@179.236.75.148` debe entrar pidiendo la frase de la llave, no la contraseña de root.
+3. Recién entonces se desactiva la contraseña en el servidor (`PasswordAuthentication no`). Si algún día pierde
+   la llave, se entra por la consola web de Hostinger.
 
 ## Seguridad (antes de datos reales de BCI)
 
