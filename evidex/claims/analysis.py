@@ -282,7 +282,9 @@ def analyze(decl: dict, decl_ev: str, photos: list[Photo], registry: list[dict])
             from evidex.portal.links import findings_for
             out += findings_for(p, decl, cite)
         elif not m["has_exif"] and not ai:
-            if m.get("portal"):
+            if m.get("from_word"):
+                pass            # Word borra estos datos: lo informa una sola alerta del documento («Fotos del Word sin datos»)
+            elif m.get("portal"):
                 out.append(Finding("no_metadata", "media", f"Foto subida sin fecha ni ubicación ({p.name})",
                                    f"La foto {p.name} la subió el asegurado desde su galería, pero no trae fecha, cámara "
                                    "ni ubicación. Es típico de una foto que antes pasó por WhatsApp, de una captura de "
@@ -301,6 +303,19 @@ def analyze(decl: dict, decl_ev: str, photos: list[Photo], registry: list[dict])
                                    "este choque. Lo más común es que se haya reenviado por WhatsApp o redes sociales "
                                    "(que borran esos datos), que sea una captura de pantalla o que se haya descargado.",
                                    cite, p.ts))
+
+        wi = m.get("word_image") or {}
+        if not m.get("taken") and wi.get("name_date") and len(wi["name_date"]) >= 10:
+            nd = datetime.fromisoformat(wi["name_date"])
+            delta = nd - t0
+            origen = {"WhatsApp": "WhatsApp", "captura de pantalla": "la captura de pantalla"}.get(wi.get("name_date_origin"), "el teléfono")
+            if delta < -(BEFORE_TOLERANCE if len(wi["name_date"]) > 10 else timedelta(days=1)):
+                out.append(Finding("word_photo_name_before", "media", f"Imagen del Word con fecha anterior al siniestro ({p.name})",
+                                   f"La imagen {p.name}, sacada de {m['from_word']}, se llamaba originalmente "
+                                   f"«{wi.get('original_name')}». Ese nombre lo pone {origen} y dice "
+                                   f"{_fmt(nd) if len(wi['name_date']) > 10 else nd.strftime('%d-%m-%Y')}: "
+                                   f"{abs(delta.days) or 'menos de 1'} día(s) antes del siniestro declarado ({_fmt(t0)}).",
+                                   cite + [decl_ev], p.ts))
 
         if m.get("taken"):
             taken = datetime.fromisoformat(m["taken"])
@@ -449,6 +464,12 @@ def photo_set_findings(photos: list["Photo"]) -> list[Finding]:
                                    [a.ev, b.ev], b.ts))
             elif (copy := _copy_of_ai(a, b, "es prácticamente la misma imagen que la foto")):
                 out.append(copy)
+            elif bool(a.meta.get("from_word")) != bool(b.meta.get("from_word")):
+                w, s_ = (a, b) if a.meta.get("from_word") else (b, a)
+                out.append(Finding("duplicate_in_claim", "baja", f"La misma foto, suelta y dentro del Word ({w.name})",
+                                   f"La imagen {w.name}, sacada de {w.meta['from_word']}, es la misma foto que {s_.name}, que "
+                                   "también se envió por separado. Es normal que el asegurado mande las fotos y además un Word "
+                                   "con ellas; se informa para no contarla dos veces.", [a.ev, b.ev], b.ts))
             else:
                 out.append(Finding("duplicate_in_claim", "media", f"La misma foto dos veces ({b.name})",
                                    f"Las fotos {a.name} y {b.name} son prácticamente la misma imagen. Puede ser una ráfaga, "
@@ -812,6 +833,12 @@ def load_case(case, timeline) -> tuple[dict, str, list[Photo]]:
                 meta["content"] = cache[e["subject"]]
                 if e["data"].get("portal"):
                     meta["portal"] = e["data"]["portal"]
+                if e["data"].get("from_word"):
+                    meta["from_word"] = e["data"].get("word_name") or "un Word"
+                    meta["word_image"] = e["data"].get("word_image") or {}
+                    if not meta["word_image"]:          # subida antes de que Evidex leyera estas pistas del Word
+                        from evidex.forensics import word as _word
+                        meta["word_image"] = _word.details_for_image(path.parent / e["data"]["from_word"], e["subject"])
                 if cap := e["data"].get("capture"):
                     # captura segura: fecha del servidor y GPS del momento, no los del archivo
                     meta["secure_capture"] = cap

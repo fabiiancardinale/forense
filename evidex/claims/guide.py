@@ -176,6 +176,12 @@ GUIDE: dict[str, tuple[str, str]] = {
     "word_other_author": (
         "Los datos internos del Word dicen que lo hizo o lo guardó otra persona, no el asegurado.",
         "Pregunte quién armó el documento (familiar, taller, tramitador). Si es un taller o tramitador, revise sus otros siniestros."),
+    "word_photo_name_before": (
+        "Word borra la fecha de las fotos, pero muchas veces guarda el nombre original del archivo que se pegó. Los "
+        "teléfonos y WhatsApp ponen la fecha (y a veces la hora) en ese nombre, por ejemplo IMG_20260912_153210.jpg. "
+        "Según ese nombre, la foto es anterior al choque.",
+        "Pregunte cuándo se tomó la foto y pida el original por el portal. Un nombre se puede cambiar a mano, así que "
+        "no lo trate como prueba definitiva, pero sí como contradicción a aclarar."),
     "word_photos_no_data": (
         "Las fotos pegadas en un Word pierden la fecha, la cámara y el lugar: no se puede comprobar cuándo ni dónde se tomaron.",
         "Pida las fotos originales por el portal del asegurado (las toma con la cámara) o por WhatsApp como documento."),
@@ -299,6 +305,7 @@ WHY = {
     # edición
     "word_before_claim": "Media porque reutilizar un Word es común, pero las fotos podrían ser de antes del choque.",
     "word_other_author": "Media porque es común que otro arme el documento, pero puede indicar un tramitador.",
+    "word_photo_name_before": "Media porque el nombre del archivo es un indicio fuerte, pero se puede cambiar a mano.",
     "word_photos_no_data": "Baja porque no prueba nada malo: solo impide verificar las fotos.",
     "phone_edit": "Media porque editar en la galería es común y suele ser inocente (encuadrar, aclarar), pero puede "
                   "sacar del cuadro o disimular algo; no es alta mientras no haya IA ni cambios de contenido.",

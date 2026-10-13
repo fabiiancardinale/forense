@@ -248,5 +248,7 @@ def _word_findings(decl: dict, decl_ev: str, d: Document, t0: datetime, add) -> 
     if m.get("images") and not m.get("images_with_data"):
         add("word_photos_no_data", "baja", f"Las fotos del Word no traen fecha, cámara ni lugar ({d.name})",
             f"El Word {d.name} trae {m['images']} imagen(es) y ninguna conserva sus datos originales: Word o el envío "
-            "anterior los borró. Pida las fotos originales por el portal del asegurado.", cite, d)
+            "anterior los borró. Pida las fotos originales por el portal del asegurado."
+            + (f" Aun así, el Word guardó el nombre original de {m['images_named']} imagen(es), que muchas veces trae la "
+               "fecha: véalo en cada foto, en la pestaña Fotos." if m.get("images_named") else ""), cite, d)
     return []

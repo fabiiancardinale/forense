@@ -4,17 +4,34 @@
 <a class="pic" href="{{ url_for('claims.evidence_file', cid=c.id, digest=i.digest) }}" target="_blank" rel="noopener" title="Abrir en tamaño completo">
 <img src="{{ url_for('claims.evidence_file', cid=c.id, digest=i.digest, mini=1) }}" alt="{{ i.title }}" loading="lazy">
 {% if i.findings %}<span class="sev {{ i.worst }}">{{ i.findings|length }} alerta{{ 's' if i.findings|length > 1 }}</span>{% endif %}</a>
-<div class="body"><b class="t">{{ i.title }}</b>
+<div class="body">{% set ttl = (i.word_image or {}).original_name or i.title %}<b class="t" title="{{ i.title }}">{{ ttl }}</b>
+{% if i.from_word %}<span class="from-word" title="Sacada de {{ i.from_word }}">{{ icon('filecheck', 13) }}Del Word: {{ i.from_word }}</span>{% endif %}
 <dl class="kv sm">
-<dt>Subió</dt><dd>{{ i.who }}{% if i.info.secure %} · cámara del portal{% endif %}{% if i.from_word %} · <span class="badge warn">sacada de {{ i.from_word }}</span>{% endif %}</dd>
+<dt>Subió</dt><dd>{{ i.who }}{% if i.info.secure %} · cámara del portal{% endif %}</dd>
 <dt>Tomada</dt><dd>{{ (i.info.taken or '')[:16]|replace('T',' ') or 'sin fecha' }}</dd>
 <dt>Cámara</dt><dd>{{ i.info.camera or '—' }}</dd>
 <dt>Ubicación</dt><dd>{{ 'sí (GPS)' if i.info.gps else 'no' }}</dd></dl>
+{% if i.from_word %}{% set w = i.word_image or {} %}<div class="wordbox"><div class="wb-h">Lo que guardó el Word de esta imagen</div>
+{% if w.original_name or w.name_date or w.texts or w.clues or w.inner_dates or w.original_path %}<dl class="kv sm">
+{% if w.original_name %}<dt>Nombre original</dt><dd class="mono">{{ w.original_name }}</dd>{% endif %}
+{% if w.name_date %}<dt>Fecha por el nombre</dt><dd><b>{{ w.name_date[8:10] }}-{{ w.name_date[5:7] }}-{{ w.name_date[:4] }}{% if w.name_date|length > 10 %} {{ w.name_date[11:16] }}{% endif %}</b> <span class="muted">({{ w.name_date_origin }})</span></dd>{% endif %}
+{% if w.inner_dates %}{% for k, v in w.inner_dates.items() %}<dt>{{ k }}</dt><dd>{{ v|replace('T', ' ') }}</dd>{% endfor %}{% endif %}
+{% if w.original_path %}<dt>Ruta original</dt><dd class="mono">{{ w.original_path }}</dd>{% endif %}
+{% if w.texts %}<dt>Texto junto a la imagen</dt><dd>«{{ w.texts[0] }}»</dd>{% endif %}
+{% if w.px %}<dt>Tamaño</dt><dd>{{ w.px[0] }}×{{ w.px[1] }} px{% if w.cm %} · {{ w.cm[0] }}×{{ w.cm[1] }} cm en la página{% endif %}{% if w.quality %} · calidad {{ w.quality }}{% endif %}</dd>{% endif %}
+{% if w.icc %}<dt>Perfil de color</dt><dd>{{ w.icc }}</dd>{% endif %}
+</dl>
+{% if w.clues %}<ul class="clues">{% for t in w.clues %}<li>{{ t }}</li>{% endfor %}</ul>{% endif %}
+{% else %}<p class="hint">El Word no guardó el nombre original ni la fecha de esta imagen{% if w.px %} ({{ w.px[0] }}×{{ w.px[1] }} px{% if w.quality %}, calidad {{ w.quality }}{% endif %}){% endif %}. Pida la foto original por el portal.</p>{% endif %}
+</div>{% endif %}
 {% if i.findings %}<ul class="flinks">{% for f in i.findings %}<li class="{{ f.severity }}"><details class="why"><summary>{{ f.title|replace(' (' ~ i.name ~ ')', '') }}</summary>{% include "claims/case/_explain.html" %}</details></li>{% endfor %}</ul>{% endif %}
-{% if i.zones %}<a class="btn sm zonelink" href="{{ url_for('claims.evidence_zones', cid=c.id, digest=i.digest) }}" target="_blank" rel="noopener">Ver zonas marcadas ({{ i.zones|length }})</a>{% endif %}
-<a class="hint metalink" href="{{ url_for('claims.evidence_metadata', cid=c.id, digest=i.digest) }}" target="_blank" rel="noopener">Ver todos los datos del archivo</a>
 {% set checks = i.info.checks %}{% include "claims/case/_checks.html" %}
+<div class="cardacts">
+{% if i.zones %}<a class="btn sm" href="{{ url_for('claims.evidence_zones', cid=c.id, digest=i.digest) }}" target="_blank" rel="noopener">Ver zonas marcadas ({{ i.zones|length }})</a>{% endif %}
+<a class="btn sm" href="{{ url_for('claims.evidence_metadata', cid=c.id, digest=i.digest) }}" target="_blank" rel="noopener">Datos del archivo</a>
+<details class="more"><summary class="btn sm" aria-label="Más acciones">⋯</summary><div class="more-body">
 {% include "claims/case/_teach.html" %}
-<div class="acts">{% include "claims/case/_remove.html" %}</div>
+<div class="acts">{% include "claims/case/_remove.html" %}</div></div></details>
+</div>
 </div></article>{% endfor %}</div>
 {% else %}<div class="card empty"><h2>Aún no hay fotos</h2><p>Agréguelas arriba o pídaselas al asegurado en la pestaña Asegurado.</p></div>{% endif %}

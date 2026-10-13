@@ -1,29 +1,34 @@
 <div class="verdict-ed {{ c.level }}">
 <div class="eyebrow">Veredicto de Evidex</div>
 <h2>{{ verdict.head }}</h2>
-{% if verdict.why %}<p class="lead">{{ verdict.why }} {{ verdict.detail }}</p>{% elif verdict.detail %}<p class="lead">{{ verdict.detail }}</p>{% endif %}
+{% if verdict.why %}<p class="lead">{{ verdict.why }}</p>{% endif %}
 </div>
-{% if todo %}{% set first = todo[0] %}
-<div class="nextstep {{ first[0] }}"><div><small>Siguiente paso</small><b>{{ first[1] }}</b></div>
-<a class="btn" href="{{ url_for('claims.case_view', cid=c.id, tab=first[2] if first[2] != 'resumen' else None) }}{{ '#decision' if first[2] == 'resumen' }}">{{ {'asegurado': 'Ir al portal', 'peritaje': 'Ir a peritaje', 'resumen': 'Decidir'}.get(first[2], 'Ir') }} →</a></div>
-{% if todo|length > 1 %}<ul class="v-next">{% for lvl, text, t in todo[1:] %}<li class="{{ lvl }}"><a href="{{ url_for('claims.case_view', cid=c.id, tab=t if t != 'resumen' else None) }}{{ '#decision' if t == 'resumen' }}">{{ icon('arrow', 14) }}{{ text }}</a></li>{% endfor %}</ul>{% endif %}
-{% endif %}
-<section class="whysec"><div class="sec-h"><h3 class="sec">Por qué</h3>
-<span class="hint">{{ n_findings }} alerta(s) · <a href="{{ url_for('claims.case_view', cid=c.id, tab='informe') }}">ver informe completo</a></span></div>
-{% if groups %}<div class="rlist">
-{% for g in groups %}<details class="reason {{ g.severity }}"{{ ' open' if loop.first and g.severity == 'alta' }}>
-<summary><span class="sev {{ g.severity }}">{{ g.severity|capitalize }}</span><b class="rt">{{ g.title }}</b>
-{% if g.count > 1 %}<span class="cnt">× {{ g.count }}</span>{% endif %}
-{% if g.refs %}<span class="rthumbs">{% for r in g.refs[:4] %}<img src="{{ url_for('claims.evidence_file', cid=c.id, digest=r.digest, mini=1) }}" alt="{{ r.title }}" loading="lazy">{% endfor %}{% if g.refs|length > 4 %}<i>+{{ g.refs|length - 4 }}</i>{% endif %}</span>{% endif %}
-<span class="chev" aria-hidden="true"></span></summary>
+
+{% if todo %}<section class="todo-box" aria-label="Qué hacer ahora"><h3 class="sec">Qué hacer ahora</h3>
+{% for lvl, text, t in todo %}<div class="todo-row {{ lvl }}"><span class="dot-l" aria-hidden="true"></span><span class="tx">{{ text }}</span>
+<a class="btn sm" href="{{ url_for('claims.case_view', cid=c.id, tab=t if t != 'resumen' else None) }}{{ '#decision' if t == 'resumen' }}">{{ {'asegurado': 'Ir al portal', 'peritaje': 'Ir a peritaje', 'resumen': 'Decidir'}.get(t, 'Ir') }} →</a></div>{% endfor %}
+</section>{% endif %}
+
+<section class="whysec"><div class="sec-h"><h3 class="sec">Por qué · {{ n_findings }} alerta{{ 's' if n_findings != 1 }}</h3>
+<a class="hint" href="{{ url_for('claims.case_view', cid=c.id, tab='informe') }}">Ver informe completo</a></div>
+{% if groups %}{% for sev, label in (('alta', 'Altas'), ('media', 'Medias'), ('baja', 'Bajas')) %}{% set gs = groups|selectattr('severity', 'equalto', sev)|list %}
+{% if gs %}<div class="sevgroup {{ sev }}"><div class="sg-h"><span class="dot-s {{ sev }}"></span>{{ label }} <b>{{ gs|map(attribute='count')|sum }}</b></div>
+<div class="rlist">{% for g in gs %}<details class="reason {{ g.severity }}">
+<summary><span class="rmain"><b class="rt">{{ g.title if g.count > 1 else g.findings[0].base }}</b>
+{% set labs = g.findings|map(attribute='label')|select|list %}{% if labs %}<small class="rsub">{{ labs|join(' · ') }}</small>{% endif %}</span>
+<span class="rthumbs">{% for r in g.refs[:3] %}<img src="{{ url_for('claims.evidence_file', cid=c.id, digest=r.digest, mini=1) }}" alt="{{ r.title }}" loading="lazy">{% endfor %}{% if g.refs|length > 3 %}<i>+{{ g.refs|length - 3 }}</i>{% endif %}</span>
+<span class="cnt">{{ '× ' ~ g.count if g.count > 1 else '' }}</span><span class="chev" aria-hidden="true"></span></summary>
 <div class="rbody">
 {% for f in g.findings %}<div class="ritem">{% if f.ref %}<a class="rpic" href="{{ url_for('claims.evidence_file', cid=c.id, digest=f.ref.digest) }}" target="_blank" rel="noopener" title="Abrir {{ f.ref.title }}"><img src="{{ url_for('claims.evidence_file', cid=c.id, digest=f.ref.digest, mini=1) }}" alt="{{ f.ref.title }}" loading="lazy"></a>{% endif %}
-<p>{% if g.count > 1 and f.label %}<b>{{ f.label }}</b> — {% endif %}{{ f.summary }}</p></div>{% endfor %}
+<p>{{ f.summary }}</p></div>{% endfor %}
 {% set f = g.findings[0] %}{% set show_found = false %}{% include "claims/case/_explain.html" %}
-</div></details>{% endfor %}
-</div>
+</div></details>{% endfor %}</div></div>{% endif %}{% endfor %}
 {% else %}<p class="muted">Evidex no encontró alertas en este caso.</p>{% endif %}</section>
-{% set mostrar = ['relato', 'resumen'] %}{% include "claims/case/_ia.html" %}
+
+<details class="fold"{{ " open" if ia and (ia.relato or ia.resumen) }}><summary><h3 class="sec">Asistente de texto (IA)</h3><span class="hint">revisión del relato y resumen del caso</span></summary>
+{% set mostrar = ['relato', 'resumen'] %}{% include "claims/case/_ia.html" %}</details>
+
+<details class="fold"><summary><h3 class="sec">Datos completos y analista</h3><span class="hint">RUT, póliza, contacto, taller, relato y reasignación</span></summary>
 <div class="grid2">
 <section class="panel"><div class="ph"><h2>Datos del siniestro</h2></div><div class="pb">
 <dl class="kv">
@@ -44,4 +49,4 @@
 <input name="motivo" placeholder="Motivo (vacaciones, carga…)" aria-label="Motivo">
 <button class="btn sm" type="submit">Reasignar</button></form>{% endif %}
 </div></section>
-</div>
+</div></details>

@@ -141,6 +141,16 @@ Hallazgo central: no hay un detector que reconozca todos los editores. Cada edit
 - [ ] **Fuentes más nuevas que el documento** (rápida): un PDF fechado en 2023 que usa una fuente publicada en 2025 se hizo después.
 - [ ] **Contenido oculto** (rápida): texto blanco, texto fuera de la página, capas ocultas o código JavaScript dentro del PDF.
 
+## Word: lo que queda de cada imagen (hecho)
+- [x] Word borra fecha/cámara/GPS, pero Evidex ahora lee del documento: nombre original del archivo pegado (con su fecha:
+      IMG_20260912_153210, «WhatsApp Image … at …», Screenshot_…), ruta original (Word antiguo: revela la carpeta y el
+      usuario del PC), texto junto a la imagen, tamaño en la página, calidad, perfil de color y pistas de origen
+      (WhatsApp, captura de pantalla, comprimida por Word). Se ve en cada foto («Lo que guardó el Word de esta imagen»).
+- [x] Alerta nueva «Imagen del Word con fecha anterior al siniestro (por su nombre)» (media).
+- [x] Sin una alerta «sin fecha» por cada imagen del Word (queda una sola del documento); la misma foto suelta y en el
+      Word baja a «baja».
+- [ ] Detectar imágenes que son capturas de documentos (tablas, formularios) y mostrarlas aparte de las fotos.
+
 ## Inteligencia artificial de texto (Groq u otro)
 No sirve para detectar ediciones en fotos (adivina con buena redacción). Sí para:
 - [ ] Coherencia entre relato y fotos (dice choque trasero, las fotos muestran la puerta delantera).
@@ -233,6 +243,9 @@ No es "taller externo = sospechoso": se mira cada taller, en convenio o no, sobr
       (veredicto, fotos con su alerta, principales razones), flechas ↑ ↓ y Enter; en el celular, solo la lista.
 - [x] Caso como expediente: ficha fija a la izquierda (riesgo, datos, índice de secciones, decisión con botones) y el
       contenido a la derecha con el veredicto en grande y la barra «Siguiente paso». En el celular se reordena y «Decidir» queda abajo.
+- [x] Resumen ordenado: veredicto + una frase, bloque «Qué hacer ahora», alertas agrupadas por gravedad (todas cerradas,
+      archivos afectados en gris), IA y datos completos plegados; ficha al costado desde 760 px.
+- [x] Tarjetas de fotos: etiqueta «Del Word» que no se desborda, acciones en botones y menú «⋯».
 - [ ] Fotos como visor forense: foto grande, tira de miniaturas, panel de datos, deslizador foto/mapa de zonas, lado a lado.
 - [ ] Línea de tiempo del siniestro: choque, fecha de cada foto, PDF/Word y denuncia en un eje; lo anterior al choque en rojo.
 - [ ] Menú lateral contraíble a íconos y buscador rápido Ctrl+K (siniestro, patente, página).

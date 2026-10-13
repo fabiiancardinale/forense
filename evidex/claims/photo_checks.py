@@ -47,7 +47,7 @@ CHECKS = [
      lambda m: None if (m.get("content") or {}).get("learned") else "no hay un modelo instalado"),
     ("Píxeles", "Luz del cielo contra la hora", ("daylight_at_night",),
      lambda m: None if (m.get("content") or {}).get("sky_day") else "no se ve cielo de día"),
-    ("Contexto", "Fecha de la foto contra la del siniestro", ("taken_before", "taken_late", "photo_before_policy"),
+    ("Contexto", "Fecha de la foto contra la del siniestro", ("taken_before", "taken_late", "photo_before_policy", "word_photo_name_before"),
      lambda m: None if m.get("taken") else "la foto no tiene fecha"),
     ("Contexto", "Ubicación contra el lugar declarado", ("gps_mismatch", "impossible_travel"),
      lambda m: None if m.get("gps") else "la foto no tiene ubicación"),

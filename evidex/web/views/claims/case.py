@@ -79,6 +79,7 @@ def evidence_items(case: Case, snap: dict) -> list[dict]:
             "title": (d.get("portal") or {}).get("title") or info.get("title") or d["original_name"],
             "name": d["original_name"], "who": "asegurado" if e["actor"].startswith("asegurado") else e["actor"],
             "from_word": d.get("word_name"),
+            "word_image": (d.get("word_image") or _word_image(case, d, digest)) if d.get("from_word") else None,
             "received": e["ts"], "info": info, "findings": found,
             "zones": zones(content.get(digest) if isinstance(content.get(digest), dict) else {},
                            confirmed=any(f["rule"] in AI_CONFIRMED for f in found)),
@@ -88,6 +89,11 @@ def evidence_items(case: Case, snap: dict) -> list[dict]:
             "is_image": Path(d["original_name"]).suffix.lower() in (".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"),
         })
     return items
+
+
+def _word_image(case, d, digest) -> dict:
+    from evidex.forensics import word
+    return word.details_for_image(case.evidence_dir / d["from_word"], digest)
 
 
 @bp.get("/caso/<cid>")

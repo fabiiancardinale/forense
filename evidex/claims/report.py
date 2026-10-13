@@ -245,7 +245,7 @@ RULE_NAMES = {
     "copied_narrative": "Relato copiado", "time_contradiction": "Relato contradice la hora",
     "witness_contradiction": "Contradicción sobre testigos", "police_missing": "Constancia sin parte", "short_narrative": "Relato muy breve",
     "word_before_claim": "Word creado antes del siniestro", "word_other_author": "Word hecho por otra persona",
-    "word_photos_no_data": "Fotos del Word sin datos",
+    "word_photos_no_data": "Fotos del Word sin datos", "word_photo_name_before": "Imagen del Word anterior al siniestro (por su nombre)",
     "doc_editor": "PDF pasado por editor", "doc_modified": "PDF modificado", "doc_before_claim": "Documento anterior al siniestro",
     "reused_doc": "Documento repetido", "not_pdf": "PDF inválido", "doc_no_metadata": "PDF sin metadatos",
     "edited": "Foto editada", "reused_photo": "Foto repetida", "no_metadata": "Foto sin metadatos", "ai_generated": "Posible imagen IA",

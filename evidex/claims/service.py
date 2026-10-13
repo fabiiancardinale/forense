@@ -353,8 +353,12 @@ def add_file(case: Case, path: Path, note: str | None = None, analyst: str | Non
                 imgs = word.extract_images(case.evidence_dir / digest, Path(td), base)
             except Exception:
                 imgs = []
+            try:
+                details = list(word.image_details(case.evidence_dir / digest).values())
+            except Exception:
+                details = []
             from evidex.core.case import sha256_file
-            for img in imgs:
+            for n, img in enumerate(imgs):
                 d = sha256_file(img)
                 if has_evidence(case, d) and d not in case.purged():
                     continue                                  # esa foto ya estaba en el caso (otro Word o suelta)
@@ -362,8 +366,10 @@ def add_file(case: Case, path: Path, note: str | None = None, analyst: str | Non
                     upload_guard.check(img, img.name, "evidencia")
                 except InvalidFile:
                     continue
-                out.append(case.add_evidence(img, analyst, note="foto",
-                                             extra={"from_word": digest, "word_name": Path(path).name}))
+                extra = {"from_word": digest, "word_name": Path(path).name}
+                if n < len(details):
+                    extra["word_image"] = details[n]
+                out.append(case.add_evidence(img, analyst, note="foto", extra=extra))
     return out
 
 
