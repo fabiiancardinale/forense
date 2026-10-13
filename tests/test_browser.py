@@ -144,7 +144,7 @@ def test_send_buttons_record_address(page):
     pg.click("button:has-text('Registrar siniestro')")
     pg.wait_for_load_state("networkidle")
     pg.goto(f"{base}/caso/SIN-2026-7003?tab=asegurado")
-    assert "Para enviar el enlace, abra Evidex con" in pg.content()      # dirección local: sin botones de envío
+    assert "Para enviar el enlace, use Evidex desde el servidor" in pg.content()      # dirección local: sin botones de envío
     assert not pg.query_selector("[data-copy-message]")
     import json
     (root / "casos" / "config.json").write_text(json.dumps({"direccion_publica": "https://evidex.ejemplo.cl"}))

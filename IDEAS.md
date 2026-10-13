@@ -231,9 +231,12 @@ Zelekpress es el encargado y BCI el responsable de los datos. Revisar todo con a
 ## Seguridad y requisitos de TI
 - [ ] Cifrado de los casos en el disco (media).
 - [ ] Inicio de sesión con las cuentas corporativas (Microsoft o Google) (media).
-- [ ] Respaldo automático y auditoría exportable (rápida).
+- [x] Respaldo automático diario en el servidor (`evidex-respaldo`, 14 días). Falta: copia fuera del servidor y auditoría exportable.
 - [ ] Sello de tiempo externo (RFC 3161) para la evidencia (media).
-- [ ] Instalación en un servidor de la compañía con su dominio (media).
+- [x] **Evidex en un VPS Ubuntu** (13 de octubre de 2026): `deploy/instalar.sh` instala y actualiza (Caddy con HTTPS automático, gunicorn, worker, firewall, fail2ban, parches automáticos, respaldo diario); modo servidor con IP real del visitante y opción de permitir solo las redes de la oficina (`EVIDEX_IPS_PERMITIDAS`). Se quitaron los `.bat`.
+- [ ] Segundo factor de ingreso (código por app o correo) ahora que Evidex está en internet (media).
+- [ ] SSH solo con llave y sin contraseña en el VPS (rápida, la hace Fabián).
+- [ ] Dominio propio (evidex.zelekpress.cl o similar) en vez de sslip.io (rápida).
 
 ## Para crecer después de BCI
 - [ ] Conexión con el sistema de siniestros de la aseguradora (grande).

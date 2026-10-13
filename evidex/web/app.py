@@ -7,6 +7,7 @@ from datetime import timedelta
 from evidex.core.storage import locked, atomic_bytes
 from evidex.web.security import (csrf_token, demo_open, portal_count_miss, portal_rate_limit, protect_mutations,
                                  security_headers)
+import ipaddress
 from pathlib import Path
 
 from flask import Flask, abort, current_app, g, redirect, render_template, request, session, url_for
@@ -100,6 +101,18 @@ def network_guard():
     if current_app.config['DEMO_MODE'] and request.remote_addr not in ('127.0.0.1', '::1'):
         abort(403)
     if request.path.startswith("/c/") or request.path in PORTAL_STATIC:
+        return None
+    if current_app.config.get("SERVER"):
+        # en un servidor todo Evidex está en internet (con HTTPS, usuario y contraseña); opcionalmente solo
+        # desde las redes de la compañía. El portal del asegurado (arriba) queda abierto a todos.
+        nets = current_app.config.get("ALLOWED_NETWORKS") or []
+        if nets:
+            try:
+                ip = ipaddress.ip_address(request.remote_addr or "")
+            except ValueError:
+                abort(403)
+            if not any(ip in n for n in nets):
+                abort(403)
         return None
     via_tunnel = any(h in request.headers for h in ("Cf-Connecting-Ip", "Cf-Ray", "X-Forwarded-For"))
     host = (request.host or "").rsplit(":", 1)[0].strip("[]").lower()

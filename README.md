@@ -15,7 +15,7 @@ python -m evidex.accounts.setup --dir casos
 python -m evidex.web --dir casos
 ```
 
-En Windows también puede usar `iniciar_evidex.bat` (solo en este computador), `iniciar_publico.bat` (con enlace público para el portal del asegurado) o `iniciar_captura.bat` (celulares en la misma red wifi); los tres usan `preparar.bat`, que instala lo mismo, incluidos los extras de `requirements-optional.txt`. Sin usuarios no hay acceso anónimo: se inicializa el administrador por consola. La demo sin usuarios requiere `--demo` explícitamente y solo funciona localmente.
+**En producción Evidex corre en un servidor Ubuntu** (VPS) con HTTPS: vea [deploy/LEEME.md](deploy/LEEME.md). `deploy/instalar.sh` instala y actualiza todo; los `.bat` de Windows ya no se usan. El comando de arriba sirve para probar en un PC. Sin usuarios no hay acceso anónimo: se inicializa el administrador por consola. La demo sin usuarios requiere `--demo` explícitamente y solo funciona localmente.
 
 **No se certifica «Original» por ausencia de indicios.** Se distinguen alteración detectada entre revisiones, indicios de alteración, sin indicios detectados y no concluyente. La detección/localización de IA no está validada contra un corpus real del negocio.
 
@@ -88,11 +88,9 @@ Secciones de la interfaz (menú lateral):
   ("Le pedimos: ..."). Además puede escribir su relato y presiona *Enviar todo*; Evidex reanaliza el caso. Puede avanzar por
   partes durante 7 días. Cada archivo entra a la cadena de custodia al llegar. El analista ve el avance en el caso (paso a paso) y en el Panel
   (*Esperando al asegurado*: sin abrir, abierto, vencido) y puede renovar el enlace o pedir más documentos; lo ya recibido se
-  conserva. Para que el asegurado abra el enlace desde su celular, inicie Evidex con `iniciar_publico.bat`: descarga
-  cloudflared y crea una dirección temporal https://…trycloudflare.com (WhatsApp la muestra como enlace). Por esa dirección solo
-  se abre el portal; el resto de Evidex sigue local. Si el enlace apunta a 127.0.0.1, el caso muestra un aviso, porque el
-  asegurado no podrá abrirlo. En producción se configura el dominio de la compañía en Configuración > Dirección pública.
-  `iniciar_captura.bat` sigue disponible para probar con un celular en la misma red wifi.
+  conserva. En el servidor el enlace sale con el dominio de Evidex (https://...) y el asegurado lo abre desde
+  cualquier celular. Para probar en un PC, `python -m evidex.web --publico` abre una dirección temporal
+  https://…trycloudflare.com (necesita cloudflared) y `--red` sirve para un celular en la misma red wifi.
 - **Decisión del liquidador** en cada caso (en revisión, fraude confirmado, legítimo, rechazado), registrada en la cadena de custodia con su autor.
 
 ## Investigaciones (expedientes y auditoría de informes)

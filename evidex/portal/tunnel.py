@@ -43,7 +43,7 @@ def start(port: int, base: Path, timeout: float = 40) -> tuple[str | None, str]:
     """Inicia el túnel y devuelve (dirección pública, mensaje)."""
     exe = find_cloudflared(base)
     if not exe:
-        return None, "No se encontró cloudflared. Use iniciar_publico.bat, que lo descarga."
+        return None, "No se encontró cloudflared. Instálelo (https://github.com/cloudflare/cloudflared) o use Evidex en el servidor."
     proc = subprocess.Popen([exe, "tunnel", "--no-autoupdate", "--url", f"http://127.0.0.1:{port}"],
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace")
     found: list[str] = []
