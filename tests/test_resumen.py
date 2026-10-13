@@ -17,3 +17,11 @@ def test_agrupa_y_ordena():
     v = _verdict({"level": "warn"}, fs, g)
     assert v["counts"] == {"alta": 1, "media": 3, "baja": 1}
     assert v["detail"] == "5 alertas de 3 tipos (1 alta, 3 medias, 1 baja)."
+
+
+def test_el_celular_no_agranda_el_texto():
+    """En «versión para ordenadores», Chrome de Android agranda los párrafos largos si no se le pide lo contrario."""
+    from pathlib import Path
+    static = Path(__file__).resolve().parents[1] / "evidex" / "web" / "static"
+    for css in ("app.css", "login.css", "portal.css"):
+        assert "text-size-adjust:100%" in (static / css).read_text(encoding="utf-8"), css

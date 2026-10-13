@@ -1,3 +1,4 @@
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 @font-face{font-family:"Manrope";font-style:normal;font-display:swap;font-weight:200 800;src:url(fonts/manrope-latin-wght-normal.woff2) format("woff2")}
 :root{--ink:#16181d;--muted:#6b7079;--line:#e6e3dc;--accent:#0f6b5f;--red:#b42318;--redbg:#fef3f2;--grn:#067647;--grnbg:#ecfdf3}
 *{box-sizing:border-box}body{margin:0;font:16px/1.5 "Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:#f5f4f0}

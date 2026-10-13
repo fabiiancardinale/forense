@@ -11,6 +11,7 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{margin:0}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{font:14px/1.55 var(--font);color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased}
 a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 /* ---- estructura: barra lateral clara ---- */
