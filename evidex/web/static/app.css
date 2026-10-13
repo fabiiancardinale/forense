@@ -818,3 +818,24 @@ a{color:var(--accent)}
 }
 .settings-form{display:grid;gap:16px;max-width:820px}
 .settings-form>.full{margin-top:4px}
+
+/* ==== Menú lateral blanco con violeta (elegido el 14-10-2026) ==== */
+:root{--sbg:#ffffff;--sink:#4b5563;--sline:#e7e9ee}
+.side{background:#fff;border-right:1px solid var(--line)}
+.side .brand,.side .brand b{color:var(--ink)}.side .brand small{color:var(--muted)}
+.sb-search{background:var(--bg);border-color:var(--line);color:var(--muted)}
+.sb-search:focus-within{background:#fff;border-color:var(--accent)}
+.sb-search input{color:var(--ink)}.sb-search input::placeholder{color:var(--muted)}
+.side .navs a{color:var(--ink2)}
+.side .navs a:hover{background:var(--bg);color:var(--ink)}
+.side .navs a.on{background:var(--accentbg);color:var(--accent2)}
+.side .navs .grp{color:var(--muted);opacity:.8}
+.side .client{border:1px solid var(--line)}
+.side .me>summary:hover{background:var(--bg)}
+.side .me .who b{color:var(--ink)}.side .me .who small{color:var(--muted)}
+.side .me .chev{border-color:var(--muted)}
+.me-menu{background:#fff;border-color:var(--line);box-shadow:0 12px 30px rgba(16,24,40,.14)}
+.me-menu a,.me-menu button{color:var(--ink2)}
+.me-menu a:hover,.me-menu button:hover{background:var(--bg);color:var(--ink)}
+@media (max-width:900px){.mtop{background:#fff;color:var(--ink);border-bottom:1px solid var(--line)}.mtop button{color:var(--ink)}
+ .side.open{box-shadow:0 0 0 100vmax rgba(16,24,40,.35)}}
