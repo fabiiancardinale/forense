@@ -1,20 +1,30 @@
 <div class="layout-side">
 <div style="display:grid;gap:16px">
-{% if todo %}<section class="panel"><div class="ph"><h2>Qué falta</h2></div><div class="pb"><ul class="todo">
-{% for lvl, text, t in todo %}<li class="{{ lvl }}"><a href="{{ url_for('claims.case_view', cid=c.id, tab=t if t != 'resumen' else None) }}">{{ text }}</a></li>{% endfor %}
-</ul></div></section>{% endif %}
+{% set sc = c.score if c.score is number else 0 %}
+<section class="vband {{ c.level }}" aria-label="Veredicto">
+<div class="v-score" style="--p:{{ sc }}"><b>{{ c.score if c.score is number else '—' }}</b><small>de 100</small></div>
+<div class="v-text">
+<h2>{{ verdict.head }}</h2>{% if verdict.detail %}<p>{{ verdict.detail }}</p>{% endif %}
+{% if todo %}<ul class="v-next">{% for lvl, text, t in todo %}<li class="{{ lvl }}"><a href="{{ url_for('claims.case_view', cid=c.id, tab=t if t != 'resumen' else None) }}{{ '#decision' if t == 'resumen' }}">{{ icon('arrow', 14) }}{{ text }}</a></li>{% endfor %}</ul>{% endif %}
+</div>
+<dl class="v-sev">{% for k in ('alta', 'media', 'baja') %}<div class="{{ k }}{{ ' zero' if not verdict.counts[k] }}"><dt>{{ k|capitalize }}</dt><dd>{{ verdict.counts[k] }}</dd></div>{% endfor %}</dl>
+</section>
 
-<section class="panel"><div class="ph"><h2>Alertas principales</h2>
-<span class="r hint">{{ n_findings }} en total · <a href="{{ url_for('claims.case_view', cid=c.id, tab='informe') }}">ver informe completo</a></span></div>
-<div class="pb">{% if top %}<div class="flist">
-{% for f in top %}<article class="fcard {{ f.severity }}">
-{% if f.ref %}<a class="fpic" href="{{ url_for('claims.evidence_file', cid=c.id, digest=f.ref.digest) }}" target="_blank" rel="noopener" title="Abrir {{ f.ref.title }}">
-<img src="{{ url_for('claims.evidence_file', cid=c.id, digest=f.ref.digest, mini=1) }}" alt="{{ f.ref.title }}" loading="lazy"><small>{{ f.ref.title }}</small></a>{% endif %}
-<div><div class="ft"><span class="sev {{ f.severity }}">{{ f.severity|capitalize }}</span> <b>{{ f.title }}</b></div>
-<p>{{ f.summary }}</p>
-<details class="why"><summary>Qué significa, por qué es {{ f.severity }} y qué hacer</summary>{% set show_found = false %}{% include "claims/case/_explain.html" %}</details>
-</div></article>{% endfor %}</div>
-{% else %}<p class="muted" style="margin:0">Evidex no encontró alertas en este caso.</p>{% endif %}</div></section>
+<section class="panel"><div class="ph"><h2>Por qué</h2>
+<span class="r hint">{{ n_findings }} alerta(s) · <a href="{{ url_for('claims.case_view', cid=c.id, tab='informe') }}">ver informe completo</a></span></div>
+{% if groups %}<div class="rlist">
+{% for g in groups %}<details class="reason {{ g.severity }}"{{ ' open' if loop.first and g.severity == 'alta' }}>
+<summary><span class="sev {{ g.severity }}">{{ g.severity|capitalize }}</span><b class="rt">{{ g.title }}</b>
+{% if g.count > 1 %}<span class="cnt">× {{ g.count }}</span>{% endif %}
+{% if g.refs %}<span class="rthumbs">{% for r in g.refs[:4] %}<img src="{{ url_for('claims.evidence_file', cid=c.id, digest=r.digest, mini=1) }}" alt="{{ r.title }}" loading="lazy">{% endfor %}{% if g.refs|length > 4 %}<i>+{{ g.refs|length - 4 }}</i>{% endif %}</span>{% endif %}
+<span class="chev" aria-hidden="true"></span></summary>
+<div class="rbody">
+{% for f in g.findings %}<div class="ritem">{% if f.ref %}<a class="rpic" href="{{ url_for('claims.evidence_file', cid=c.id, digest=f.ref.digest) }}" target="_blank" rel="noopener" title="Abrir {{ f.ref.title }}"><img src="{{ url_for('claims.evidence_file', cid=c.id, digest=f.ref.digest, mini=1) }}" alt="{{ f.ref.title }}" loading="lazy"></a>{% endif %}
+<p>{% if g.count > 1 and f.label %}<b>{{ f.label }}</b> — {% endif %}{{ f.summary }}</p></div>{% endfor %}
+{% set f = g.findings[0] %}{% set show_found = false %}{% include "claims/case/_explain.html" %}
+</div></details>{% endfor %}
+</div>
+{% else %}<div class="pb"><p class="muted" style="margin:0">Evidex no encontró alertas en este caso.</p></div>{% endif %}</section>
 {% set mostrar = ['relato', 'resumen'] %}{% include "claims/case/_ia.html" %}
 </div>
 

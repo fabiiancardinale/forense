@@ -224,6 +224,15 @@ No es "taller externo = sospechoso": se mira cada taller, en convenio o no, sobr
 - [ ] Búsqueda global por RUT, patente, teléfono o taller (rápida).
 - [ ] Panel de tendencias: fraudes por mes, comuna, taller y tipo de señal (media).
 
+## Diseño (estructura, no colores) — ideas sacadas de Linear, bandejas lista+detalle y gestores de siniestros
+- [x] Caso con el veredicto arriba: anillo de riesgo, una frase de conclusión, conteo alta/media/baja y el siguiente
+      paso como botón; alertas de la misma regla agrupadas en una línea («× 3», miniaturas) que se despliega.
+- [ ] Cola de trabajo tipo bandeja dividida: lista a la izquierda, vista previa del caso a la derecha, flechas del teclado.
+- [ ] Fotos como visor forense: foto grande, tira de miniaturas, panel de datos, deslizador foto/mapa de zonas, lado a lado.
+- [ ] Línea de tiempo del siniestro: choque, fecha de cada foto, PDF/Word y denuncia en un eje; lo anterior al choque en rojo.
+- [ ] Menú lateral contraíble a íconos y buscador rápido Ctrl+K (siniestro, patente, página).
+- [ ] Celular: el caso apilado con la decisión abajo, al alcance del pulgar.
+
 ## Datos personales: quién ve qué y cuánto tiempo se guardan (Ley 21.719)
 Zelekpress es el encargado y BCI el responsable de los datos. Revisar todo con abogado y dejarlo en el contrato.
 

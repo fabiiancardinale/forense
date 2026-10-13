@@ -117,13 +117,52 @@ def _tab_summary(case, snap, items):
     decl = service.declaration(case) or {}
     findings = sorted(snap["findings"], key=lambda f: SEV_ORDER[f["severity"]])
     thumbs = {i["digest"][:8]: i for i in items if i["is_image"]}
-    top = []
-    for f in findings[:6]:
-        ref = next((thumbs[e] for e in f["evidence"] if e in thumbs), None)
-        top.append({**f, "ref": ref})
-    return {"decl": decl, "top": top, "decisions": service.DECISIONS, "history": service.decision_history(case),
+    groups = _group_findings(findings, thumbs)
+    return {"decl": decl, "groups": groups, "verdict": _verdict(summarize(case), findings, groups),
+            "decisions": service.DECISIONS, "history": service.decision_history(case),
             "todo": _todo(case, items), "team": analysts() if has_perm("equipo") else [],
             "can_reassign": has_perm("equipo"), **_ia(case)}
+
+
+def _group_findings(findings, thumbs) -> list[dict]:
+    """Alertas de la misma regla juntas («3 fotos sin metadatos» en una sola línea), de la más grave a la más leve."""
+    from evidex.claims.report import RULE_NAMES
+    by_rule: dict[str, dict] = {}
+    for f in findings:                                    # ya vienen ordenadas por gravedad
+        g = by_rule.setdefault(f["rule"], {"rule": f["rule"], "severity": f["severity"], "findings": [], "refs": []})
+        if SEV_ORDER[f["severity"]] < SEV_ORDER[g["severity"]]:
+            g["severity"] = f["severity"]
+        ref = next((thumbs[e] for e in f["evidence"] if e in thumbs), None)
+        base, _, rest = f["title"].partition(" (")
+        label = rest[:-1] if rest.endswith(")") else (ref["title"] if ref else "")
+        g["findings"].append({**f, "ref": ref, "base": base, "label": label})
+        if ref and ref not in g["refs"]:
+            g["refs"].append(ref)
+    out = []
+    for g in by_rule.values():
+        n = len(g["findings"])
+        g["count"] = n
+        bases = {f["base"] for f in g["findings"]}
+        g["title"] = (g["findings"][0]["title"] if n == 1 else
+                      bases.pop() if len(bases) == 1 else RULE_NAMES.get(g["rule"], g["findings"][0]["base"]))
+        out.append(g)
+    return sorted(out, key=lambda g: (SEV_ORDER[g["severity"]], -g["count"]))
+
+
+def _verdict(c, findings, groups) -> dict:
+    """La conclusión del caso en una frase, para la franja de arriba del Resumen."""
+    n = {s: sum(1 for f in findings if f["severity"] == s) for s in ("alta", "media", "baja")}
+    head = {"bad": "Riesgo alto: hay señales fuertes que justifican investigar.",
+            "warn": "Riesgo medio: el liquidador debe revisar las alertas antes de decidir.",
+            "ok": "Riesgo bajo: Evidex no encontró señales relevantes.",
+            "none": "Aún no se analiza este caso."}.get(c["level"], "")
+    if findings:
+        partes = [f"{v} {k}{'s' if v != 1 else ''}" for k, v in n.items() if v]
+        detail = (f"{len(findings)} alerta{'s' if len(findings) != 1 else ''} de {len(groups)} "
+                  f"tipo{'s' if len(groups) != 1 else ''} ({', '.join(partes)}).")
+    else:
+        detail = "Sin alertas." if c["level"] != "none" else ""
+    return {"head": head, "detail": detail, "counts": n}
 
 
 def _ia(case) -> dict:

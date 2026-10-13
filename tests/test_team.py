@@ -76,7 +76,7 @@ def test_case_tabs_show_everything_in_its_place(tmp_path):
     c = app.test_client()
     _login(c, "ana")
     _new_case(c, "SIN-T1")
-    for tab, text in [("", "Alertas principales"), ("fotos", "frontal"), ("documentos", "Aún no hay documentos"),
+    for tab, text in [("", "Por qué"), ("fotos", "frontal"), ("documentos", "Aún no hay documentos"),
                       ("peritaje", "Derivar las entrevistas"), ("asegurado", "Crear enlace para el asegurado"),
                       ("informe", "Verificar integridad"), ("historial", "Cadena de custodia")]:
         r = c.get(f"/caso/SIN-T1{'?tab=' + tab if tab else ''}")
