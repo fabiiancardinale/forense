@@ -112,10 +112,15 @@ def load(case, timeline) -> list[Document]:
     for e in case.active_evidence():
         name = e["data"]["original_name"]
         image_doc = e["data"].get("note") == "documento" and Path(name).suffix.lower() in IMAGE_DOC_EXT
-        if Path(name).suffix.lower() not in DOC_EXT and not image_doc:
+        is_word = e["data"].get("note") == "word"
+        if Path(name).suffix.lower() not in DOC_EXT and not image_doc and not is_word:
             continue
         try:
             path = case.evidence_dir / e["subject"]
+            if is_word:
+                from evidex.forensics import word
+                meta = {"is_pdf": False, "revisions": 0, **word.metadata(path)}
+                raise _Done
             if image_doc:
                 # documento en papel fotografiado: se lee su texto para revisar RUT, fechas y patentes
                 meta = {"is_pdf": False, "image_doc": True, "revisions": 0, "tools": [], "created": None,
@@ -181,6 +186,9 @@ def analyze(decl: dict, decl_ev: str, docs: list[Document], registry: list[dict]
         m, cite = d.meta, [d.ev]
         if m.get("image_doc"):
             continue                    # foto de un documento: solo aplican las revisiones de su texto
+        if m.get("word"):
+            out += _word_findings(decl, decl_ev, d, t0, add)
+            continue
         if not m.get("is_pdf"):
             add("not_pdf", "media", f"Archivo no es un PDF válido ({d.name})",
                 f"El archivo {d.name} tiene extensión PDF pero su contenido no corresponde a un PDF.", cite, d)
@@ -218,3 +226,27 @@ def analyze(decl: dict, decl_ev: str, docs: list[Document], registry: list[dict]
                     f"El documento {d.name} es idéntico al documento {r['name']} del siniestro {r['claim']}.", cite, d)
                 break
     return out
+
+
+def _word_findings(decl: dict, decl_ev: str, d: Document, t0: datetime, add) -> list:
+    """Word del asegurado: cuándo y quién lo hizo, y si sus fotos todavía traen datos."""
+    from evidex.forensics import word
+    m, cite = d.meta, [d.ev]
+    created = datetime.fromisoformat(m["created"]) if m.get("created") else None
+    if created and created < t0 - timedelta(days=1):
+        add("word_before_claim", "media", f"Word creado antes del siniestro ({d.name})",
+            f"El Word {d.name} se creó el {_fmt(created)}, antes del siniestro declarado ({_fmt(t0)}). Puede ser un "
+            "documento viejo reutilizado: revise si las fotos que trae son de este choque.", cite + [decl_ev], d)
+    asegurado = decl.get("asegurado") or ""
+    autores = [a for a in (m.get("creator"), m.get("last_modified_by")) if a and not word.generico(a)]
+    otros = [a for a in dict.fromkeys(autores) if asegurado and not word.mismo_nombre(a, asegurado)]
+    if otros:
+        add("word_other_author", "media", f"Word hecho o guardado por otra persona ({d.name})",
+            f"Según sus datos internos, el Word {d.name} lo creó «{m.get('creator') or '—'}» y lo guardó por última vez "
+            f"«{m.get('last_modified_by') or '—'}», no el asegurado ({asegurado}). Puede ser un familiar o el taller: "
+            "pregunte quién lo armó.", cite, d)
+    if m.get("images") and not m.get("images_with_data"):
+        add("word_photos_no_data", "baja", f"Las fotos del Word no traen fecha, cámara ni lugar ({d.name})",
+            f"El Word {d.name} trae {m['images']} imagen(es) y ninguna conserva sus datos originales: Word o el envío "
+            "anterior los borró. Pida las fotos originales por el portal del asegurado.", cite, d)
+    return []

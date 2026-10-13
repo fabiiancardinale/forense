@@ -28,11 +28,12 @@ PDF = {".pdf": "PDF"}
 CHAT = {".txt", ".zip"}
 TABLE = {".csv", ".xlsx", ".xlsm"}
 AUDIO = {".ogg", ".opus", ".mp3", ".m4a", ".wav", ".webm", ".aac"}   # notas de voz (WhatsApp) y entrevistas
+WORD = {".docx"}                                                   # Word del asegurado, a veces con fotos pegadas
 MAX_AUDIO = 25_000_000
 
 # qué se acepta en cada carga
 PURPOSES = {
-    "evidencia": set(IMAGES) | set(PDF) | CHAT | AUDIO,   # fotos, documentos, chats y audios del caso
+    "evidencia": set(IMAGES) | set(PDF) | CHAT | AUDIO | WORD,   # fotos, documentos, chats, audios y Word del caso
     "portal": set(IMAGES) | set(PDF),               # lo que sube el asegurado
     "documento": set(IMAGES) | set(PDF),            # documentos de una investigación
     "informe": set(PDF),                            # informe del perito para auditar
@@ -125,6 +126,20 @@ def inspect(path, name: str, purpose: str) -> dict:
         return validate(path, name, max_pages=DOC_MAX_PAGES)
     if ext in AUDIO:
         return _audio(path, ext)
+    if ext in WORD:
+        _zip(path, needs=("[Content_Types].xml", "word/document.xml"))
+        with zipfile.ZipFile(path) as z:
+            names = [i.filename.lower() for i in z.infolist()]
+            if any(n.endswith("vbaproject.bin") or n.endswith(".bin") and "activex" in n for n in names):
+                raise InvalidFile("El Word trae macros o controles: no se acepta.")
+            from xml.etree import ElementTree as ET
+            for n in ("word/document.xml", "docProps/core.xml"):
+                if n in z.namelist():
+                    raw = z.read(n)
+                    if b"<!DOCTYPE" in raw or b"<!ENTITY" in raw:      # XML con entidades: posible ataque
+                        raise InvalidFile("El Word tiene un formato no permitido.")
+                    ET.fromstring(raw)
+        return {"kind": "word"}
     if ext == ".txt":
         _text(path, MAX_TEXT)
         return {"kind": "text"}

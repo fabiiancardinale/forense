@@ -253,7 +253,7 @@ Zelekpress es el encargado y BCI el responsable de los datos. Revisar todo con a
 
 - [x] **Diseño nuevo propio** (13 de octubre de 2026): barra lateral clara, verde petróleo con detalle ámbar, tipografía Manrope (licencia OFL, incluida en el código), marca nueva (lupa). Ya no se parece a la paleta azul anterior ni a la de BCI.
 - [x] **Logo del cliente** en Configuración: aparece en el menú, el ingreso y el portal del asegurado. Solo PNG/JPG/WEBP (se vuelve a dibujar como PNG), solo con autorización escrita de la aseguradora.
-- [ ] Aceptar Word (.docx): sacar las imágenes solas y leer quién lo creó y cuándo (propuesto, falta confirmar).
+- [x] Aceptar Word (.docx) (13 de octubre de 2026): se guarda intacto, sus imágenes entran como fotos («sacada de X.docx», sin recomprimir), se lee quién lo creó y cuándo (alertas: creado antes del siniestro, hecho por otra persona, fotos sin datos). Se rechazan Word con macros o XML con entidades. Falta: aceptarlo también en el portal del asegurado y el .doc antiguo.
 
 ## Para ofrecerlo
 - Piloto de 60 a 90 días con siniestros cerrados y anonimizados, gratis o a bajo costo, con informe de resultados en números de BCI.

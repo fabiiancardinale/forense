@@ -1,4 +1,4 @@
-{% set upload_label = 'Agregar documentos, chats o audios' %}{% include "claims/case/_upload.html" %}
+{% set upload_label = 'Agregar documentos, Word, chats o audios' %}{% include "claims/case/_upload.html" %}
 {% if items %}<section class="panel"><table class="queue doctable">
 <colgroup><col style="width:38%"><col style="width:16%"><col><col style="width:96px"></colgroup>
 <thead><tr><th>Documento</th><th>Subió</th><th>Alertas</th><th></th></tr></thead>
@@ -6,6 +6,7 @@
 <td><div class="docname">{% if i.is_image %}<img class="docthumb" src="{{ url_for('claims.evidence_file', cid=c.id, digest=i.digest, mini=1) }}" alt="" loading="lazy">{% else %}<span class="docicon">{{ (i.name.rsplit('.', 1)[-1] if '.' in i.name else '')|upper }}</span>{% endif %}
 <div style="min-width:0"><a class="strong ellip" style="display:block" href="{{ url_for('claims.evidence_file', cid=c.id, digest=i.digest) }}" target="_blank" rel="noopener" title="{{ i.name }}">{{ i.title }}</a>
 <div class="line2">{{ i.kind_label }}{% if i.info.scanned %} · leído con OCR{% endif %}{% if i.info.producer %} · {{ i.info.producer }}{% endif %}</div>
+{% if i.info.word %}<div class="line2">Creado por {{ i.info.creator or '—' }}{% if i.info.created %} el {{ i.info.created[8:10] }}-{{ i.info.created[5:7] }}-{{ i.info.created[:4] }}{% endif %}{% if i.info.last_modified_by and i.info.last_modified_by != i.info.creator %} · guardado por {{ i.info.last_modified_by }}{% endif %}{% if i.info.images %} · {{ i.info.images }} imagen(es), en la pestaña Fotos{% endif %}</div>{% endif %}
 {% if i.kind == 'audio' %}<audio controls preload="none" src="{{ url_for('claims.evidence_file', cid=c.id, digest=i.digest) }}" style="width:100%;max-width:320px;margin-top:6px" id="a-{{ i.digest[:12] }}"></audio>
 {% set tr = (ia.transcripciones or {}).get(i.digest) %}
 {% if tr %}<details class="why" open><summary>Transcripción (IA) · {{ tr.ts[:10] }}</summary><p class="iatext">{{ tr.texto or '(sin texto: el audio parece vacío)' }}</p></details>{% endif %}

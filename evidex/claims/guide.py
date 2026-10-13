@@ -170,6 +170,15 @@ GUIDE: dict[str, tuple[str, str]] = {
         "La foto se tomó con la cámara del portal, pero el asegurado no permitió registrar la ubicación.",
         "Pregúntele dónde estaba al tomarla."),
     # ---- documentos ------------------------------------------------------------------------
+    "word_before_claim": (
+        "El Word se creó antes del siniestro. Puede ser un documento viejo reutilizado como plantilla, o fotos de otro momento.",
+        "Revise si las fotos del Word muestran este choque y pida las originales por el portal."),
+    "word_other_author": (
+        "Los datos internos del Word dicen que lo hizo o lo guardó otra persona, no el asegurado.",
+        "Pregunte quién armó el documento (familiar, taller, tramitador). Si es un taller o tramitador, revise sus otros siniestros."),
+    "word_photos_no_data": (
+        "Las fotos pegadas en un Word pierden la fecha, la cámara y el lugar: no se puede comprobar cuándo ni dónde se tomaron.",
+        "Pida las fotos originales por el portal del asegurado (las toma con la cámara) o por WhatsApp como documento."),
     "doc_editor": (
         "El PDF pasó por un programa que permite cambiar su contenido (montos, fechas, nombres).",
         "Pida el documento directamente al emisor (taller, Carabineros, tienda) y compárelo."),
@@ -288,6 +297,9 @@ WHY = {
     "ai_detected": "Alta o media según el puntaje del detector externo: es una estimación, no una prueba.",
     "ai_dimensions": "Media porque el tamaño coincide con generadores de IA, pero por sí solo no lo prueba.",
     # edición
+    "word_before_claim": "Media porque reutilizar un Word es común, pero las fotos podrían ser de antes del choque.",
+    "word_other_author": "Media porque es común que otro arme el documento, pero puede indicar un tramitador.",
+    "word_photos_no_data": "Baja porque no prueba nada malo: solo impide verificar las fotos.",
     "phone_edit": "Media porque editar en la galería es común y suele ser inocente (encuadrar, aclarar), pero puede "
                   "sacar del cuadro o disimular algo; no es alta mientras no haya IA ni cambios de contenido.",
     "edited": "Alta porque un editor de imágenes permite cambiar el contenido, no solo el encuadre.",

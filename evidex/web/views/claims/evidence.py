@@ -30,8 +30,7 @@ def add_photos(cid):
         for p in photos:
             d = sha256_file(p)
             if not service.has_evidence(case, d) or d in case.purged():       # eliminado antes: vuelve a entrar
-                case.add_evidence(p, note=service.evidence_note(p))
-                added += 1
+                added += len(service.add_file(case, p))                       # un Word trae además sus imágenes
     if rejected:
         flash("No se agregaron: " + ", ".join(rejected), "bad")
     if added:

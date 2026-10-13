@@ -197,10 +197,16 @@ def _textos_documentos(case, max_docs: int = 6, max_chars: int = 2500) -> list[d
         ocr = {}
     out = []
     for e in case.active_evidence():
-        if e["data"].get("note") != "documento" or len(out) >= max_docs:
+        if e["data"].get("note") not in ("documento", "word") or len(out) >= max_docs:
             continue
         d, name = e["subject"], e["data"].get("original_name", "")
         texto = ocr.get(d) or ""
+        if not texto and e["data"].get("note") == "word":
+            try:
+                from evidex.forensics import word
+                texto = word.metadata(case.evidence_dir / d).get("text") or ""
+            except Exception:
+                texto = ""
         if not texto and name.lower().endswith(".pdf"):
             try:
                 texto, _ = pdf_versions._text((case.evidence_dir / d).read_bytes(), max_pages=5)

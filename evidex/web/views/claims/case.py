@@ -30,7 +30,7 @@ from evidex.web.views.claims import bp
 TABS = [("resumen", "Resumen"), ("fotos", "Fotos"), ("documentos", "Documentos"), ("peritaje", "Peritaje"),
         ("asegurado", "Asegurado"), ("informe", "Informe"), ("historial", "Historial")]
 SEV_ORDER = {"alta": 0, "media": 1, "baja": 2}
-KIND_LABEL = {"foto": "Foto", "documento": "Documento", "chat": "Chat de WhatsApp", "audio": "Audio"}
+KIND_LABEL = {"foto": "Foto", "documento": "Documento", "chat": "Chat de WhatsApp", "audio": "Audio", "word": "Word"}
 
 
 def _refresh_if_needed(case: Case) -> None:
@@ -78,6 +78,7 @@ def evidence_items(case: Case, snap: dict) -> list[dict]:
             "digest": digest, "kind": note, "kind_label": KIND_LABEL.get(note, note.capitalize()),
             "title": (d.get("portal") or {}).get("title") or info.get("title") or d["original_name"],
             "name": d["original_name"], "who": "asegurado" if e["actor"].startswith("asegurado") else e["actor"],
+            "from_word": d.get("word_name"),
             "received": e["ts"], "info": info, "findings": found,
             "zones": zones(content.get(digest) if isinstance(content.get(digest), dict) else {},
                            confirmed=any(f["rule"] in AI_CONFIRMED for f in found)),

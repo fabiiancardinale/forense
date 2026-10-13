@@ -20,7 +20,7 @@ from evidex.forensics import policy
 from evidex.claims import report
 from evidex.forensics import whatsapp
 from evidex.core.case import Case
-from evidex.core.upload_guard import AUDIO as AUDIO_EXT
+from evidex.core.upload_guard import AUDIO as AUDIO_EXT, WORD as WORD_EXT
 from evidex.core.timeline import Timeline
 
 SEV_ORDER = {"alta": 0, "media": 1, "baja": 2}
@@ -66,7 +66,7 @@ def has_evidence(case: Case, digest: str) -> bool:
 
 
 def evidence_note(filename) -> str | None:
-    """Clasifica un archivo: 'foto', 'documento', 'chat', 'audio' o None si no se admite.
+    """Clasifica un archivo: 'foto', 'documento', 'chat', 'audio', 'word' o None si no se admite.
     Los .txt y .zip solo se aceptan si el archivo existe y es un chat de WhatsApp exportado."""
     ext = Path(filename).suffix.lower()
     if ext in claims.IMAGE_EXT:
@@ -75,6 +75,8 @@ def evidence_note(filename) -> str | None:
         return "documento"
     if ext in AUDIO_EXT:
         return "audio"
+    if ext in WORD_EXT:
+        return "word"
     if ext in whatsapp.CHAT_EXT:
         return "chat" if Path(filename).is_file() and whatsapp.looks_like_chat(Path(filename)) else None
     return None
@@ -238,8 +240,12 @@ def write_snapshot(case: Case, photos, docs, findings) -> None:
 
     def doc(d):
         m = d.meta
-        return {"digest": d.digest, "name": d.name, "title": m.get("title") or d.name, "producer": m.get("producer") or
-                m.get("creator"), "versions": len(m.get("versions") or []), "scanned": bool(m.get("ocr"))}
+        row = {"digest": d.digest, "name": d.name, "title": m.get("title") or d.name, "producer": m.get("producer") or
+               m.get("creator"), "versions": len(m.get("versions") or []), "scanned": bool(m.get("ocr"))}
+        if m.get("word"):
+            row.update(word=True, creator=m.get("creator"), last_modified_by=m.get("last_modified_by"),
+                       created=m.get("created"), modified=m.get("modified"), images=m.get("images", 0))
+        return row
 
     from evidex.claims import photo_checks
     cited: dict[str, list] = {}
@@ -328,13 +334,44 @@ def metrics(workdir: Path) -> dict:
     }
 
 
+def add_file(case: Case, path: Path, note: str | None = None, analyst: str | None = None, extra: dict | None = None) -> list[str]:
+    """Agrega un archivo al caso. Si es un Word, también cada imagen que trae adentro (marcada «extraída de ...»).
+    Devuelve los hashes agregados."""
+    note = note or evidence_note(path)
+    if not note:
+        return []
+    digest = case.add_evidence(path, analyst, note=note, extra=extra)
+    out = [digest]
+    if note == "word":
+        import tempfile
+        from evidex.core import upload_guard
+        from evidex.forensics import word
+        from evidex.inspection.validation import InvalidFile
+        base = re.sub(r"[^\w\-]+", "_", Path(path).stem)[:40] or "word"
+        with tempfile.TemporaryDirectory() as td:
+            try:
+                imgs = word.extract_images(case.evidence_dir / digest, Path(td), base)
+            except Exception:
+                imgs = []
+            from evidex.core.case import sha256_file
+            for img in imgs:
+                d = sha256_file(img)
+                if has_evidence(case, d) and d not in case.purged():
+                    continue                                  # esa foto ya estaba en el caso (otro Word o suelta)
+                try:
+                    upload_guard.check(img, img.name, "evidencia")
+                except InvalidFile:
+                    continue
+                out.append(case.add_evidence(img, analyst, note="foto",
+                                             extra={"from_word": digest, "word_name": Path(path).name}))
+    return out
+
+
 def create_claim(workdir: Path, cid: str, decl_path: Path, files: list[Path]) -> Case:
     case = Case.create(Path(workdir) / cid, f"Siniestro {cid}", kind="claim")
     case.add_evidence(decl_path, note="declaracion")
     for f in files:
-        note = evidence_note(f)
-        if note:
-            case.add_evidence(f, note=note)
+        add_file(case, f)
     return case
 
 
