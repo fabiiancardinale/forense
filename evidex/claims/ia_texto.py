@@ -67,19 +67,25 @@ def tapar(texto: str) -> str:
 
 # ---- llamadas a Groq (se reemplazan en las pruebas) ----------------------------------------------------
 def _post(url: str, data: bytes, headers: dict) -> dict:
-    req = urllib.request.Request(url, data=data, headers={"Authorization": f"Bearer {clave()}", **headers},
-                                 method="POST")
+    # User-Agent propio: el «Python-urllib» que viene por defecto lo bloquea el cortafuegos de Groq (403)
+    req = urllib.request.Request(url, data=data, method="POST",
+                                 headers={"Authorization": f"Bearer {clave()}", "User-Agent": "Evidex/1.0",
+                                          "Accept": "application/json", **headers})
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
             return json.loads(r.read().decode("utf-8"))
     except urllib.error.HTTPError as ex:
-        detalle = ""
+        detalle, cuerpo = "", b""
         try:
-            detalle = json.loads(ex.read().decode("utf-8")).get("error", {}).get("message", "")
+            cuerpo = ex.read()
+            detalle = json.loads(cuerpo.decode("utf-8")).get("error", {}).get("message", "")
         except Exception:
-            pass
+            detalle = re.sub(r"<[^>]+>|\s+", " ", cuerpo[:2000].decode("utf-8", "replace")).strip()[:160]
         if ex.code == 401:
             raise IAError("La clave de Groq no es válida (revise GROQ_API_KEY en el servidor).") from ex
+        if ex.code == 403:
+            raise IAError("Groq rechazó la conexión (403): revise en la consola de Groq que la clave esté activa y "
+                          f"que su organización no tenga restricciones. Detalle: {detalle or 'sin detalle'}") from ex
         if ex.code == 429:
             raise IAError("Groq rechazó por exceso de uso. Espere un minuto e intente de nuevo.") from ex
         raise IAError(f"Groq respondió con un error ({ex.code}). {detalle[:200]}") from ex

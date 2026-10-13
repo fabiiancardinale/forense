@@ -130,3 +130,36 @@ def test_errores_de_groq(monkeypatch, tmp_path):
     monkeypatch.setattr(ia_texto.urllib.request, "urlopen", falla)
     with pytest.raises(ia_texto.IAError, match="no es válida"):
         ia_texto.chat_json("s", "u")
+
+
+def test_user_agent_propio(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "gsk_x")
+    visto = {}
+
+    class R:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return b'{"choices":[{"message":{"content":"{}"}}]}'
+
+    def abrir(req, timeout):
+        visto.update({k.lower(): v for k, v in req.header_items()})
+        return R()
+    monkeypatch.setattr(ia_texto.urllib.request, "urlopen", abrir)
+    assert ia_texto.chat_json("s", "u") == {}
+    assert visto["user-agent"] == "Evidex/1.0" and visto["authorization"] == "Bearer gsk_x"
+
+    def prohibido(*a, **k):
+        raise urllib_error().HTTPError("u", 403, "no", {}, io.BytesIO(b"<html><b>Access denied</b> error 1010</html>"))
+    monkeypatch.setattr(ia_texto.urllib.request, "urlopen", prohibido)
+    with pytest.raises(ia_texto.IAError, match="403.*Access denied"):
+        ia_texto.chat_json("s", "u")
+
+
+def urllib_error():
+    import urllib.error
+    return urllib.error
