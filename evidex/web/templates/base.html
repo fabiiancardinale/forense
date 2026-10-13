@@ -4,38 +4,45 @@
 
 
 <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">{% block extra_head %}{% endblock %}</head><body>
-<aside class="side" id="side">
-<a class="brand" href="{{ url_for('panel.dashboard') }}"><span class="mark">{{ brand_mark(20) }}</span><span><b>Evidex</b><small>by Zelekpress</small></span></a>
-{% if client %}<div class="client"><img src="{{ url_for('admin.client_logo', v=client.v) }}" alt="{{ client.name or 'Cliente' }}"><span>{{ client.name or '' }}</span></div>{% endif %}
-<nav class="navs">{% if can("ver_siniestros") %}<a class="{{ 'on' if active == 'analizar' }}" href="{{ url_for('inspection.index') }}">{{ icon('upload') }}Analizar archivos</a>{% endif %}
-{% if legacy_modules %}
 {% set perito = current_user and current_user.role == 'perito' %}
-{% if not perito %}<a href="{{ url_for('panel.dashboard') }}" class="{{ 'on' if active=='dash' }}">{{ icon('grid') }}{{ 'Mis casos' if current_user and not can('ver_todos') else 'Panel' }}</a>{% endif %}
-{% if can('ver_siniestros') %}<div class="grp">Siniestros</div>
-<a href="{{ url_for('claims.index') }}" class="{{ 'on' if active in ('index', 'new') }}">{{ icon('list') }}Cola de trabajo{% if nav_pending %}<span class="n" title="Riesgo alto sin decisión">{{ nav_pending }}</span>{% endif %}</a>
-<a href="{{ url_for('tools.photo_check') }}" class="{{ 'on' if active=='foto' }}">{{ icon('camera') }}Revisar una foto</a>{% endif %}
-{% if can('ensenar_modelo') %}<a href="{{ url_for('training.index') }}" class="{{ 'on' if active=='entrenar' }}">{{ icon('filecheck') }}Enseñar al modelo</a>{% endif %}
-{% if can('equipo') %}<div class="grp">Equipo</div>
-<a href="{{ url_for('panel.team') }}" class="{{ 'on' if active=='team' }}">{{ icon('users') }}Carga y atrasos</a>{% endif %}
-{% if can('peritaje') %}<div class="grp">{{ 'Peritaje' if perito else 'Investigaciones' }}</div>
-<a href="{{ url_for('investigations.investigations') }}" class="{{ 'on' if active in ('inv', 'inv_new') }}">{{ icon('folder') }}{{ 'Mis encargos' if perito else 'Expedientes' }}</a>{% endif %}
+<header class="topbar" id="side">
+<a class="tb-brand" href="{{ url_for('panel.dashboard') }}"><span class="mark">{{ brand_mark(18) }}</span><b>Evidex</b></a>
+<button type="button" class="tb-menu" aria-label="Abrir menú" id="menu-toggle">{{ icon('menu', 22) }}</button>
+<nav class="tb-nav" aria-label="Menú principal">
+{% if legacy_modules %}
+{% if can('ver_siniestros') %}<a href="{{ url_for('claims.index') }}" class="{{ 'on' if active in ('index', 'new') }}">Cola{% if nav_pending %}<span class="n" title="Riesgo alto sin decisión">{{ nav_pending }}</span>{% endif %}</a>{% endif %}
+{% if not perito %}<a href="{{ url_for('panel.dashboard') }}" class="{{ 'on' if active=='dash' }}">{{ 'Mis casos' if current_user and not can('ver_todos') else 'Panel' }}</a>{% endif %}
+{% if can('ver_siniestros') %}<a href="{{ url_for('tools.photo_check') }}" class="{{ 'on' if active=='foto' }}">Revisar una foto</a>{% endif %}
+{% if can('peritaje') %}<a href="{{ url_for('investigations.investigations') }}" class="{{ 'on' if active in ('inv', 'inv_new') }}">{{ 'Mis encargos' if perito else 'Expedientes' }}</a>{% endif %}
+{% endif %}
+{% if can("ver_siniestros") %}<a class="{{ 'on' if active == 'analizar' }}" href="{{ url_for('inspection.index') }}">Analizar archivos</a>{% endif %}
+{% set more_on = active in ('entrenar', 'team', 'redes', 'metricas', 'importar', 'usuarios', 'config') %}
+{% if (legacy_modules and (can('ensenar_modelo') or can('equipo') or can('redes') or can('cartera'))) or can('admin') %}
+<details class="tb-more{{ ' on' if more_on }}"><summary>Más</summary><div class="tb-drop">
+{% if legacy_modules %}
+{% if can('equipo') %}<div class="grp">Equipo</div><a href="{{ url_for('panel.team') }}" class="{{ 'on' if active=='team' }}">{{ icon('users', 16) }}Carga y atrasos</a>{% endif %}
+{% if can('ensenar_modelo') %}<a href="{{ url_for('training.index') }}" class="{{ 'on' if active=='entrenar' }}">{{ icon('filecheck', 16) }}Enseñar al modelo</a>{% endif %}
 {% if can('redes') or can('cartera') %}<div class="grp">Cartera</div>{% endif %}
-{% if can('redes') %}<a href="{{ url_for('portfolio.networks') }}" class="{{ 'on' if active=='redes' }}">{{ icon('network') }}Redes de fraude</a>{% endif %}
-{% if can('cartera') %}<a href="{{ url_for('portfolio.metrics_view') }}" class="{{ 'on' if active=='metricas' }}">{{ icon('chart') }}Métricas</a>
-<a href="{{ url_for('portfolio.import_view') }}" class="{{ 'on' if active=='importar' }}">{{ icon('upload') }}Importar historial</a>{% endif %}
+{% if can('redes') %}<a href="{{ url_for('portfolio.networks') }}" class="{{ 'on' if active=='redes' }}">{{ icon('network', 16) }}Redes de fraude</a>{% endif %}
+{% if can('cartera') %}<a href="{{ url_for('portfolio.metrics_view') }}" class="{{ 'on' if active=='metricas' }}">{{ icon('chart', 16) }}Métricas</a>
+<a href="{{ url_for('portfolio.import_view') }}" class="{{ 'on' if active=='importar' }}">{{ icon('upload', 16) }}Importar historial</a>{% endif %}
 {% endif %}
 {% if can('admin') %}<div class="grp">Sistema</div>
-<a href="{{ url_for('admin.users_view') }}" class="{{ 'on' if active=='usuarios' }}">{{ icon('users') }}Usuarios y empresas</a>
-<a href="{{ url_for('admin.settings') }}" class="{{ 'on' if active=='config' }}">{{ icon('gear') }}Configuración</a>{% endif %}
+<a href="{{ url_for('admin.users_view') }}" class="{{ 'on' if active=='usuarios' }}">{{ icon('users', 16) }}Usuarios y empresas</a>
+<a href="{{ url_for('admin.settings') }}" class="{{ 'on' if active=='config' }}">{{ icon('gear', 16) }}Configuración</a>{% endif %}
+</div></details>{% endif %}
 </nav>
-{% if current_user %}<div class="sidefoot userbox"><span class="av">{{ current_user.name[:1]|upper }}</span><span><b>{{ current_user.name }}</b><br>{{ roles[current_user.role] }}</span>
-<form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">Salir</button></form></div>
-{% elif not auth_on %}<div class="sidefoot demo"><span class="dotw"></span><span>Modo demo, sin usuarios. <a href="{{ url_for('admin.users_view') }}">Crear administrador</a></span></div>{% endif %}
-</aside>
+{% if legacy_modules and can('ver_siniestros') %}<form class="tb-search" method="get" action="{{ url_for('claims.index') }}" role="search">{{ icon('search', 15) }}
+<input id="gsearch" name="q" value="{{ request.args.get('q', '') if active == 'index' else '' }}" placeholder="Buscar siniestro, patente o asegurado" aria-label="Buscar siniestro" autocomplete="off"><kbd>Ctrl K</kbd></form>{% endif %}
+{% if client %}<span class="tb-client"><img src="{{ url_for('admin.client_logo', v=client.v) }}" alt="{{ client.name or 'Cliente' }}"></span>{% endif %}
+{% if current_user %}<details class="tb-user"><summary aria-label="Cuenta"><span class="av">{{ current_user.name[:1]|upper }}</span></summary><div class="tb-drop right">
+<div class="who"><b>{{ current_user.name }}</b><span>{{ roles[current_user.role] }}</span></div>
+<form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">Salir</button></form></div></details>
+{% elif not auth_on %}<a class="tb-demo" href="{{ url_for('admin.users_view') }}">Modo demo · crear administrador</a>{% endif %}
+</header>
 <div class="wrap">
-<div class="mtop"><button type="button" aria-label="Abrir menú" id="menu-toggle">{{ icon('menu', 22) }}</button><b>Evidex</b></div>
-<header class="pagehead"><div class="tt"><div class="crumbs">{% block crumbs %}{% endblock %}</div>{% block heading %}{% endblock %}</div>
-<div class="actions">{% block actions %}{% endblock %}</div>{% block tabs %}{% endblock %}</header>
+{% block pagehead %}<header class="pagehead"><div class="tt"><div class="crumbs">{% block crumbs %}{% endblock %}</div>{% block heading %}{% endblock %}</div>
+<div class="actions">{% block actions %}{% endblock %}</div>{% block tabs %}{% endblock %}</header>{% endblock %}
 <main>
 {% with msgs = get_flashed_messages(with_categories=true) %}{% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}{% endwith %}
 {% block body %}{% endblock %}
@@ -50,8 +57,11 @@ document.querySelectorAll('[data-copy-message]').forEach(x=>x.addEventListener('
 document.querySelectorAll('[data-confirm]').forEach(x=>x.addEventListener('submit',e=>{if(!confirm(x.dataset.confirm))e.preventDefault()}));
 document.querySelectorAll('[data-file-names]').forEach(x=>x.addEventListener('change',()=>{x.form.querySelector('.fname').textContent=[...x.files].map(f=>f.name).join(', ');x.form.querySelector('.go').hidden=!x.files.length}));
 document.getElementById('menu-toggle').addEventListener('click',()=>document.getElementById('side').classList.toggle('open'));
+document.querySelectorAll('.topbar details').forEach(d=>d.addEventListener('toggle',()=>{if(d.open)document.querySelectorAll('.topbar details').forEach(o=>{if(o!==d)o.open=false})}));
+document.addEventListener('click',e=>{document.querySelectorAll('.topbar details[open]').forEach(d=>{if(!d.contains(e.target))d.open=false})});
+document.addEventListener('keydown',e=>{const g=document.getElementById('gsearch');if(g&&(e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();g.focus();g.select()}});
 document.querySelectorAll('form[data-busy]').forEach(f=>f.addEventListener('submit',()=>{
   f.querySelectorAll('button[type=submit]').forEach(b=>{b.disabled=true;b.textContent=f.dataset.busy})}));
-document.addEventListener('click',e=>{const s=document.getElementById('side');if(s.classList.contains('open')&&!s.contains(e.target)&&!e.target.closest('.mtop'))s.classList.remove('open')});
+document.addEventListener('click',e=>{const s=document.getElementById('side');if(s.classList.contains('open')&&!s.contains(e.target))s.classList.remove('open')});
 </script>
 </body></html>

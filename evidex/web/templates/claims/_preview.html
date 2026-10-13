@@ -1,0 +1,21 @@
+{# Vista previa de un caso en la cola de trabajo. Requiere p, p_verdict, p_groups, p_photos, p_more. #}
+{% set sc = p.score if p.score is number else 0 %}
+<div class="pv" data-cid="{{ p.id }}">
+<div class="pv-head"><div class="ring {{ p.level }}" style="--p:{{ sc }}"><b>{{ p.score if p.score is number else '—' }}</b><small>de 100</small></div>
+<div><div class="eyebrow {{ p.level }}">{{ p.numero }} · {{ p.rec }}</div>
+<h2>{{ p_verdict.head }}</h2>
+<p class="lead">{{ p.asegurado }}{% if p.patente and p.patente != '—' %} · {{ p.patente }}{% endif %}{% if p.monto %} · ${{ money(p.monto) }}{% endif %}{% if p.fecha %} · ocurrido {{ p.fecha }}{% endif %}</p>
+<p class="pv-meta">{{ p_verdict.detail }} Analista: {{ p.owner_name }}{% if p.decision_label %} · Decisión: {{ p.decision_label }}{% endif %}</p></div></div>
+{% if p_photos %}<div class="pv-strip">{% for i in p_photos %}<a href="{{ url_for('claims.case_view', cid=p.id, tab='fotos') }}" title="{{ i.title }}">
+<img src="{{ url_for('claims.evidence_file', cid=p.id, digest=i.digest, mini=1) }}" alt="{{ i.title }}" loading="lazy">{% if i.worst %}<span class="{{ i.worst }}">{{ i.worst }}</span>{% endif %}</a>{% endfor %}
+{% if p_more %}<a class="more" href="{{ url_for('claims.case_view', cid=p.id, tab='fotos') }}">+{{ p_more }}</a>{% endif %}</div>{% endif %}
+{% if p_groups %}<h3 class="sec">Principales razones</h3><div class="pv-why">
+{% for g in p_groups[:5] %}<a class="wi" href="{{ url_for('claims.case_view', cid=p.id) }}"><span class="sev {{ g.severity }}">{{ g.severity|capitalize }}</span><span class="t">{{ g.title }}</span>
+{% if g.count > 1 %}<span class="cnt">× {{ g.count }}</span>{% endif %}</a>{% endfor %}
+{% if p_groups|length > 5 %}<a class="wi more" href="{{ url_for('claims.case_view', cid=p.id) }}">y {{ p_groups|length - 5 }} tipo(s) más…</a>{% endif %}</div>
+{% else %}<p class="muted">Sin alertas.</p>{% endif %}
+<div class="pv-btns"><a class="btn pri" href="{{ url_for('claims.case_view', cid=p.id) }}">Abrir expediente →</a>
+<a class="btn" href="{{ url_for('claims.case_view', cid=p.id, tab='fotos') }}">Fotos</a>
+<a class="btn" href="{{ url_for('claims.case_view', cid=p.id, tab='peritaje') }}">Peritaje</a>
+<a class="btn" href="{{ url_for('claims.case_view', cid=p.id, tab='informe') }}">Informe</a></div>
+</div>

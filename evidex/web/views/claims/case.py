@@ -106,21 +106,43 @@ def case_view(cid):
            "analyzing": background.is_running(case), "analysis_state": background.status(case),
            "n_photos": sum(1 for i in items if i["kind"] == "foto" and not i["excluded"]),
            "n_docs": sum(1 for i in items if i["kind"] != "foto" and not i["excluded"]),
-           "n_findings": len(snap["findings"])}
+           "n_findings": len(snap["findings"]), **_overview(case, c, snap, items),
+           "decisions": service.DECISIONS, "history": service.decision_history(case)}
     builder = {"resumen": _tab_summary, "fotos": _tab_photos, "documentos": _tab_docs, "peritaje": _tab_expert,
                "asegurado": _tab_portal, "informe": lambda case, snap, items: {}, "historial": _tab_history}[tab]
     ctx.update(builder(case, snap, items))
     return render_template("claims/case.html", **ctx)
 
 
-def _tab_summary(case, snap, items):
-    decl = service.declaration(case) or {}
-    findings = sorted(snap["findings"], key=lambda f: SEV_ORDER[f["severity"]])
+def _overview(case, c, snap, items) -> dict:
+    """Lo que muestran la ficha del expediente y la vista previa de la cola: veredicto y alertas agrupadas."""
+    findings = sorted((snap or {}).get("findings", []), key=lambda f: SEV_ORDER[f["severity"]])
     thumbs = {i["digest"][:8]: i for i in items if i["is_image"]}
     groups = _group_findings(findings, thumbs)
-    return {"decl": decl, "groups": groups, "verdict": _verdict(summarize(case), findings, groups),
-            "decisions": service.DECISIONS, "history": service.decision_history(case),
-            "todo": _todo(case, items), "team": analysts() if has_perm("equipo") else [],
+    return {"groups": groups, "verdict": _verdict(c, findings, groups)}
+
+
+def preview_context(case) -> dict:
+    """Vista previa de un caso en la cola de trabajo (sin reanalizar ni registrar decisiones)."""
+    c = summarize(case)
+    snap = service.snapshot(case) or {"findings": []}
+    items = evidence_items(case, snap)
+    photos = [i for i in items if i["is_image"] and not i["excluded"]]
+    return {"p": c, "p_photos": photos[:6], "p_more": max(0, len(photos) - 6), **{"p_" + k: v for k, v in
+            _overview(case, c, snap, items).items()}}
+
+
+@bp.get("/caso/<cid>/vista")
+def case_preview(cid):
+    case = load_claim(cid)
+    ctx = preview_context(case)
+    log_access("vista_previa", ctx["p"]["numero"])
+    return render_template("claims/_preview.html", **ctx)
+
+
+def _tab_summary(case, snap, items):
+    decl = service.declaration(case) or {}
+    return {"decl": decl, "todo": _todo(case, items), "team": analysts() if has_perm("equipo") else [],
             "can_reassign": has_perm("equipo"), **_ia(case)}
 
 
@@ -162,7 +184,12 @@ def _verdict(c, findings, groups) -> dict:
                   f"tipo{'s' if len(groups) != 1 else ''} ({', '.join(partes)}).")
     else:
         detail = "Sin alertas." if c["level"] != "none" else ""
-    return {"head": head, "detail": detail, "counts": n}
+    titles = [t[0].lower() + t[1:] if t[1:2].islower() else t for t in (g["title"].split(" (")[0] for g in groups[:3])]
+    why = ""
+    if titles:
+        lista = titles[0] if len(titles) == 1 else ", ".join(titles[:-1]) + " y " + titles[-1]
+        why = f"Principales señales: {lista}."
+    return {"head": head, "detail": detail, "counts": n, "why": why}
 
 
 def _ia(case) -> dict:

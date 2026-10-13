@@ -1,17 +1,15 @@
-<div class="layout-side">
-<div style="display:grid;gap:16px">
-{% set sc = c.score if c.score is number else 0 %}
-<section class="vband {{ c.level }}" aria-label="Veredicto">
-<div class="v-score" style="--p:{{ sc }}"><b>{{ c.score if c.score is number else '—' }}</b><small>de 100</small></div>
-<div class="v-text">
-<h2>{{ verdict.head }}</h2>{% if verdict.detail %}<p>{{ verdict.detail }}</p>{% endif %}
-{% if todo %}<ul class="v-next">{% for lvl, text, t in todo %}<li class="{{ lvl }}"><a href="{{ url_for('claims.case_view', cid=c.id, tab=t if t != 'resumen' else None) }}{{ '#decision' if t == 'resumen' }}">{{ icon('arrow', 14) }}{{ text }}</a></li>{% endfor %}</ul>{% endif %}
+<div class="verdict-ed {{ c.level }}">
+<div class="eyebrow">Veredicto de Evidex</div>
+<h2>{{ verdict.head }}</h2>
+{% if verdict.why %}<p class="lead">{{ verdict.why }} {{ verdict.detail }}</p>{% elif verdict.detail %}<p class="lead">{{ verdict.detail }}</p>{% endif %}
 </div>
-<dl class="v-sev">{% for k in ('alta', 'media', 'baja') %}<div class="{{ k }}{{ ' zero' if not verdict.counts[k] }}"><dt>{{ k|capitalize }}</dt><dd>{{ verdict.counts[k] }}</dd></div>{% endfor %}</dl>
-</section>
-
-<section class="panel"><div class="ph"><h2>Por qué</h2>
-<span class="r hint">{{ n_findings }} alerta(s) · <a href="{{ url_for('claims.case_view', cid=c.id, tab='informe') }}">ver informe completo</a></span></div>
+{% if todo %}{% set first = todo[0] %}
+<div class="nextstep {{ first[0] }}"><div><small>Siguiente paso</small><b>{{ first[1] }}</b></div>
+<a class="btn" href="{{ url_for('claims.case_view', cid=c.id, tab=first[2] if first[2] != 'resumen' else None) }}{{ '#decision' if first[2] == 'resumen' }}">{{ {'asegurado': 'Ir al portal', 'peritaje': 'Ir a peritaje', 'resumen': 'Decidir'}.get(first[2], 'Ir') }} →</a></div>
+{% if todo|length > 1 %}<ul class="v-next">{% for lvl, text, t in todo[1:] %}<li class="{{ lvl }}"><a href="{{ url_for('claims.case_view', cid=c.id, tab=t if t != 'resumen' else None) }}{{ '#decision' if t == 'resumen' }}">{{ icon('arrow', 14) }}{{ text }}</a></li>{% endfor %}</ul>{% endif %}
+{% endif %}
+<section class="whysec"><div class="sec-h"><h3 class="sec">Por qué</h3>
+<span class="hint">{{ n_findings }} alerta(s) · <a href="{{ url_for('claims.case_view', cid=c.id, tab='informe') }}">ver informe completo</a></span></div>
 {% if groups %}<div class="rlist">
 {% for g in groups %}<details class="reason {{ g.severity }}"{{ ' open' if loop.first and g.severity == 'alta' }}>
 <summary><span class="sev {{ g.severity }}">{{ g.severity|capitalize }}</span><b class="rt">{{ g.title }}</b>
@@ -24,22 +22,9 @@
 {% set f = g.findings[0] %}{% set show_found = false %}{% include "claims/case/_explain.html" %}
 </div></details>{% endfor %}
 </div>
-{% else %}<div class="pb"><p class="muted" style="margin:0">Evidex no encontró alertas en este caso.</p></div>{% endif %}</section>
+{% else %}<p class="muted">Evidex no encontró alertas en este caso.</p>{% endif %}</section>
 {% set mostrar = ['relato', 'resumen'] %}{% include "claims/case/_ia.html" %}
-</div>
-
-<aside>
-<section class="panel" id="decision"><div class="ph"><h2>Decisión</h2></div><div class="pb">
-{% if can('editar_siniestros') %}<form method="post" action="{{ url_for('claims.decide', cid=c.id) }}" style="display:grid;gap:10px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<select name="decision" required aria-label="Decisión">{% for k, v in decisions.items() %}<option value="{{ k }}" {{ 'selected' if c.decision == k }}>{{ v }}</option>{% endfor %}</select>
-{% if current_user %}<input type="hidden" name="actor" value="{{ current_user.name }}">{% else %}<input name="actor" placeholder="Su nombre" required aria-label="Su nombre">{% endif %}
-<input name="nota" placeholder="Nota (opcional)" aria-label="Nota">
-<button class="btn pri" type="submit">Registrar decisión</button></form>{% endif %}
-{% if history %}<div class="hist">{% for h in history|reverse %}
-<div class="hint"><b class="dec {{ h.subject }}">{{ h.data.label }}</b> · {{ h.actor }} · {{ h.ts[:16]|replace('T',' ') }} UTC{% if h.data.note %}<br>{{ h.data.note }}{% endif %}</div>{% endfor %}</div>
-{% else %}<p class="hint" style="margin:10px 0 0">Cada decisión queda en la cadena de custodia con su autor.</p>{% endif %}
-</div></section>
-
+<div class="grid2">
 <section class="panel"><div class="ph"><h2>Datos del siniestro</h2></div><div class="pb">
 <dl class="kv">
 <dt>Asegurado</dt><dd>{{ decl.asegurado or '—' }}</dd><dt>RUT</dt><dd>{{ decl.rut or '—' }}</dd>
@@ -59,4 +44,4 @@
 <input name="motivo" placeholder="Motivo (vacaciones, carga…)" aria-label="Motivo">
 <button class="btn sm" type="submit">Reasignar</button></form>{% endif %}
 </div></section>
-</aside></div>
+</div>

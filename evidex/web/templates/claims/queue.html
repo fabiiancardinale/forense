@@ -1,48 +1,60 @@
 {% extends "base.html" %}{% block title %}Cola de trabajo{% endblock %}
-{% block heading %}<h1>Cola de trabajo</h1><p class="sub">{{ 'Todos los siniestros' if everyone else 'Sus siniestros' }}, del mayor al menor riesgo.</p>{% endblock %}
-{% block actions %}{% if can('cartera') %}<a class="btn" href="{{ url_for('portfolio.export_xlsx', what='cola') }}">{{ icon('download', 15) }}Excel</a>{% endif %}
-{% if can('editar_siniestros') %}<a class="btn pri" href="{{ url_for('claims.new_claim') }}">{{ icon('plus', 15, '#fff') }}Nuevo siniestro</a>{% endif %}{% endblock %}
+{% block pagehead %}{% if not (cases or who) %}<header class="pagehead"><div class="tt"><h1>Cola de trabajo</h1></div></header>{% endif %}{% endblock %}
 {% block body %}
 {% if cases or who %}
-<section class="panel">
-<div class="filterbar">
-<label class="search">{{ icon('search', 15) }}<input id="q" placeholder="Buscar número, patente o asegurado" aria-label="Buscar"></label>
-<div class="chips" id="chips" role="group" aria-label="Filtrar por estado">
-<button type="button" class="chip on" data-f="">Todos <span class="c">{{ cases|length }}</span></button>
-<button type="button" class="chip" data-f="pend">Alto sin decidir <span class="c">{{ counts.pend }}</span></button>
-<button type="button" class="chip" data-f="bad">Derivar <span class="c">{{ counts.bad }}</span></button>
-<button type="button" class="chip" data-f="warn">Revisión <span class="c">{{ counts.warn }}</span></button>
-<button type="button" class="chip" data-f="ok">Sin alertas <span class="c">{{ counts.ok }}</span></button></div>
+<div class="qsplit">
+<aside class="qlist">
+<div class="qhead"><div class="qtitle"><h1>Cola de trabajo</h1>
+<div class="qact">{% if can('cartera') %}<a class="btn sm" href="{{ url_for('portfolio.export_xlsx', what='cola') }}" title="Descargar en Excel">{{ icon('download', 14) }}Excel</a>{% endif %}
+{% if can('editar_siniestros') %}<a class="btn sm pri" href="{{ url_for('claims.new_claim') }}">{{ icon('plus', 14, '#fff') }}Nuevo</a>{% endif %}</div></div>
+<p class="sub">{{ 'Todos los siniestros' if everyone else 'Sus siniestros' }}, del mayor al menor riesgo.</p>
+<label class="search">{{ icon('search', 15) }}<input id="q" value="{{ q }}" placeholder="Buscar número, patente o asegurado" aria-label="Buscar"></label>
+<div class="qchips" id="chips" role="group" aria-label="Filtrar por estado">
+<button type="button" class="on" data-f="">Todos<b>{{ cases|length }}</b></button>
+<button type="button" data-f="pend">Alto sin decidir<b>{{ counts.pend }}</b></button>
+<button type="button" data-f="bad">Derivar<b>{{ counts.bad }}</b></button>
+<button type="button" data-f="warn">Revisión<b>{{ counts.warn }}</b></button>
+<button type="button" data-f="ok">Sin alertas<b>{{ counts.ok }}</b></button></div>
 {% if everyone and team %}<form method="get" class="fsel"><label for="an">Analista</label>
 <select id="an" name="analista" data-auto-submit><option value="">Todos</option>{% for a in team %}<option value="{{ a.username }}" {{ 'selected' if who == a.username }}>{{ a.name }}</option>{% endfor %}<option value="-" {{ 'selected' if who == '-' }}>Sin asignar</option></select></form>{% endif %}
 </div>
-<table class="queue" id="t">
-<colgroup><col style="width:25%"><col style="width:12%"><col style="width:17%"><col style="width:12%"><col>{% if everyone %}<col style="width:13%">{% endif %}</colgroup>
-<thead><tr><th>Siniestro</th><th>Ocurrido</th><th>Riesgo</th><th class="num">Monto</th><th>Estado</th>{% if everyone %}<th>Analista</th>{% endif %}</tr></thead>
-<tbody>{% for c in cases %}<tr class="row" data-level="{{ c.level }}" data-pend="{{ 1 if c.level == 'bad' and c.decision in (None, 'en_revision') else 0 }}" data-href="{{ url_for('claims.case_view', cid=c.id) }}">
-<td><a class="strong" href="{{ url_for('claims.case_view', cid=c.id) }}">{{ c.numero }}</a>
-<div class="line2">{{ c.asegurado }}{% if c.patente and c.patente != '—' %} · {{ c.patente }}{% endif %}</div></td>
-<td class="nowrap">{{ c.fecha[8:10] }}-{{ c.fecha[5:7] }}-{{ c.fecha[:4] }}<div class="line2">{{ c.fecha[11:] }}</div></td>
-<td><span class="risk {{ c.level }}" style="--w:{{ c.score if c.score is number else 0 }}%"><i></i>{{ c.score }}</span>
-<div class="line2">{{ c.findings }} alerta{{ 's' if c.findings != 1 }}{% if c.linked %} · {{ c.linked }} vínculo{{ 's' if c.linked != 1 }}{% endif %}</div></td>
-<td class="num nowrap">{{ '$' ~ money(c.monto) if c.monto else '—' }}</td>
-<td>{% if c.decision and c.decision != 'en_revision' %}<span class="dec {{ c.decision }}">{{ c.decision_label }}</span>
-{% else %}<span class="badge {{ c.level }}">{{ level_text.get(c.level, c.rec) }}</span>{% endif %}
-{% if c.derivation %}<div class="line2"><span class="dot {{ c.derivation.state }}"></span>Peritaje: {{ c.derivation.state_label|lower }}</div>
-{% elif c.portal in ('enviado', 'abierto', 'vencido') %}<div class="line2"><span class="dot p-{{ c.portal }}"></span>Asegurado: {{ {'enviado': 'enlace enviado', 'abierto': 'subiendo archivos', 'vencido': 'enlace vencido'}[c.portal] }}</div>{% endif %}</td>
-{% if everyone %}<td class="ellip">{{ c.owner_name }}</td>{% endif %}</tr>{% endfor %}
-<tr class="norow" hidden><td colspan="6" class="muted">Ningún caso coincide con la búsqueda.</td></tr></tbody>
-</table>
-<div class="tablefoot hint" id="shown"></div>
-</section>
+<div class="qrows" id="t" role="listbox" aria-label="Siniestros">
+{% for c in cases %}{% set sc = c.score if c.score is number else 0 %}<a class="qrow{{ ' on' if c.id == sel }}" role="option" href="{{ url_for('claims.case_view', cid=c.id) }}" data-cid="{{ c.id }}"
+ data-preview="{{ url_for('claims.case_preview', cid=c.id) }}" data-level="{{ c.level }}" data-pend="{{ 1 if c.level == 'bad' and c.decision in (None, 'en_revision') else 0 }}">
+<span class="ring sm {{ c.level }}" style="--p:{{ sc }}"><b>{{ c.score if c.score is number else '—' }}</b></span>
+<span class="qmain"><b>{{ c.numero }}</b><small>{{ c.asegurado }}{% if c.patente and c.patente != '—' %} · {{ c.patente }}{% endif %}</small>
+{% if c.decision and c.decision != 'en_revision' %}<span class="dec {{ c.decision }}">{{ c.decision_label }}</span>
+{% else %}<span class="tag {{ c.level }}">{{ level_text.get(c.level, c.rec) }}</span>{% endif %}
+{% if c.derivation %}<span class="qnote"><span class="dot {{ c.derivation.state }}"></span>Peritaje: {{ c.derivation.state_label|lower }}</span>
+{% elif c.portal in ('enviado', 'abierto', 'vencido') %}<span class="qnote"><span class="dot p-{{ c.portal }}"></span>Asegurado: {{ {'enviado': 'enlace enviado', 'abierto': 'subiendo archivos', 'vencido': 'enlace vencido'}[c.portal] }}</span>{% endif %}</span>
+<span class="qmeta">{{ c.fecha[8:10] }}-{{ c.fecha[5:7] }}-{{ c.fecha[:4] }}<br>{{ c.findings }} alerta{{ 's' if c.findings != 1 }}{% if c.monto %}<br>${{ money(c.monto) }}{% endif %}{% if everyone %}<br><i>{{ c.owner_name }}</i>{% endif %}</span></a>
+{% endfor %}<p class="norow muted" hidden>Ningún caso coincide con la búsqueda.</p>
+</div>
+<div class="qfoot hint"><span id="shown"></span><span class="keys">↑ ↓ para moverse · Enter para abrir</span></div>
+</aside>
+<section class="qprev" id="pv" aria-live="polite">{% if p %}{% include "claims/_preview.html" %}{% endif %}</section>
+</div>
 <script nonce="{{ csp_nonce }}">
-const q=document.getElementById('q');let lf='';
-function apply(){const v=q.value.toLowerCase();let n=0;document.querySelectorAll('#t tr.row').forEach(r=>{
+(()=>{
+const q=document.getElementById('q'),pv=document.getElementById('pv'),wide=matchMedia('(min-width:1001px)');let lf='';
+const rows=()=>[...document.querySelectorAll('#t .qrow')].filter(r=>!r.hidden);
+function apply(){const v=q.value.toLowerCase();let n=0;document.querySelectorAll('#t .qrow').forEach(r=>{
  const okf=!lf||(lf==='pend'?r.dataset.pend==='1':r.dataset.level===lf);const s=okf&&r.textContent.toLowerCase().includes(v);r.hidden=!s;n+=s});
- document.querySelector('#t tr.norow').hidden=n>0;document.getElementById('shown').textContent=n+' de {{ cases|length }} caso(s)'}
+ document.querySelector('#t .norow').hidden=n>0;document.getElementById('shown').textContent=n+' de {{ cases|length }} caso(s)'}
+let ctl;async function pick(r,scroll){if(!r)return;document.querySelectorAll('#t .qrow.on').forEach(x=>x.classList.remove('on'));r.classList.add('on');
+ if(scroll)r.scrollIntoView({block:'nearest'});const u=new URL(location);u.searchParams.set('sel',r.dataset.cid);history.replaceState(null,'',u);
+ ctl&&ctl.abort();ctl=new AbortController();pv.classList.add('loading');
+ try{const res=await fetch(r.dataset.preview,{signal:ctl.signal});if(res.ok){pv.innerHTML=await res.text();pv.scrollTop=0}}catch(e){}pv.classList.remove('loading')}
+document.querySelectorAll('#t .qrow').forEach(r=>{r.addEventListener('click',e=>{if(!wide.matches||e.ctrlKey||e.metaKey||e.shiftKey)return;
+ if(r.classList.contains('on'))return;e.preventDefault();pick(r)})});
+document.addEventListener('keydown',e=>{if(!wide.matches||e.target.closest('input,select,textarea'))return;const rs=rows();const i=rs.findIndex(r=>r.classList.contains('on'));
+ if(e.key==='ArrowDown'||e.key==='j'){e.preventDefault();pick(rs[Math.min(rs.length-1,i+1)],true)}
+ else if(e.key==='ArrowUp'||e.key==='k'){e.preventDefault();pick(rs[Math.max(0,i-1)],true)}
+ else if(e.key==='Enter'&&i>=0){location.href=rs[i].href}});
 q.addEventListener('input',apply);
-document.querySelectorAll('#chips .chip').forEach(c=>c.onclick=()=>{document.querySelectorAll('#chips .chip').forEach(x=>x.classList.remove('on'));
+document.querySelectorAll('#chips button').forEach(c=>c.onclick=()=>{document.querySelectorAll('#chips button').forEach(x=>x.classList.remove('on'));
  c.classList.add('on');lf=c.dataset.f;apply()});apply();
+})();
 </script>
 {% else %}
 <div class="card empty"><h2>Aún no hay siniestros</h2>

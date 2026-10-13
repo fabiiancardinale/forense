@@ -227,7 +227,12 @@ No es "taller externo = sospechoso": se mira cada taller, en convenio o no, sobr
 ## Diseño (estructura, no colores) — ideas sacadas de Linear, bandejas lista+detalle y gestores de siniestros
 - [x] Caso con el veredicto arriba: anillo de riesgo, una frase de conclusión, conteo alta/media/baja y el siguiente
       paso como botón; alertas de la misma regla agrupadas en una línea («× 3», miniaturas) que se despliega.
-- [ ] Cola de trabajo tipo bandeja dividida: lista a la izquierda, vista previa del caso a la derecha, flechas del teclado.
+- [x] Barra superior oscura en lugar del menú lateral: secciones principales, «Más» con el resto, buscador (Ctrl K), logo del
+      cliente y menú de la cuenta. En el celular, un botón ☰ despliega todo.
+- [x] Cola de trabajo tipo bandeja dividida: lista con anillo de riesgo a la izquierda, vista previa del caso a la derecha
+      (veredicto, fotos con su alerta, principales razones), flechas ↑ ↓ y Enter; en el celular, solo la lista.
+- [x] Caso como expediente: ficha fija a la izquierda (riesgo, datos, índice de secciones, decisión con botones) y el
+      contenido a la derecha con el veredicto en grande y la barra «Siguiente paso». En el celular se reordena y «Decidir» queda abajo.
 - [ ] Fotos como visor forense: foto grande, tira de miniaturas, panel de datos, deslizador foto/mapa de zonas, lado a lado.
 - [ ] Línea de tiempo del siniestro: choque, fecha de cada foto, PDF/Word y denuncia en un eje; lo anterior al choque en rojo.
 - [ ] Menú lateral contraíble a íconos y buscador rápido Ctrl+K (siniestro, patente, página).

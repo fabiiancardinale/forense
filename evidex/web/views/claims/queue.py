@@ -22,8 +22,15 @@ def index():
     who = request.args.get("analista", "")
     if everyone and who:
         cases = [c for c in cases if (c["owner"] or "") == ("" if who == "-" else who)]
+    sel = next((c for c in cases if c["id"] == request.args.get("sel")), cases[0] if cases else None)
+    preview = {}
+    if sel:
+        from evidex.core.case import Case
+        from evidex.web.views.claims.case import preview_context
+        preview = preview_context(Case(cx.workdir / sel["id"]))
     return render_template("claims/queue.html", cases=cases, counts=level_counts(cases), workdir=cx.workdir,
-                           active="index", everyone=everyone, who=who, team=analysts() if everyone else [])
+                           active="index", everyone=everyone, who=who, team=analysts() if everyone else [],
+                           sel=sel["id"] if sel else None, q=request.args.get("q", ""), **preview)
 
 
 def _new_form(f, error=None, status=200):

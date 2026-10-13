@@ -25,7 +25,7 @@ def test_web_create_claim_with_documents_verify_export(demo_src, tmp_path):
     rep = c.get("/caso/SIN-2026-5000/informe").get_data(as_text=True)
     assert "Documento pasado por un editor de PDF" in rep and "Aumento de cobertura" in rep
     index = c.get("/siniestros").get_data(as_text=True)
-    assert "SIN-2026-5000" in index and 'class="risk bad"' in index
+    assert "SIN-2026-5000" in index and 'class="ring sm bad"' in index
     dash = c.get("/").get_data(as_text=True)
     assert "Riesgo alto sin decidir" in dash and "SIN-2026-5000" in dash
     assert "Integridad verificada" in c.post("/caso/SIN-2026-5000/verificar", follow_redirects=True).get_data(as_text=True)
