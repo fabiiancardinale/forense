@@ -148,6 +148,10 @@ No sirve para detectar ediciones en fotos (adivina con buena redacción). Sí pa
 - [ ] Preguntas para la entrevista según las alertas.
 - [ ] Resumen del caso para el jefe.
 - Requiere clave de API en la configuración (nunca en GitHub) y aprobación de BCI, porque las fotos y datos salen a un servidor externo.
+- Revisado el 13 de octubre de 2026: Groq hoy tiene solo modelos de texto (Llama 3.1 8B, Llama 3.3 70B, GPT-OSS 20B y 120B) y Whisper para audio; **no tiene modelos de visión en producción**, así que lo de las fotos (color, modelo, daño vs. relato) no se puede con Groq. Datos en EE. UU.; se puede activar «Zero Data Retention» en la consola.
+- [ ] Transcribir audios con Whisper: notas de voz del asegurado y entrevistas del perito, con el texto en el caso (media).
+- [ ] Relato vs. datos del caso: fecha, hora, lugar, partes dañadas y kilometraje del relato contra el formulario y el texto de los documentos (media).
+- [ ] La clave va en /etc/evidex/evidex.env del servidor (GROQ_API_KEY), nunca en el código ni en el chat.
 
 ## Ideas novedosas (diferenciadoras)
 - [ ] **Los dos autos deben calzar** (grande): el daño del asegurado y el del otro auto tienen que corresponder en altura, forma y pintura transferida (restos del color del otro auto en el golpe). Un golpe a 80 cm del suelo no lo hace el parachoques de un auto bajo; pintura blanca en el golpe no viene de un auto rojo.
