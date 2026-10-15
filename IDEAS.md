@@ -284,6 +284,12 @@ Zelekpress es el encargado y BCI el responsable de los datos. Revisar todo con a
 - [ ] Logo y configuración por empresa cliente (hoy el logo es uno solo).
 - [ ] Números de siniestro repetidos entre aseguradoras (hoy el número es único en todo Evidex).
 
+## Marca
+- [x] Logo de Evidex (15-10-2026): huella dentro de una E, en el menú, ingreso, ícono del navegador/celular y encabezado
+      del informe (incrustado). Paleta pasó de violeta a azul del logo (#0b5fd8, celeste #38bdf8). Informes viejos
+      muestran el logo al reanalizar.
+- [ ] Versión del logo simplificada para 16–32 px (la huella no se distingue tan chica).
+
 ## Base de datos (paso 1 hecho 15-10-2026)
 - [x] Paso 1: SQLite (`evidex.sqlite3`) con empresas cliente, usuarios, roles, 2FA, empresas de peritaje e índice
       de casos (empresa y analista). Importa solo los JSON anteriores y los deja como *.migrado. La asignación sigue

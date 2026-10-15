@@ -1,6 +1,6 @@
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 @font-face{font-family:"Manrope";font-style:normal;font-display:swap;font-weight:200 800;src:url(fonts/manrope-latin-wght-normal.woff2) format("woff2")}
-:root{--ink:#0e1014;--muted:#6b7079;--line:#e7e9ee;--accent:#5b5bd6;--red:#b42318;--redbg:#fef3f2;--grn:#067647;--grnbg:#ecfdf3}
+:root{--ink:#0e1014;--muted:#6b7079;--line:#e7e9ee;--accent:#0b5fd8;--red:#b42318;--redbg:#fef3f2;--grn:#067647;--grnbg:#ecfdf3}
 *{box-sizing:border-box}body{margin:0;font:16px/1.5 "Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:#f6f7f9}
 header{background:#fff;color:var(--ink);padding:16px 18px 18px;border-bottom:1px solid var(--line)}header b{font-size:17px;font-weight:800;display:block}header div{color:var(--muted);font-size:13.5px}
 header .cli{display:block;max-height:30px;max-width:150px;object-fit:contain;margin-bottom:10px}
@@ -9,7 +9,7 @@ header .cli{display:block;max-height:30px;max-width:150px;object-fit:contain;mar
 main{padding:14px;max-width:560px;margin:0 auto}
 .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
 .card h2{font-size:17px;margin:0 0 4px;display:flex;align-items:center;gap:10px}
-.card h2 .n{width:26px;height:26px;border-radius:50%;background:#eef0ff;color:var(--accent);display:grid;place-items:center;font-size:14px;flex:none}
+.card h2 .n{width:26px;height:26px;border-radius:50%;background:#eaf2ff;color:var(--accent);display:grid;place-items:center;font-size:14px;flex:none}
 .card h2 .n.ok{background:var(--grnbg);color:var(--grn)}
 .card p.lead{margin:0 0 12px;color:var(--muted);font-size:14.5px}
 .opt{font-size:12px;font-weight:600;color:var(--muted);background:#f1efea;border-radius:99px;padding:1px 8px;margin-left:auto}

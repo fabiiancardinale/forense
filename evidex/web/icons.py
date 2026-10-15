@@ -38,9 +38,7 @@ def icon(name: str, size: int = 17, color: str = "currentColor") -> Markup:
                   f'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{ICONS[name]}"/></svg>')
 
 
-def brand_mark(size: int = 20) -> Markup:
-    """Marca propia de Evidex: una lupa con un punto de luz (dibujo original)."""
-    return Markup(f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
-                  '<circle cx="10.5" cy="10.5" r="6" stroke="#fff" stroke-width="2.2"/>'
-                  '<path d="M15 15l5 5" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>'
-                  '<circle cx="10.5" cy="10.5" r="2.2" fill="#c7d2fe"/></svg>')
+def brand_mark(size: int = 34) -> Markup:
+    """Logo de Evidex (huella dentro de la E), desde static/marca."""
+    from flask import url_for
+    return Markup(f'<img class="logo" src="{url_for("static", filename="marca/evidex-128.png")}" width="{size}" height="{size}" alt="">')

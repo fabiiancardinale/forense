@@ -1,8 +1,8 @@
 <!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Ingresar · Evidex by Zelekpress</title>
 
-<link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}"></head><body><form class="box" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<div class="brand"><span class="mark">{{ brand_mark(22) }}</span><span><b>Evidex</b><small>by Zelekpress</small></span>{% if client %}<img class="cli" src="{{ url_for('admin.client_logo', v=client.v) }}" alt="{{ client.name or 'Cliente' }}">{% endif %}</div>
+<link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='marca/favicon-32.png') }}"><link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='marca/evidex-192.png') }}"><link rel="apple-touch-icon" href="{{ url_for('static', filename='marca/apple-touch-icon.png') }}"><meta name="theme-color" content="#0b5fd8"><link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}"></head><body><form class="box" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<div class="brand"><span class="mark">{{ brand_mark(44) }}</span><span><b>Evidex</b><small>by Zelekpress</small></span>{% if client %}<img class="cli" src="{{ url_for('admin.client_logo', v=client.v) }}" alt="{{ client.name or 'Cliente' }}">{% endif %}</div>
 <h1>Ingresar</h1><p class="sub">Use el usuario que le entregó el administrador.</p>
 {% if error %}<div class="err">{{ error }}</div>{% endif %}
 <label for="u">Usuario</label><input id="u" name="usuario" autocomplete="username" required autofocus value="{{ usuario or '' }}">

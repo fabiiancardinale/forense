@@ -3,10 +3,10 @@
 <title>{% block title %}Evidex{% endblock %} · Evidex by Zelekpress</title>
 
 
-<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">{% block extra_head %}{% endblock %}</head><body>
+<link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='marca/favicon-32.png') }}"><link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='marca/evidex-192.png') }}"><link rel="apple-touch-icon" href="{{ url_for('static', filename='marca/apple-touch-icon.png') }}"><meta name="theme-color" content="#0b5fd8"><link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">{% block extra_head %}{% endblock %}</head><body>
 {% set perito = current_user and current_user.role == 'perito' %}
 <aside class="side" id="side">
-<a class="brand" href="{{ url_for('panel.dashboard') }}"><span class="mark">{{ brand_mark(18) }}</span><span><b>Evidex</b><small>by Zelekpress</small></span></a>
+<a class="brand" href="{{ url_for('panel.dashboard') }}"><span class="mark">{{ brand_mark(34) }}</span><span><b>Evidex</b><small>by Zelekpress</small></span></a>
 {% if client %}<div class="client"><img src="{{ url_for('admin.client_logo', v=client.v) }}" alt="{{ client.name or 'Cliente' }}"></div>{% endif %}
 {% if legacy_modules and can('ver_siniestros') %}<form class="sb-search" method="get" action="{{ url_for('claims.index') }}" role="search">{{ icon('search', 15) }}
 <input id="gsearch" name="q" value="{{ request.args.get('q', '') if active == 'index' else '' }}" placeholder="Buscar" aria-label="Buscar siniestro, patente o asegurado" autocomplete="off"><kbd>Ctrl K</kbd></form>{% endif %}

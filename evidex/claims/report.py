@@ -9,13 +9,25 @@ from evidex.claims.guide import explain
 from evidex.core.compliance import deadlines
 from evidex.core.ledger import verify_chain, verify_seal
 
+def _logo() -> str:
+    """Logo incrustado (el informe es un archivo independiente; no depende del servidor)."""
+    import base64
+    from pathlib import Path
+    p = Path(__file__).resolve().parents[1] / "web" / "static" / "marca" / "evidex-64.png"
+    try:
+        return f'<img src="data:image/png;base64,{base64.b64encode(p.read_bytes()).decode()}" alt="">'
+    except OSError:
+        return ""
+
+
 CSS = """
-:root{--ink:#16181d;--muted:#6b7079;--line:#e6e3dc;--bg:#f5f4f0;--card:#fff;--accent:#0f6b5f;
+:root{--ink:#16181d;--muted:#6b7079;--line:#e6e3dc;--bg:#f5f4f0;--card:#fff;--accent:#0b5fd8;
 --red:#b42318;--redbg:#fef3f2;--amb:#b54708;--ambbg:#fffaeb;--grn:#067647;--grnbg:#ecfdf3}
 *{box-sizing:border-box}body{margin:0;font:14.5px/1.55 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
 header{background:#0b1f36;color:#fff;padding:28px 0 24px}
 .wrap{max-width:1000px;margin:0 auto;padding:0 20px}
-.brand{font-size:12px;letter-spacing:.18em;text-transform:uppercase;opacity:.7}
+.brand{font-size:12px;letter-spacing:.18em;text-transform:uppercase;display:flex;align-items:center;gap:10px}
+.brand img{width:30px;height:30px}.brand span{opacity:.75}
 header h1{margin:6px 0 4px;font-size:26px}header p{margin:0;opacity:.75}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:-18px 0 8px}
 .tile{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
@@ -25,7 +37,7 @@ h2{font-size:16px;margin:0 0 12px}
 .checks{display:flex;flex-wrap:wrap;gap:8px}.chk{padding:6px 12px;border-radius:99px;font-weight:600;font-size:13px}
 .ok{background:var(--grnbg);color:var(--grn)}.bad{background:var(--redbg);color:var(--red)}
 .claims{margin:0;padding-left:18px}.claims li{margin:6px 0}
-.cite{display:inline-block;font:11.5px ui-monospace,monospace;background:#e7f3f0;color:var(--accent);
+.cite{display:inline-block;font:11.5px ui-monospace,monospace;background:#eaf2ff;color:var(--accent);
 border-radius:4px;padding:0 5px;margin-left:2px;text-decoration:none}
 .note{color:var(--muted);font-size:13px;margin:10px 0 0}
 .finding{border-left:4px solid var(--line);padding:6px 0 6px 14px;margin:10px 0}
@@ -133,7 +145,7 @@ def build(case, timeline, findings, verified, ovi=False) -> str:
 
     h = [f"<!doctype html><html lang=es><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
          f"<title>Informe {html.escape(case.name)}</title><style>{CSS}</style>"]
-    h.append(f'<header><div class="wrap"><div class="brand">Evidex · Informe de incidente</div>'
+    h.append(f'<header><div class="wrap"><div class="brand">{_logo()}<span>Evidex · Informe de incidente</span></div>'
              f"<h1>{html.escape(case.name)}</h1><p>Detectado {detected.replace('T', ' ').replace('Z', ' UTC')}</p></div></header>")
     h.append('<div class="wrap"><div class="tiles">')
     for val, lbl in [(len(rows), "eventos analizados"), (hosts, "equipos"), (len(findings), "hallazgos"),
@@ -396,7 +408,7 @@ def build_claim(case, decl, decl_ev, photos, findings, verified, rec, docs=(), n
 
     h = [f"<!doctype html><html lang=es><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
          f"<title>Siniestro {html.escape(decl['numero'])}</title><style>{CSS}{CLAIM_CSS}</style>"]
-    h.append(f'<header><div class="wrap"><div class="brand">Evidex · Análisis forense de siniestro</div>'
+    h.append(f'<header><div class="wrap"><div class="brand">{_logo()}<span>Evidex · Análisis forense de siniestro</span></div>'
              f"<h1>Siniestro {html.escape(decl['numero'])}</h1>"
              f"<p>{html.escape(decl.get('asegurado', ''))} · Patente {html.escape(decl.get('patente', '—'))} · "
              f"{_fmt_date(decl['fecha_siniestro'])} · {html.escape(decl.get('lugar', ''))}</p></div></header>")
