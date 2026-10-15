@@ -5,30 +5,26 @@ Reglas (Ley 21.719: cada aseguradora es responsable de sus datos y Zelekpress lo
   - Jefes, analistas e investigadores pertenecen a una empresa y solo ven siniestros de ella.
   - Las redes de fraude se cruzan solo dentro de cada empresa: cada una tiene su propio registro.
   - Un siniestro sin empresa (los anteriores a esta separación) solo lo ve el administrador.
+
+Las empresas viven en la base de datos (tabla empresas); la empresa de cada caso, en su case.json
+(y en su cadena de custodia), con copia en el índice de casos.
 """
 from __future__ import annotations
 
 import json
 import re
 import unicodedata
-from datetime import datetime, timezone
 from pathlib import Path
 
-from evidex.core.storage import atomic_json
+from evidex.core import db
 
 SLUG = re.compile(r"^[a-z0-9][a-z0-9-]{1,30}$")
 
 
-def _path(workdir: Path) -> Path:
-    return Path(workdir) / "clientes.json"
-
-
 def all_clients(workdir: Path) -> dict[str, dict]:
-    try:
-        data = json.loads(_path(workdir).read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else {}
-    except (OSError, ValueError):
-        return {}
+    with db.open_db(workdir).read() as con:
+        return {r["slug"]: {"nombre": r["nombre"], "creada": r["creada"]}
+                for r in con.execute("SELECT * FROM empresas ORDER BY nombre COLLATE NOCASE")}
 
 
 def name_of(workdir: Path, slug: str | None) -> str:
@@ -48,11 +44,11 @@ def add(workdir: Path, nombre: str) -> tuple[str | None, str | None]:
     slug = slugify(nombre)
     if len(nombre) < 2 or not SLUG.fullmatch(slug or ""):
         return None, "Escriba el nombre de la empresa (al menos 2 letras)."
-    data = all_clients(workdir)
-    if slug in data:
-        return None, f"Ya existe la empresa {data[slug]['nombre']}."
-    data[slug] = {"nombre": nombre, "creada": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
-    atomic_json(_path(workdir), data)
+    with db.open_db(workdir).tx() as con:
+        row = con.execute("SELECT nombre FROM empresas WHERE slug=?", (slug,)).fetchone()
+        if row:
+            return None, f"Ya existe la empresa {row['nombre']}."
+        con.execute("INSERT INTO empresas VALUES (?,?,?)", (slug, nombre, db.now()))
     return slug, None
 
 
@@ -71,6 +67,7 @@ def set_case(case, slug: str | None, actor: str = "evidex") -> None:
     meta["cliente"] = slug or None
     case.meta_path.write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
     case.ledger.append(actor, "cliente_asignado", slug or "sin empresa", {"cliente": slug})
+    db.index_case(case.root.parent, case.root.name, cliente=slug)
 
 
 def registry(workdir: Path, slug: str | None) -> Path:

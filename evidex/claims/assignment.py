@@ -12,7 +12,6 @@ siniestro; el perito trabaja ese expediente y el analista ve su avance desde el 
 from __future__ import annotations
 
 import json
-import tempfile
 from datetime import date, datetime, timezone
 from pathlib import Path
 
@@ -34,7 +33,10 @@ def owner(case: Case) -> dict | None:
 
 
 def assign(case: Case, username: str, name: str, actor: str, reason: str = "") -> dict:
-    return case.ledger.append(actor, "case_assigned", username, {"name": name, "reason": reason})
+    from evidex.core import db
+    entry = case.ledger.append(actor, "case_assigned", username, {"name": name, "reason": reason})
+    db.index_case(case.root.parent, case.root.name, owner=owner(case))
+    return entry
 
 
 def assignment_history(case: Case) -> list[dict]:
@@ -134,23 +136,19 @@ def idle_days(case: Case) -> int:
 
 # ---- empresas de peritaje ----------------------------------------------------------------------
 def firms(workdir: Path) -> list[dict]:
-    try:
-        return json.loads((Path(workdir) / "empresas.json").read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return []
+    from evidex.core import db
+    with db.open_db(workdir).read() as con:
+        return [dict(r) for r in con.execute("SELECT nombre, rut, contacto FROM firmas ORDER BY nombre COLLATE NOCASE")]
 
 
 def save_firm(workdir: Path, nombre: str, rut: str = "", contacto: str = "") -> str | None:
+    from evidex.core import db
     nombre = " ".join(nombre.split())[:80]
     if len(nombre) < 3:
         return "Escriba el nombre de la empresa."
-    items = [f for f in firms(workdir) if f["nombre"].lower() != nombre.lower()]
-    items.append({"nombre": nombre, "rut": rut.strip(), "contacto": contacto.strip()})
-    items.sort(key=lambda f: f["nombre"].lower())
-    path = Path(workdir) / "empresas.json"
-    with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=workdir, delete=False, suffix=".tmp") as tmp:
-        json.dump(items, tmp, ensure_ascii=False, indent=2)
-    Path(tmp.name).replace(path)
+    with db.open_db(workdir).tx() as con:
+        con.execute("DELETE FROM firmas WHERE nombre=?", (nombre,))          # mismo nombre (sin importar mayúsculas): se reemplaza
+        con.execute("INSERT INTO firmas VALUES (?,?,?)", (nombre, rut.strip(), contacto.strip()))
     return None
 
 

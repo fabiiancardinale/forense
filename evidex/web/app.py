@@ -52,6 +52,11 @@ def create_app(workdir: Path, config: dict | None = None) -> Flask:
         app.config['SESSION_COOKIE_SECURE'] = True
     app.config.setdefault("PUBLIC_BASE", "http://127.0.0.1:8765")
     app.extensions["evidex"] = {"workdir": workdir, "registry": workdir / "registro.jsonl", "store": U.Store(workdir)}
+    from evidex.core import db as _db
+    try:
+        _db.reindex_cases(workdir)          # índice de casos al día con las carpetas (la verdad está en cada caso)
+    except _db.DatabaseError:
+        pass                                # la base no abre: el acceso queda bloqueado por el registro de usuarios
 
     from evidex.claims.guide import explain
     app.jinja_env.globals.update(explain=explain, icon=icon, brand_mark=brand_mark, level_text=LEVEL_TEXT, roles=U.ROLES,

@@ -40,7 +40,10 @@ def upload(c,blob=None,name='sample.png',key='a'*32):
 def test_default_closed_and_corruption_never_enables_demo(tmp_path):
     app,store=app_users(tmp_path)
     assert app.test_client().get('/analizar').status_code==302
-    store.path.write_text('{broken')
+    for extra in ('-wal','-shm'):
+        p=store.path.with_name(store.path.name+extra)
+        if p.exists(): p.unlink()
+    store.path.write_bytes(b'{broken'*100)
     assert app.test_client().get('/ingresar').status_code==503
     app.config['DEMO_MODE']=True
     assert app.test_client().get('/usuarios').status_code==503

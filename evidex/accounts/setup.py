@@ -8,9 +8,12 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument('--dir', default='casos')
     p.add_argument('--reset', action='store_true', help='Restablecer un administrador existente y revocar sus sesiones')
+    p.add_argument('--hay-admin', action='store_true', help='Solo revisar: sale con 0 si ya hay un administrador')
     a = p.parse_args()
     work = Path(a.dir).resolve(); work.mkdir(parents=True, exist_ok=True)
     store = Store(work)
+    if a.hay_admin:
+        raise SystemExit(0 if store.by_role('administrador') else 1)
     if store.all() and not a.reset:
         p.error('Ya existen usuarios; use --reset para recuperar un administrador.')
     username = input('Usuario administrador: ').strip().lower()

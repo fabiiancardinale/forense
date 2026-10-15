@@ -64,6 +64,17 @@ powershell -ExecutionPolicy Bypass -File deploy\bajar_respaldo.ps1
 Crea un respaldo nuevo, lo baja a `forense\respaldos_servidor`, comprueba que la copia sea idéntica (sha256) y
 deja los últimos 8. Trae datos personales: guárdelo en un disco cifrado (BitLocker), nunca en GitHub ni en el correo.
 
+### Base de datos
+
+Empresas cliente, usuarios, roles, 2FA, empresas de peritaje y el índice de casos viven en
+`/var/lib/evidex/casos/evidex.sqlite3` (SQLite). Las pruebas, el análisis y la cadena de custodia siguen en la
+carpeta de cada caso. Al actualizar desde una versión anterior, Evidex importa solo `usuarios.json`,
+`clientes.json` y `empresas.json` y los deja renombrados como `*.migrado` (no los borre hasta comprobar que todo funciona).
+
+El respaldo diario copia la base en caliente con SQLite, no el archivo directo. Para restaurar: detener los
+servicios, extraer el respaldo sobre `/var/lib/evidex`, borrar `evidex.sqlite3-wal` y `-shm` si quedaron, y arrancar.
+No edite la base a mano: los cambios de usuarios se hacen desde la página Usuarios o con `evidex-admin`.
+
 ### Entrar al servidor con llave (y no con contraseña)
 
 1. En el PC (PowerShell), cree su llave. Ponga una frase de paso cuando la pida; si ya tiene una, responda «n» a sobrescribir:

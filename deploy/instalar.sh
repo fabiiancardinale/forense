@@ -136,7 +136,15 @@ cat > /usr/local/bin/evidex-respaldo <<EOF
 # Respaldo de los casos y del modelo. Se guardan los últimos 14. Copie de vez en cuando uno fuera del servidor.
 set -euo pipefail
 f="$RESPALDOS/evidex-\$(date +%Y%m%d-%H%M).tar.gz"
-tar czf "\$f" -C "$DATOS" casos modelos
+# La base de datos se copia en caliente con SQLite (copiar el archivo mientras se escribe puede dejarlo inconsistente).
+# Se hace como el usuario evidex para que SQLite no deje archivos de root que la aplicación no pueda escribir.
+tmp=\$(mktemp -d); trap 'rm -rf "\$tmp"' EXIT
+mkdir -p "\$tmp/casos"; chown -R evidex "\$tmp"
+if [ -f "$DATOS/casos/evidex.sqlite3" ]; then
+  sudo -u evidex env PYTHONPATH=$APP $VENV/bin/python -m evidex.core.db respaldar "$DATOS/casos" "\$tmp/casos/evidex.sqlite3" >/dev/null
+fi
+tar czf "\$f" -C "$DATOS" --exclude=casos/evidex.sqlite3 --exclude=casos/evidex.sqlite3-wal --exclude=casos/evidex.sqlite3-shm \\
+    casos modelos -C "\$tmp" \$(cd "\$tmp" && ls casos/evidex.sqlite3 2>/dev/null)
 chmod 600 "\$f"
 ls -1t "$RESPALDOS"/evidex-*.tar.gz | tail -n +15 | xargs -r rm -f
 echo "Respaldo: \$f"
@@ -198,7 +206,7 @@ sleep 3
 if systemctl is-active --quiet evidex-web; then echo "==> Evidex está corriendo."; else
   echo "==> Evidex no arrancó. Revise: journalctl -u evidex-web -n 50"; exit 1; fi
 
-if [ ! -f "$DATOS/casos/usuarios.json" ]; then
+if ! evidex-admin --hay-admin; then
   echo
   echo "Falta crear el administrador. Corra:"
   echo "  evidex-admin"

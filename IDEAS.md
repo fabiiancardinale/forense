@@ -284,6 +284,15 @@ Zelekpress es el encargado y BCI el responsable de los datos. Revisar todo con a
 - [ ] Logo y configuración por empresa cliente (hoy el logo es uno solo).
 - [ ] Números de siniestro repetidos entre aseguradoras (hoy el número es único en todo Evidex).
 
+## Base de datos (paso 1 hecho 15-10-2026)
+- [x] Paso 1: SQLite (`evidex.sqlite3`) con empresas cliente, usuarios, roles, 2FA, empresas de peritaje e índice
+      de casos (empresa y analista). Importa solo los JSON anteriores y los deja como *.migrado. La asignación sigue
+      registrándose primero en la cadena de custodia; el índice se reconstruye al arrancar. Respaldo en caliente.
+- [ ] Paso 2: comentarios internos y @menciones (en la base, con huella en la cadena de custodia); «Te mencionaron» en Inicio.
+- [ ] Paso 3: notificaciones por correo y panel de tendencias por empresa.
+- [ ] Usar el índice de casos para la cola y el Inicio (hoy se leen las carpetas) cuando haya muchos casos.
+- [ ] Pasar a Postgres solo si hay más de un servidor o muchas aseguradoras grandes.
+
 ## Seguridad y requisitos de TI
 - [x] Verificación en dos pasos (TOTP, app del teléfono, QR), exigible a todos desde Configuración; el admin la quita.
 - [x] Respaldo fuera del VPS: deploy/bajar_respaldo.ps1 (verifica sha256, guarda 8). Instrucciones para llave SSH propia.

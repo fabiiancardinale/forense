@@ -78,8 +78,9 @@ def test_users_login_roles_and_access_log(tmp_path):
     c.post("/usuarios", data={"usuario": "admin", "nombre": "Admin", "rol": "administrador", "clave": "clave-segura-001"})
     c.post("/usuarios", data={"usuario": "ana", "nombre": "Ana Pérez", "rol": "liquidador", "clave": "clave-segura-002"})
     c.post("/usuarios", data={"usuario": "ivan", "nombre": "Iván Inv", "rol": "investigador", "clave": "clave-segura-003"})
-    users = json.loads((tmp_path / "casos" / "usuarios.json").read_text(encoding="utf-8"))
+    users = app.extensions["evidex"]["store"].all()
     assert "clave-segura-001" not in json.dumps(users) and set(users) == {"admin", "ana", "ivan"}
+    assert b"clave-segura-001" not in (tmp_path / "casos" / "evidex.sqlite3").read_bytes()
     c.post("/salir")
     r = c.get("/redes")
     assert r.status_code == 302 and "/ingresar" in r.location                # pide ingresar

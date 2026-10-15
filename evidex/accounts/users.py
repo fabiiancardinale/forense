@@ -13,14 +13,17 @@ La demo anónima requiere activación explícita y solo debe usarse localmente.
 Contraseñas: se guardan solo como hash (werkzeug: scrypt/pbkdf2), nunca en texto. Tras 5 intentos
 fallidos, el usuario queda bloqueado 5 minutos. Cada ingreso, salida y apertura de un caso queda
 en accesos.jsonl (quién, cuándo, qué, desde qué equipo).
+
+Los usuarios viven en la base de datos (evidex.core.db, tabla usuarios).
 """
 from __future__ import annotations
 
 import json
 import re
-import time
 import secrets
-from evidex.core.storage import atomic_json, atomic_bytes, serialized
+import sqlite3
+from evidex.core.db import USER_COLS, DatabaseError, open_db
+from evidex.core.storage import atomic_bytes
 from evidex.accounts.state import AuthState
 from datetime import datetime, timezone
 from pathlib import Path
@@ -96,30 +99,84 @@ class UserStorageError(RuntimeError):
     pass
 
 
+class _Rejected(Exception):
+    pass
+
+
 class Store:
+    """Usuarios en la base de datos de Evidex (tabla usuarios). Misma interfaz que cuando era usuarios.json."""
+
     def __init__(self, workdir: Path):
-        self.path = Path(workdir) / "usuarios.json"
-        self.log_path = Path(workdir) / "accesos.jsonl"
-        self.marker = Path(workdir) / ".auth_initialized"
-        if self.path.exists():
-            self.all()
+        self.workdir = Path(workdir)
+        self.log_path = self.workdir / "accesos.jsonl"
+        self.marker = self.workdir / ".auth_initialized"
+        try:
+            self.db = open_db(self.workdir)          # la primera vez importa usuarios.json
+        except DatabaseError as ex:
+            raise UserStorageError(f"{ex} Acceso bloqueado.") from ex
+        self.path = self.db.path
+        if self.all():
             atomic_bytes(self.marker, b"initialized")
-        self.state = AuthState(Path(workdir) / "auth.sqlite3")
+        self.state = AuthState(self.workdir / "auth.sqlite3")
+
+    def _load(self, db) -> dict:
+        users = {}
+        for r in db.execute("SELECT * FROM usuarios"):
+            u = dict(r)
+            name = u.pop("username")
+            extra = json.loads(u.pop("extra") or "{}")
+            u = {**extra, **{k: v for k, v in u.items() if v is not None or k == "cliente"}}
+            u["active"] = bool(u["active"])
+            u["role"] = LEGACY_ROLES.get(u.get("role"), u.get("role"))
+            if u["role"] not in ROLES or not isinstance(u.get("pw"), str):
+                raise ValueError("invalid user")
+            users[name] = u
+        return users
 
     def all(self) -> dict:
-        if not self.path.exists() and not self.marker.exists():
+        if not self.path.exists():
+            if self.marker.exists():
+                raise UserStorageError("Falta la base de datos de usuarios. Acceso bloqueado; restaure el respaldo.")
             return {}
         try:
-            users = json.loads(self.path.read_text(encoding="utf-8"))
-            if not isinstance(users, dict) or not users:
-                raise ValueError("empty user store")
-            for u in users.values():
-                u["role"] = LEGACY_ROLES.get(u.get("role"), u.get("role"))
-                if u["role"] not in ROLES or not isinstance(u.get("pw"), str):
-                    raise ValueError("invalid user")
-            return users
-        except (OSError, ValueError, TypeError, AttributeError) as ex:
+            with self.db.read() as db:
+                users = self._load(db)
+        except (sqlite3.DatabaseError, DatabaseError, ValueError, TypeError) as ex:
             raise UserStorageError("No se puede leer el registro de usuarios. Acceso bloqueado; restaure el respaldo.") from ex
+        if not users and self.marker.exists():
+            raise UserStorageError("El registro de usuarios está vacío. Acceso bloqueado; restaure el respaldo.")
+        return users
+
+    def _mutate(self, change, need_admin: bool = True) -> str | None:
+        """Aplica `change(users)` dentro de una transacción. Si devuelve un texto, es un error y no se guarda nada."""
+        try:
+            with self.db.tx() as db:
+                users = self._load(db)
+                before = {k: dict(v) for k, v in users.items()}
+                err = change(users)
+                if not err and need_admin and not any(x.get("role") == "administrador" and x.get("active", True)
+                                                      for x in users.values()):
+                    err = "Debe quedar al menos un administrador activo."
+                if err:
+                    raise _Rejected(err)                 # deshace la transacción
+                for k, u in users.items():
+                    if before.get(k) != u:
+                        self._upsert(db, k, u)
+        except _Rejected as r:
+            return str(r)
+        except (sqlite3.DatabaseError, DatabaseError, ValueError) as ex:
+            raise UserStorageError("No se pudo guardar el usuario. Reintente; si sigue, restaure el respaldo.") from ex
+        atomic_bytes(self.marker, b"initialized")
+        return None
+
+    @staticmethod
+    def _upsert(db, username: str, u: dict) -> None:
+        extra = {k: v for k, v in u.items() if k not in USER_COLS}
+        vals = [username] + [u.get(c) for c in USER_COLS] + [json.dumps(extra, ensure_ascii=False)]
+        vals[USER_COLS.index("active") + 1] = 1 if u.get("active", True) else 0
+        cols = ("username",) + USER_COLS + ("extra",)
+        db.execute(f"INSERT INTO usuarios ({', '.join(cols)}) VALUES ({', '.join('?' * len(cols))}) "
+                   f"ON CONFLICT(username) DO UPDATE SET {', '.join(f'{c}=excluded.{c}' for c in cols[1:])}", vals)
 
     def by_role(self, *roles: str) -> list[dict]:
         return sorted(({**u, "username": k} for k, u in self.all().items() if u.get("role") in roles and u.get("active", True)),
@@ -129,10 +186,6 @@ class Store:
         u = self.all().get(username or "")
         return u["name"] if u else (username or "")
 
-    def _save(self, users: dict) -> None:
-        atomic_bytes(self.marker, b"initialized")
-        atomic_json(self.path, users)
-
     def enabled(self) -> bool:
         return any(u.get("active", True) for u in self.all().values())
 
@@ -140,7 +193,6 @@ class Store:
         u = self.all().get(username)
         return {**u, "username": username} if u else None
 
-    @serialized(lambda self, *a, **kw: self.path)
     def add(self, username: str, name: str, role: str, password: str, empresa: str = "",
             cliente: str | None = None) -> str | None:
         """Crea o actualiza un usuario. Devuelve un mensaje de error o None."""
@@ -152,54 +204,54 @@ class Store:
             return "La contraseña no puede superar 256 caracteres."
         if role not in ROLES:
             return "Rol desconocido."
-        users = self.all()
-        if not users and role != "administrador":
-            return "El primer usuario debe ser administrador."
-        if username not in users and len(password) < 15:
-            return "La contraseña debe tener al menos 15 caracteres."
-        if password and len(password) < 15:
-            return "La contraseña debe tener al menos 15 caracteres."
-        u = users.get(username, {"created": _now()})
         if role == "perito" and not empresa.strip():
             return "Un perito debe pertenecer a una empresa de peritaje."
-        u["auth_version"] = secrets.token_hex(16)
-        u.update({"name": name.strip() or username, "role": role, "active": True,
-                  "empresa": empresa.strip() if role == "perito" else "",
-                  "cliente": (cliente or None) if role not in ("administrador", "perito") else None})
-        if password:
-            u["pw"] = generate_password_hash(password)
-        users[username] = u
-        if not any(x.get("role") == "administrador" and x.get("active", True) for x in users.values()):
-            return "Debe quedar al menos un administrador activo."
-        self._save(users)
-        return None
+        cliente = (cliente or None) if role not in ("administrador", "perito") else None
+        if cliente and not self._client_exists(cliente):
+            return "Esa empresa cliente no existe."
+        pw_hash = generate_password_hash(password) if password else None
 
-    @serialized(lambda self, *a, **kw: self.path)
+        def change(users):
+            if not users and role != "administrador":
+                return "El primer usuario debe ser administrador."
+            if username not in users and len(password) < 15:
+                return "La contraseña debe tener al menos 15 caracteres."
+            if password and len(password) < 15:
+                return "La contraseña debe tener al menos 15 caracteres."
+            u = users.get(username, {"created": _now()})
+            u["auth_version"] = secrets.token_hex(16)
+            u.update({"name": name.strip() or username, "role": role, "active": True,
+                      "empresa": empresa.strip() if role == "perito" else "", "cliente": cliente})
+            if pw_hash:
+                u["pw"] = pw_hash
+            users[username] = u
+        return self._mutate(change)
+
+    def _client_exists(self, slug: str) -> bool:
+        with self.db.read() as db:
+            return db.execute("SELECT 1 FROM empresas WHERE slug=?", (slug,)).fetchone() is not None
+
     def set_active(self, username: str, active: bool) -> str | None:
-        users = self.all()
-        if username not in users:
-            return "No existe ese usuario."
-        users[username]["active"] = active
-        users[username]["auth_version"] = secrets.token_hex(16)
-        if not any(x.get("role") == "administrador" and x.get("active", True) for x in users.values()):
-            return "Debe quedar al menos un administrador activo."
-        self._save(users)
-        return None
+        def change(users):
+            if username not in users:
+                return "No existe ese usuario."
+            users[username]["active"] = active
+            users[username]["auth_version"] = secrets.token_hex(16)
+        return self._mutate(change)
 
-    @serialized(lambda self, *a, **kw: self.path)
     def set_totp(self, username: str, secret: str | None) -> None:
         """Activa (con su secreto) o quita la verificación en dos pasos de un usuario."""
-        users = self.all()
-        if username not in users:
-            return
-        u = users[username]
-        if secret:
-            u.update({"totp": secret, "totp_since": _now()})
-        else:
-            for k in ("totp", "totp_since", "totp_step"):
-                u.pop(k, None)
-        u["auth_version"] = secrets.token_hex(16)            # cierra las sesiones abiertas
-        self._save(users)
+        def change(users):
+            u = users.get(username)
+            if u is None:
+                return
+            if secret:
+                u.update({"totp": secret, "totp_since": _now()})
+            else:
+                for k in ("totp", "totp_since", "totp_step"):
+                    u.pop(k, None)
+            u["auth_version"] = secrets.token_hex(16)            # cierra las sesiones abiertas
+        self._mutate(change, need_admin=False)
 
     def check_totp(self, username: str, code: str, ip: str = "local"):
         """Segundo paso del ingreso. Mismos límites de intentos que la contraseña."""
@@ -218,12 +270,11 @@ class Store:
         u, err = self.state.check(username + "#2fa", ip, verify)
         return u, (err.replace("Usuario o contraseña incorrectos.", "Código incorrecto o vencido.") if err else None)
 
-    @serialized(lambda self, *a, **kw: self.path)
     def _save_step(self, username: str, step: int) -> None:
-        users = self.all()
-        if username in users:
-            users[username]["totp_step"] = step
-            self._save(users)
+        def change(users):
+            if username in users:
+                users[username]["totp_step"] = step
+        self._mutate(change, need_admin=False)
 
     def check(self, username: str, password: str, ip: str = "local"):
         username = (username or "").strip().lower()[:128]
