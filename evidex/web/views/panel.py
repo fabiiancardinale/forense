@@ -5,7 +5,7 @@ from datetime import date, datetime
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
-from evidex.claims import assignment
+from evidex.claims import assignment, service
 from evidex.core.case import Case
 from evidex.web.common import claim_visible
 from evidex.web.common import (SAFE_ID, actor_name, analysts, claim_list, current_user, cx, dossier_lists, has_perm,
@@ -20,6 +20,20 @@ OPEN = (None, "en_revision")
 def _today() -> str:
     t = date.today()
     return f"{t.day} de {MONTHS[t.month - 1]} de {t.year}"
+
+
+def _my_mentions(u) -> list[dict]:
+    """Comentarios donde me mencionaron y que aún no leo (solo de casos que todavía puedo ver)."""
+    from evidex.claims import comments
+    from evidex.core.case import Case
+    if not u:
+        return []
+    out = []
+    for m in comments.pending(cx.workdir, u["username"]):
+        case = Case(cx.workdir / m["caso"])
+        if case.meta_path.exists() and claim_visible(case):
+            out.append({**m, "numero": (service.declaration(case) or {}).get("numero", m["caso"])})
+    return out
 
 
 @bp.get("/")
@@ -45,9 +59,10 @@ def dashboard():
     expert = sorted((c for c in cases if c["derivation"] and not c["derivation"]["delivered"]),
                     key=lambda c: c["derivation"].get("plazo") or "9999")
     mine = bool(u and not sees_all_claims())
+    mentions = _my_mentions(u)
     return render_template("panel/dashboard.html", cases=cases, counts=counts, k=k, priority=priority, comps=comps,
                            waiting=_waiting(cases)[:8], expert=expert[:8], expedientes=exps, audits=audits,
-                           today=_today(), mine=mine, active="dash")
+                           today=_today(), mine=mine, mentions=mentions, active="dash")
 
 
 def _waiting(cases):

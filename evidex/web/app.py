@@ -62,6 +62,7 @@ def create_app(workdir: Path, config: dict | None = None) -> Flask:
     app.jinja_env.globals.update(explain=explain, icon=icon, brand_mark=brand_mark, level_text=LEVEL_TEXT, roles=U.ROLES,
                                  money=lambda n: f"{int(n or 0):,}".replace(",", "."))
     app.jinja_env.filters["extract"] = lambda k, d: d.get(k, k)
+    app.jinja_env.filters["mentions"] = _mentions_html
 
     @app.before_request
     def request_nonce():
@@ -180,3 +181,18 @@ def nav_context() -> dict:
         dec = service.current_decision(case)
         n += not dec or dec["subject"] == "en_revision"
     return {"nav_pending": n}
+
+
+def _mentions_html(text: str, names) -> "Markup":
+    """Texto de un comentario: escapado, con saltos de línea y las @menciones válidas resaltadas."""
+    from markupsafe import Markup, escape
+    from evidex.claims.comments import MENTION
+    names = set(names or [])
+    out, last = [], 0
+    for m in MENTION.finditer(text or ""):
+        out.append(escape(text[last:m.start()]))
+        tok = escape(m.group(0))
+        out.append(Markup(f'<span class="at">{tok}</span>') if m.group(1).lower() in names else tok)
+        last = m.end()
+    out.append(escape((text or "")[last:]))
+    return Markup("".join(str(x) for x in out).replace("\n", "<br>"))

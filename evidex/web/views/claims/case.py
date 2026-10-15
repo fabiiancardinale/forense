@@ -23,12 +23,13 @@ from evidex.claims.report import ACTIONS
 from evidex.core import export
 from evidex.core.case import Case
 from evidex.core.ledger import verify_chain, verify_seal
-from evidex.web.common import (actor_name, analysis_mark, analysts, cx, has_perm, load_claim, load_settings,
+from evidex.claims import comments
+from evidex.web.common import (actor_name, current_user, analysis_mark, analysts, cx, has_perm, load_claim, load_settings,
                                log_access, needs_analysis, run_claim_analysis, summarize)
 from evidex.web.views.claims import bp
 
 TABS = [("resumen", "Resumen"), ("fotos", "Fotos"), ("documentos", "Documentos"), ("linea", "Línea de tiempo"), ("peritaje", "Peritaje"),
-        ("asegurado", "Asegurado"), ("informe", "Informe"), ("historial", "Historial")]
+        ("asegurado", "Asegurado"), ("comentarios", "Comentarios"), ("informe", "Informe"), ("historial", "Historial")]
 SEV_ORDER = {"alta": 0, "media": 1, "baja": 2}
 KIND_LABEL = {"foto": "Foto", "documento": "Documento", "chat": "Chat de WhatsApp", "audio": "Audio", "word": "Word"}
 
@@ -126,12 +127,12 @@ def case_view(cid):
            "analyzing": background.is_running(case), "analysis_state": background.status(case),
            "n_photos": sum(1 for i in items if i["kind"] == "foto" and not i["excluded"]),
            "n_docs": sum(1 for i in items if i["kind"] != "foto" and not i["excluded"]),
-           "n_findings": len(snap["findings"]), **_overview(case, c, snap, items),
+           "n_findings": len(snap["findings"]), "n_comments": comments.count(case), **_overview(case, c, snap, items),
            "decisions": service.DECISIONS, "history": service.decision_history(case),
            "client_choices": __import__("evidex.accounts.clients", fromlist=["x"]).all_clients(cx.workdir) if has_perm("admin") else {}}
     builder = {"resumen": _tab_summary, "fotos": _tab_photos, "documentos": _tab_docs, "peritaje": _tab_expert,
                "asegurado": _tab_portal, "informe": lambda case, snap, items: {}, "historial": _tab_history,
-               "linea": _tab_timeline}[tab]
+               "linea": _tab_timeline, "comentarios": _tab_comments}[tab]
     ctx.update(builder(case, snap, items))
     return render_template("claims/case.html", **ctx)
 
@@ -329,6 +330,32 @@ def _tab_portal(case, snap, items):
     return out
 
 
+def _tab_comments(case, snap, items):
+    u = current_user()
+    if u:
+        comments.mark_read(cx.workdir, case.root.name, u["username"])
+    people = comments.mentionable(cx.store, case, exclude=u["username"] if u else "") if cx.store.enabled() else []
+    return {"comments": comments.listing(case)[::-1], "people": people, "max_len": comments.MAX_LEN}
+
+
+@bp.post("/caso/<cid>/comentar")
+def comment_add(cid):
+    """Comentario interno: queda en la cadena de custodia; avisa en Inicio a quienes se menciona con @usuario."""
+    case = load_claim(cid)
+    u = current_user()
+    if not u:
+        abort(403)
+    try:
+        entry, ignored = comments.add(cx.workdir, case, cx.store, u["username"], u["name"], request.form.get("texto", ""))
+    except ValueError as ex:
+        flash(str(ex), "bad")
+        return redirect(url_for("claims.case_view", cid=cid, tab="comentarios"))
+    log_access("comentario", summarize(case)["numero"])
+    if ignored:
+        flash("No se avisó a " + ", ".join("@" + n for n in ignored) + ": no existe o no puede ver este caso.", "warn")
+    return redirect(url_for("claims.case_view", cid=cid, tab="comentarios") + f"#c-{entry['seq']}")
+
+
 def _tab_history(case, snap, items):
     rows = []
     for e in case.ledger.entries():
@@ -343,7 +370,9 @@ def _tab_history(case, snap, items):
                   "llm_used": f"{d.get('tarea', '')} · {d.get('servicio', '')} ({d.get('modelo', '')})",
                   "training_marked": f"{d.get('original_name', '')}: {'editada con IA' if d.get('label') == 'editada' else 'sin editar'}"
                                      + (f" ({d['app']})" if d.get("app") else ""),
-                  "claim_analyzed": f"{d.get('findings', 0)} hallazgo(s), riesgo {d.get('score', '—')}"}.get(e["action"], "")
+                  "claim_analyzed": f"{d.get('findings', 0)} hallazgo(s), riesgo {d.get('score', '—')}",
+                  "comentario": " ".join(d.get("texto", "").split())[:90] + ("…" if len(d.get("texto", "")) > 90 else ""),
+                  "cliente_asignado": e["subject"]}.get(e["action"], "")
         rows.append({"ts": e["ts"], "actor": e["actor"], "what": what, "detail": detail, "hash": e["hash"]})
     return {"rows": rows[::-1], "accesos": cx.store.entries(subject=summarize(case)["numero"], limit=50) if cx.store.enabled() else []}
 

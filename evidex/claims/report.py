@@ -93,7 +93,8 @@ ACTIONS = {"case_created": "Caso creado", "evidence_added": "Archivo agregado", 
            "decision": "Decisión", "capture_link_created": "Enlace al asegurado creado",
            "portal_finished": "Asegurado terminó de subir", "imported_from": "Importado del historial",
            "timeline_built": "Línea de tiempo", "alert_response": "Respuesta a alerta", "conclusion": "Conclusión",
-           "dossier_delivered": "Informe final entregado", "audit_run": "Auditoría"}
+           "dossier_delivered": "Informe final entregado", "audit_run": "Auditoría",
+           "comentario": "Comentario interno", "cliente_asignado": "Empresa cliente asignada"}
 
 
 def _action_text(e) -> str:

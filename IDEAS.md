@@ -288,7 +288,11 @@ Zelekpress es el encargado y BCI el responsable de los datos. Revisar todo con a
 - [x] Paso 1: SQLite (`evidex.sqlite3`) con empresas cliente, usuarios, roles, 2FA, empresas de peritaje e índice
       de casos (empresa y analista). Importa solo los JSON anteriores y los deja como *.migrado. La asignación sigue
       registrándose primero en la cadena de custodia; el índice se reconstruye al arrancar. Respaldo en caliente.
-- [ ] Paso 2: comentarios internos y @menciones (en la base, con huella en la cadena de custodia); «Te mencionaron» en Inicio.
+- [x] Paso 2 (15-10-2026): pestaña «Comentarios» en el caso. El texto queda en la cadena de custodia (no se edita ni se
+      borra; el informe solo dice «Comentario interno»); las @menciones van a la base y salen en Inicio como «Te mencionaron»
+      hasta abrir los comentarios. Solo se puede mencionar a quien puede ver el caso (misma empresa, o el administrador).
+- [ ] Ideas siguientes de comentarios: aviso por correo de una mención, adjuntar una foto del caso a un comentario,
+      marcar un comentario como «tarea» con responsable y plazo.
 - [ ] Paso 3: notificaciones por correo y panel de tendencias por empresa.
 - [ ] Usar el índice de casos para la cola y el Inicio (hoy se leen las carpetas) cuando haya muchos casos.
 - [ ] Pasar a Postgres solo si hay más de un servidor o muchas aseguradoras grandes.

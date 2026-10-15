@@ -1,0 +1,14 @@
+<p class="lead">Notas internas del equipo sobre este siniestro. Quedan en la cadena de custodia: no se editan ni se borran (para corregir, escriba otro). El asegurado y el perito no las ven, y el informe solo indica que hubo un comentario.</p>
+{% if current_user %}<form class="cm-form" method="post" action="{{ url_for('claims.comment_add', cid=c.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<label for="cm-texto" class="sr">Comentario</label>
+<textarea id="cm-texto" name="texto" rows="3" maxlength="{{ max_len }}" required placeholder="Escriba un comentario. Use @usuario para avisarle a alguien."></textarea>
+<div class="cm-row">{% if people %}<div class="cm-people"><span class="hint">Mencionar:</span>{% for p in people %}<button type="button" class="chip" data-at="{{ p.username }}" title="{{ p.name }}">@{{ p.username }}</button>{% endfor %}</div>{% endif %}
+<button class="btn pri sm" type="submit">Comentar</button></div></form>
+<script nonce="{{ csp_nonce }}">
+(()=>{const t=document.getElementById('cm-texto');document.querySelectorAll('.cm-people [data-at]').forEach(b=>b.addEventListener('click',()=>{const s=(t.value&&!/\s$/.test(t.value))?' ':'';t.value+=s+'@'+b.dataset.at+' ';t.focus()}))})();
+</script>{% endif %}
+<div class="cm-list">{% for m in comments %}<article class="cm" id="c-{{ m.seq }}">
+<div class="cm-h"><b>{{ m.autor }}</b><span class="hint" title="{{ m.ts }} UTC · huella {{ m.hash[:16] }}">{{ m.ts[8:10] }}-{{ m.ts[5:7] }}-{{ m.ts[:4] }} {{ m.ts[11:16] }} UTC</span>
+{% if current_user and current_user.username in m.menciones %}<span class="tag warn">te mencionó</span>{% endif %}</div>
+<div class="cm-t">{{ m.texto|mentions(m.menciones) }}</div></article>
+{% else %}<div class="card empty"><h2>Sin comentarios</h2><p>Deje aquí lo que el equipo debe saber de este caso.</p></div>{% endfor %}</div>

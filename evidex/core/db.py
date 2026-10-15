@@ -5,6 +5,7 @@ Qué guarda:
   usuarios    cuentas, roles, empresa, 2FA (las contraseñas solo como hash)
   firmas      empresas de peritaje
   casos       índice de cada siniestro: empresa y analista asignado
+  menciones   @menciones en comentarios internos y si ya se leyeron (el comentario está en la cadena de custodia)
 
 Qué NO guarda: las pruebas, el análisis ni la cadena de custodia. Eso sigue en la carpeta de cada
 caso, porque es lo que se entrega como prueba. La asignación de un caso se registra primero en su
@@ -74,6 +75,21 @@ MIGRATIONS: list[str] = [
         ts       TEXT NOT NULL,
         filas    INTEGER NOT NULL
     );
+    """,
+    """
+    CREATE TABLE menciones (
+        id         INTEGER PRIMARY KEY,
+        caso       TEXT NOT NULL,
+        seq        INTEGER NOT NULL,
+        para       TEXT NOT NULL,
+        de         TEXT NOT NULL,
+        de_nombre  TEXT NOT NULL,
+        extracto   TEXT NOT NULL,
+        ts         TEXT NOT NULL,
+        leida      TEXT,
+        UNIQUE (caso, seq, para)
+    );
+    CREATE INDEX menciones_para ON menciones(para, leida);
     """,
 ]
 
