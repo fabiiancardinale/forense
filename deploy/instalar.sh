@@ -143,8 +143,10 @@ mkdir -p "\$tmp/casos"; chown -R evidex "\$tmp"
 if [ -f "$DATOS/casos/evidex.sqlite3" ]; then
   sudo -u evidex env PYTHONPATH=$APP $VENV/bin/python -m evidex.core.db respaldar "$DATOS/casos" "\$tmp/casos/evidex.sqlite3" >/dev/null
 fi
-tar czf "\$f" -C "$DATOS" --exclude=casos/evidex.sqlite3 --exclude=casos/evidex.sqlite3-wal --exclude=casos/evidex.sqlite3-shm \\
-    casos modelos -C "\$tmp" \$(cd "\$tmp" && ls casos/evidex.sqlite3 2>/dev/null)
+tar cf "\$tmp/r.tar" -C "$DATOS" --exclude=casos/evidex.sqlite3 --exclude=casos/evidex.sqlite3-wal \\
+    --exclude=casos/evidex.sqlite3-shm casos modelos
+[ -f "\$tmp/casos/evidex.sqlite3" ] && tar rf "\$tmp/r.tar" -C "\$tmp" casos/evidex.sqlite3
+gzip -c "\$tmp/r.tar" > "\$f"
 chmod 600 "\$f"
 ls -1t "$RESPALDOS"/evidex-*.tar.gz | tail -n +15 | xargs -r rm -f
 echo "Respaldo: \$f"
