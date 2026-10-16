@@ -863,3 +863,17 @@ a{color:var(--accent)}
 /* ---- Logo de Evidex (imagen) y paleta azul ---- */
 .brand .mark,.side .brand .mark{width:34px;height:34px;border-radius:0;background:none;display:block;flex:none}
 .brand .mark img.logo{display:block;width:100%;height:100%;object-fit:contain}
+
+/* ---- Videos ---- */
+.vupload{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:-4px 0 14px}
+#vstatus{margin:0 0 14px}
+.videos{margin:0 0 22px}
+.vcard{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+.vcard.off{opacity:.6}.vcard.alta{border-color:var(--red)}.vcard.media{border-color:var(--amber)}
+.vcard video{width:100%;max-height:420px;border-radius:8px;background:#000}
+.vcard .body{min-width:0}
+.vframes{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;margin-top:10px}
+.vframes a{display:block;text-decoration:none;color:var(--muted)}
+.vframes img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;border:1px solid var(--line);display:block}
+.vframes small{font-size:11px}
+@media (max-width:760px){.vcard{grid-template-columns:minmax(0,1fr)}}

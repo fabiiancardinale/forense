@@ -139,10 +139,11 @@ def progress(data: dict, excluded=()) -> dict:
     files = [f for f in data.get("files", []) if not f.get("removed") and f.get("sha256") not in excluded]
     photos = [f for f in files if f["kind"] in ("photo", "extra")]
     docs = [f for f in files if f["kind"] == "doc"]
+    videos = [f for f in files if f["kind"] == "video"]
     photos_ok = bool(photos) or bool(shots_done)
     docs_ok = bool(docs)
     done = int(photos_ok) + int(docs_ok)
-    return {"shots_done": shots_done, "photos": photos, "docs": docs, "photos_ok": photos_ok, "docs_ok": docs_ok,
+    return {"shots_done": shots_done, "photos": photos, "docs": docs, "videos": videos, "photos_ok": photos_ok, "docs_ok": docs_ok,
             "requested": [d["label"] for d in data.get("docs", []) if not d.get("optional")],
             "story": bool(data.get("story")), "finished": data.get("finished"), "done": done, "total": 2,
             "pct": round(50 * done)}
@@ -237,6 +238,44 @@ def receive_file(case, data: dict, filename: str, blob: bytes, kind: str, title:
         note = "word" if ext == ".docx" else "documento" if kind == "doc" else "foto"
         from evidex.claims import service           # un Word trae además sus fotos: entran al caso solas
         digest = service.add_file(case, p, note=note, analyst="asegurado (portal)", extra={"portal": rec})[0]
+    rec.update({"sha256": digest, "name": p.name})
+    data.setdefault("files", []).append(rec)
+    _save(case, data)
+    return rec
+
+
+MAX_VIDEOS = 3
+
+
+def receive_video(case, data: dict, path: Path, filename: str, title: str = "", user_agent: str = "",
+                  last_modified: str = "") -> dict:
+    """Video que sube el asegurado (llega por partes, ya armado en `path`). Se guarda el original tal cual."""
+    if why := status(data):
+        raise ValueError(why)
+    title = " ".join((title or "").split())[:80]
+    if len(title) < 3:
+        raise ValueError("Escriba un título para el video (por ejemplo: Daño lateral, Lugar del choque).")
+    if sum(1 for f in data.get("files", []) if f["kind"] == "video" and not f.get("removed")) >= MAX_VIDEOS:
+        raise ValueError(f"Ya se recibió el máximo de videos para este enlace ({MAX_VIDEOS}).")
+    from evidex.core import upload_guard
+    from evidex.inspection.validation import InvalidFile
+    ext = Path(filename or "").suffix.lower()
+    local, utc = _now_pair()
+    rec = {"kind": "video", "title": title, "original_name": (filename or "")[:120], "server_time": local,
+           "server_utc": utc, "device": user_agent[:160]}
+    if last_modified.isdigit() and 10 <= len(last_modified) <= 14:
+        rec["last_modified"] = int(last_modified)
+    n = len(data.get("files", [])) + 1
+    with tempfile.TemporaryDirectory() as td:
+        p = Path(td) / f"video_{n:02d}_{_slug(title)}{ext}"
+        import shutil
+        shutil.move(str(path), p)
+        try:
+            upload_guard.check(p, p.name, "portal", timeout=60)
+        except InvalidFile as ex:
+            raise ValueError(f"El video no se aceptó: {ex}") from ex
+        from evidex.claims import service
+        digest = service.add_file(case, p, note="video", analyst="asegurado (portal)", extra={"portal": rec})[0]
     rec.update({"sha256": digest, "name": p.name})
     data.setdefault("files", []).append(rec)
     _save(case, data)

@@ -29,12 +29,13 @@ CHAT = {".txt", ".zip"}
 TABLE = {".csv", ".xlsx", ".xlsm"}
 AUDIO = {".ogg", ".opus", ".mp3", ".m4a", ".wav", ".webm", ".aac"}   # notas de voz (WhatsApp) y entrevistas
 WORD = {".docx"}                                                   # Word del asegurado, a veces con fotos pegadas
+VIDEO = {".mp4", ".mov", ".m4v", ".3gp"}                          # videos del choque (se suben por partes)
 MAX_AUDIO = 25_000_000
 
 # qué se acepta en cada carga
 PURPOSES = {
-    "evidencia": set(IMAGES) | set(PDF) | CHAT | AUDIO | WORD,   # fotos, documentos, chats, audios y Word del caso
-    "portal": set(IMAGES) | set(PDF) | WORD,        # lo que sube el asegurado
+    "evidencia": set(IMAGES) | set(PDF) | CHAT | AUDIO | WORD | VIDEO,   # fotos, documentos, chats, audios, Word y videos
+    "portal": set(IMAGES) | set(PDF) | WORD | VIDEO,        # lo que sube el asegurado
     "documento": set(IMAGES) | set(PDF),            # documentos de una investigación
     "informe": set(PDF),                            # informe del perito para auditar
     "historial": TABLE,                             # importación de siniestros anteriores
@@ -95,6 +96,23 @@ def _audio(path: Path, ext: str) -> dict:
     return {"kind": "audio"}
 
 
+def _video(path: Path) -> dict:
+    """Que sea de verdad un video: cabecera MP4/MOV y, si ffprobe está instalado, que tenga imagen y no sea eterno."""
+    from evidex.forensics import video
+    if path.stat().st_size > video.MAX_BYTES:
+        raise InvalidFile("Video mayor a 300 MB.")
+    if not video.header_ok(path):
+        raise InvalidFile("El archivo no es un video MP4 o MOV válido.")
+    if video.available():
+        try:
+            info = video.probe(path)
+        except ValueError as ex:
+            raise InvalidFile(str(ex)) from ex
+        if info["duration"] > video.MAX_SECONDS:
+            raise InvalidFile("Video de más de 15 minutos.")
+    return {"kind": "video"}
+
+
 def _text(path: Path, limit: int) -> None:
     if path.stat().st_size > limit:
         raise InvalidFile("Archivo de texto demasiado grande.")
@@ -126,6 +144,8 @@ def inspect(path, name: str, purpose: str) -> dict:
         return validate(path, name, max_pages=DOC_MAX_PAGES)
     if ext in AUDIO:
         return _audio(path, ext)
+    if ext in VIDEO:
+        return _video(path)
     if ext in WORD:
         _zip(path, needs=("[Content_Types].xml", "word/document.xml"))
         with zipfile.ZipFile(path) as z:

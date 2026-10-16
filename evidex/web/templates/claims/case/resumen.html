@@ -20,7 +20,7 @@
 <span class="cnt">{{ '× ' ~ g.count if g.count > 1 else '' }}</span><span class="chev" aria-hidden="true"></span></summary>
 <div class="rbody">
 {% for f in g.findings %}<div class="ritem">{% if f.ref %}<a class="rpic" href="{{ url_for('claims.evidence_file', cid=c.id, digest=f.ref.digest) }}" target="_blank" rel="noopener" title="Abrir {{ f.ref.title }}"><img src="{{ url_for('claims.evidence_file', cid=c.id, digest=f.ref.digest, mini=1) }}" alt="{{ f.ref.title }}" loading="lazy"></a>{% endif %}
-<p>{{ f.summary }}{% if f.pair %} <a class="btn sm cmp-btn" href="{{ url_for('claims.evidence_compare', cid=c.id, a=f.pair[0], b=f.pair[1]) }}" target="_blank" rel="noopener">Comparar las dos fotos</a>{% endif %}</p></div>{% endfor %}
+<p>{{ f.summary }}{% if f.pair and f.rule == 'photo_differs_from_video' %} <a class="btn sm cmp-btn" href="{{ url_for('claims.video_compare', cid=c.id, photo=f.pair[0], vid=f.pair[1]) }}" target="_blank" rel="noopener">Comparar con el video</a>{% elif f.pair %} <a class="btn sm cmp-btn" href="{{ url_for('claims.evidence_compare', cid=c.id, a=f.pair[0], b=f.pair[1]) }}" target="_blank" rel="noopener">Comparar las dos fotos</a>{% endif %}</p></div>{% endfor %}
 {% set f = g.findings[0] %}{% set show_found = false %}{% include "claims/case/_explain.html" %}
 </div></details>{% endfor %}</div></div>{% endif %}{% endfor %}
 {% else %}<p class="muted">Evidex no encontró alertas en este caso.</p>{% endif %}</section>

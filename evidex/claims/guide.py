@@ -271,6 +271,30 @@ GUIDE: dict[str, tuple[str, str]] = {
         "perdió las marcas porque pasó por WhatsApp, redes sociales o una captura de pantalla, que las borran.",
         "Trátela igual que la original editada con IA: no la acepte como prueba y pida la foto original o una "
         "inspección presencial."),
+    "video_no_date": (
+        "El video no dice cuándo se grabó. WhatsApp y las redes sociales borran ese dato al reenviar.",
+        "Pida el video original desde la galería del teléfono, por el portal del asegurado."),
+    "video_before_claim": (
+        "El teléfono anotó en el video una fecha de grabación anterior al siniestro declarado.",
+        "Pregunte por qué hay un video del daño antes del choque. Puede ser un daño anterior o una fecha de siniestro "
+        "cambiada."),
+    "video_late": (
+        "El video se grabó muchos días después del siniestro.",
+        "Confirme que el daño que muestra es el del siniestro y no uno posterior."),
+    "video_far": (
+        "El GPS del video lo ubica lejos del lugar declarado del siniestro.",
+        "Pregunte dónde se grabó. Si el daño se filmó en otro lugar (un taller, por ejemplo), pida que lo explique."),
+    "video_edited": (
+        "El archivo lo escribió una app de edición de video, no la cámara del teléfono.",
+        "Pida el video original desde la galería. Revise si hay cortes o saltos en las partes importantes."),
+    "video_reencoded": (
+        "El archivo se volvió a codificar con FFmpeg, que usan muchas apps y redes sociales.",
+        "Si el video es una prueba importante, pida el original desde la galería."),
+    "photo_differs_from_video": (
+        "La foto muestra el mismo lugar del vehículo que un cuadro del video, pero una zona no calza. Editar un video "
+        "entero es mucho más difícil que editar una foto, así que el video sirve de referencia.",
+        "Abra «Comparar con el video» y mire la zona marcada. Si el daño es distinto, la foto pudo editarse: pida la "
+        "foto original o una inspección presencial."),
     "damage_differs_between_photos": (
         "Dos fotos sacadas desde casi el mismo lugar, una tras otra, calzan punto a punto salvo en una zona. Si esa zona "
         "es el daño, una de las fotos pudo editarse (con IA o un programa) para agrandarlo, agregarlo o borrarlo. También "
@@ -309,6 +333,13 @@ WHY = {
                  "foto real. Aunque el cambio haya sido pequeño, la foto ya no prueba por sí sola cómo estaba el vehículo.",
     "copy_of_ai_photo": "Alta porque es la misma imagen que una foto editada con IA: perder las marcas al reenviarla "
                         "no cambia lo que muestra.",
+    "video_no_date": "Baja porque es normal en videos reenviados; solo impide comprobar la fecha.",
+    "video_before_claim": "Alta porque el daño aparece grabado antes del choque declarado.",
+    "video_late": "Media porque puede haber una explicación (se grabó al llevarlo al taller).",
+    "video_far": "Media o alta según la distancia al lugar declarado.",
+    "video_edited": "Media porque editar un video puede ser inocente (recortarlo), pero ya no es el original.",
+    "video_reencoded": "Baja porque muchas apps recodifican sin editar el contenido.",
+    "photo_differs_from_video": "Media porque algo pudo moverse entre la foto y el video; alta si la foto declara IA.",
     "damage_differs_between_photos": "Media porque dos tomas seguidas pueden diferir por algo que se movió; alta si una "
                                       "de las dos declara uso de IA.",
     "ai_edit_of_original": "Alta porque se presentó una foto editada con IA junto a su original: la edición es "

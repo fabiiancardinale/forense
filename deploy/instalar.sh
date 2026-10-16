@@ -32,7 +32,7 @@ echo "==> Evidex en https://$DOMINIO"
 echo "==> Paquetes del sistema"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -q
-apt-get install -y -q python3 python3-venv python3-dev build-essential git curl rsync ufw fail2ban \
+apt-get install -y -q python3 python3-venv python3-dev build-essential git curl rsync ufw fail2ban ffmpeg \
   unattended-upgrades debian-keyring debian-archive-keyring apt-transport-https gnupg libgl1 libglib2.0-0
 if ! command -v caddy >/dev/null; then
   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor --yes -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg

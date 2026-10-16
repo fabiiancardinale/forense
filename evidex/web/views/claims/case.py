@@ -31,8 +31,10 @@ from evidex.web.views.claims import bp
 TABS = [("resumen", "Resumen"), ("fotos", "Fotos"), ("documentos", "Documentos"), ("linea", "Línea de tiempo"), ("peritaje", "Peritaje"),
         ("asegurado", "Asegurado"), ("comentarios", "Comentarios"), ("informe", "Informe"), ("historial", "Historial")]
 SEV_ORDER = {"alta": 0, "media": 1, "baja": 2}
-PAIR_RULES = {"changed_between_versions", "damage_differs_between_photos", "ai_edit_of_original", "copy_of_ai_photo"}
-KIND_LABEL = {"foto": "Foto", "documento": "Documento", "chat": "Chat de WhatsApp", "audio": "Audio", "word": "Word"}
+PAIR_RULES = {"changed_between_versions", "damage_differs_between_photos", "ai_edit_of_original", "copy_of_ai_photo",
+              "photo_differs_from_video"}
+KIND_LABEL = {"foto": "Foto", "documento": "Documento", "chat": "Chat de WhatsApp", "audio": "Audio", "word": "Word",
+              "video": "Video"}
 
 
 def _refresh_if_needed(case: Case) -> None:
@@ -126,8 +128,8 @@ def case_view(cid):
     from evidex.web import background
     ctx = {"c": c, "tab": tab, "tabs": TABS, "active": "index",
            "analyzing": background.is_running(case), "analysis_state": background.status(case),
-           "n_photos": sum(1 for i in items if i["kind"] == "foto" and not i["excluded"]),
-           "n_docs": sum(1 for i in items if i["kind"] != "foto" and not i["excluded"]),
+           "n_photos": sum(1 for i in items if i["kind"] in ("foto", "video") and not i["excluded"]),
+           "n_docs": sum(1 for i in items if i["kind"] not in ("foto", "video") and not i["excluded"]),
            "n_findings": len(snap["findings"]), "n_comments": comments.count(case), **_overview(case, c, snap, items),
            "decisions": service.DECISIONS, "history": service.decision_history(case),
            "client_choices": __import__("evidex.accounts.clients", fromlist=["x"]).all_clients(cx.workdir) if has_perm("admin") else {}}
@@ -142,7 +144,7 @@ def _overview(case, c, snap, items) -> dict:
     """Lo que muestran la ficha del expediente y la vista previa de la cola: veredicto y alertas agrupadas."""
     findings = sorted((snap or {}).get("findings", []), key=lambda f: SEV_ORDER[f["severity"]])
     thumbs = {i["digest"][:8]: i for i in items if i["is_image"]}
-    groups = _group_findings(findings, thumbs)
+    groups = _group_findings(findings, thumbs, {i["digest"][:8]: i for i in items})
     return {"groups": groups, "verdict": _verdict(c, findings, groups)}
 
 
@@ -170,7 +172,7 @@ def _tab_summary(case, snap, items):
             "can_reassign": has_perm("equipo"), **_ia(case)}
 
 
-def _group_findings(findings, thumbs) -> list[dict]:
+def _group_findings(findings, thumbs, allitems=None) -> list[dict]:
     """Alertas de la misma regla juntas («3 fotos sin metadatos» en una sola línea), de la más grave a la más leve."""
     from evidex.claims.report import RULE_NAMES
     by_rule: dict[str, dict] = {}
@@ -181,7 +183,11 @@ def _group_findings(findings, thumbs) -> list[dict]:
         ref = next((thumbs[e] for e in f["evidence"] if e in thumbs), None)
         base, _, rest = f["title"].partition(" (")
         label = rest[:-1] if rest.endswith(")") else (ref["title"] if ref else "")
-        pair = [thumbs[e]["digest"] for e in f["evidence"] if e in thumbs][:2] if f["rule"] in PAIR_RULES else []
+        pair = [(allitems or thumbs)[e]["digest"] for e in f["evidence"] if e in (allitems or thumbs)][:2] \
+            if f["rule"] in PAIR_RULES else []
+        if f["rule"] == "photo_differs_from_video" and allitems:          # la foto primero, el video después
+            kinds = {i["digest"]: i["kind"] for i in allitems.values()}
+            pair.sort(key=lambda d: kinds.get(d) == "video")
         g["findings"].append({**f, "ref": ref, "base": base, "label": label, "pair": pair if len(pair) == 2 else None})
         if ref and ref not in g["refs"]:
             g["refs"].append(ref)
@@ -276,12 +282,16 @@ def _tab_timeline(case, snap, items):
 
 
 def _tab_photos(case, snap, items):
+    from evidex.forensics import video
     from evidex.forensics.training_bank import APPS, ORIGENES
-    return {"items": [i for i in items if i["kind"] == "foto"], "teach_apps": APPS, "teach_origins": ORIGENES}
+    info = {v["digest"]: v for v in snap.get("videos", [])}
+    vids = [{**i, "video": info.get(i["digest"])} for i in items if i["kind"] == "video"]
+    return {"items": [i for i in items if i["kind"] == "foto"], "videos": vids, "video_on": video.available(),
+            "teach_apps": APPS, "teach_origins": ORIGENES}
 
 
 def _tab_docs(case, snap, items):
-    return {"items": [i for i in items if i["kind"] != "foto"], **_ia(case)}
+    return {"items": [i for i in items if i["kind"] not in ("foto", "video")], **_ia(case)}
 
 
 def _tab_expert(case, snap, items):

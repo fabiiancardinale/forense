@@ -30,6 +30,11 @@ def capture_page(token):
          "lead": "PDF, Word o foto del documento. Si lo tiene en papel, tómele una foto donde se lea bien; si es un PDF o un "
                  "Word que le enviaron, súbalo tal cual.",
          "button": "Elegir documentos", "hint": "Después escriba un título para cada documento"},
+        {"kind": "video", "title": "Videos", "files": pr["videos"], "accept": "video/mp4,video/quicktime,.mp4,.mov,.m4v,.3gp",
+         "optional": True,
+         "lead": "Si grabó un video del daño o del lugar, súbalo desde la galería de su teléfono (no lo reenvíe por WhatsApp). "
+                 "Máximo 3 videos de hasta 300 MB. Se sube por partes: si se corta la señal, sigue sola.",
+         "button": "Elegir videos", "hint": "Después escriba un título para cada video"},
     ]
     return render_template("portal/upload.html", error=capture.status(data), finished=bool(data.get("finished")),
                            numero=decl.get("numero", ""), nombre=decl.get("asegurado", ""), empresa=empresa,
@@ -52,6 +57,34 @@ def portal_file(token):
     except ValueError as ex:
         return {"error": str(ex)}, 400
     return {"ok": True, "tipo": rec["kind"], "titulo": rec["title"], "hora": rec["server_time"][11:16], "id": rec["sha256"]}
+
+
+@bp.post("/c/<token>/video")
+def portal_video(token):
+    """Video del asegurado, por partes (ver evidex.web.chunks)."""
+    import hashlib
+    from evidex.forensics import video
+    from evidex.portal import links as capture
+    from evidex.web import chunks
+    case, data = portal_case(token)
+    if why := capture.status(data):
+        return {"error": why}, 400
+    scope = "portal:" + hashlib.sha256(token.encode()).hexdigest()[:24]
+    try:
+        r = chunks.receive(cx.workdir, scope, request.form, request.files.get("parte"), video.VIDEO_EXT, video.MAX_BYTES)
+    except chunks.ChunkError as ex:
+        return {"error": str(ex)}, 400
+    if not r["done"]:
+        return {"ok": True, "next": r["next"]}
+    try:
+        rec = capture.receive_video(case, data, r["path"], r["name"], r["meta"]["extra"].get("titulo", ""),
+                                    request.headers.get("User-Agent", ""), r["meta"]["extra"].get("modificado", ""))
+    except ValueError as ex:
+        return {"error": str(ex)}, 400
+    finally:
+        chunks.finish(r)
+    return {"ok": True, "done": True, "tipo": "video", "titulo": rec["title"], "hora": rec["server_time"][11:16],
+            "id": rec["sha256"]}
 
 
 @bp.post("/c/<token>/quitar")

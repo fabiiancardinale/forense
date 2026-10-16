@@ -1,4 +1,27 @@
 {% set upload_label = 'Agregar fotos' %}{% include "claims/case/_upload.html" %}
+{% if can('editar_siniestros') %}<div class="vupload"><label class="btn sm">{{ icon('upload', 14) }}Subir video<input type="file" accept="video/mp4,video/quicktime,.mp4,.mov,.m4v,.3gp" multiple hidden
+ data-video-url="{{ url_for('claims.video_upload', cid=c.id) }}" data-csrf="{{ csrf_token() }}" data-status="vstatus"></label>
+<span class="hint">MP4 o MOV, hasta 300 MB y 15 minutos. Se sube por partes: si se corta la conexión, sigue sola.{% if not video_on %} El servidor aún no tiene ffmpeg: el video se guarda pero no se analiza.{% endif %}</span></div>
+<div id="vstatus" hidden></div>
+<script src="{{ url_for('static', filename='subida_video.js') }}"></script>{% endif %}
+{% if videos %}<section class="videos" aria-label="Videos"><h3 class="sec">Videos · {{ videos|length }}</h3>
+{% for i in videos %}{% set v = i.video or {} %}<article class="vcard{{ ' off' if i.excluded }}{{ ' ' ~ i.worst if i.worst }}" id="f-{{ i.digest[:12] }}">
+<video controls preload="metadata" playsinline src="{{ url_for('claims.evidence_file', cid=c.id, digest=i.digest) }}"{% if v.frames %} poster="{{ url_for('claims.video_frame', cid=c.id, digest=i.digest, name=v.frames[0].file) }}"{% endif %}></video>
+<div class="body"><b class="t" title="{{ i.name }}">{{ i.title }}</b>
+<dl class="kv sm">
+<dt>Subió</dt><dd>{{ i.who }}</dd>
+<dt>Grabado</dt><dd>{{ (v.recorded or '')|replace('T', ' ') or 'sin fecha' }}</dd>
+<dt>Teléfono</dt><dd>{{ v.phone or '—' }}</dd>
+<dt>Duración</dt><dd>{% if v.duration is not none %}{{ v.duration|round|int }} s · {{ v.size }}{% else %}—{% endif %}</dd>
+<dt>Ubicación</dt><dd>{{ 'sí (GPS)' if v.gps else 'no' }}</dd>
+{% if v.editor %}<dt>Programa</dt><dd>{{ v.editor }}</dd>{% endif %}</dl>
+{% if i.findings %}<ul class="flinks">{% for f in i.findings %}<li class="{{ f.severity }}"><details class="why"><summary>{{ f.title|replace(' (' ~ i.name ~ ')', '') }}</summary>{% include "claims/case/_explain.html" %}</details></li>{% endfor %}</ul>{% endif %}
+{% if v.frames %}<div class="vframes" aria-label="Cuadros clave">{% for f in v.frames %}<a href="{{ url_for('claims.video_frame', cid=c.id, digest=i.digest, name=f.file) }}" target="_blank" rel="noopener" title="Segundo {{ f.t|round|int }}"><img src="{{ url_for('claims.video_frame', cid=c.id, digest=i.digest, name=f.file) }}" alt="Segundo {{ f.t|round|int }}" loading="lazy"><small>{{ f.t|round|int }} s</small></a>{% endfor %}</div>
+<p class="hint">Cuadros clave: Evidex los compara con las fotos del caso.</p>
+{% elif not v.analyzed %}<p class="hint">{{ 'Se analiza al terminar de subir.' if video_on else 'Sin analizar: falta ffmpeg en el servidor.' }}</p>{% endif %}
+<div class="cardacts"><a class="btn sm" href="{{ url_for('claims.evidence_file', cid=c.id, digest=i.digest) }}" download>Descargar original</a>
+<div class="acts">{% include "claims/case/_remove.html" %}</div></div>
+</div></article>{% endfor %}</section>{% endif %}
 {% set vis = items|rejectattr('excluded')|selectattr('is_image')|list %}
 {% if vis %}<section class="viewer" id="viewer" aria-label="Visor de fotos">
 <div class="vw-main"><figure class="vw-a"><img id="vwA" alt=""><figcaption id="vwTa"></figcaption></figure>
@@ -59,4 +82,4 @@ show()})();
 <div class="acts">{% include "claims/case/_remove.html" %}</div></div></details>
 </div>
 </div></article>{% endfor %}</div>
-{% else %}<div class="card empty"><h2>Aún no hay fotos</h2><p>Agréguelas arriba o pídaselas al asegurado en la pestaña Asegurado.</p></div>{% endif %}
+{% elif not videos %}<div class="card empty"><h2>Aún no hay fotos</h2><p>Agréguelas arriba o pídaselas al asegurado en la pestaña Asegurado.</p></div>{% endif %}

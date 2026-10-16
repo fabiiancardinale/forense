@@ -20,7 +20,7 @@ from evidex.forensics import policy
 from evidex.claims import report
 from evidex.forensics import whatsapp
 from evidex.core.case import Case
-from evidex.core.upload_guard import AUDIO as AUDIO_EXT, WORD as WORD_EXT
+from evidex.core.upload_guard import AUDIO as AUDIO_EXT, VIDEO as VIDEO_EXT, WORD as WORD_EXT
 from evidex.core.timeline import Timeline
 
 SEV_ORDER = {"alta": 0, "media": 1, "baja": 2}
@@ -66,7 +66,7 @@ def has_evidence(case: Case, digest: str) -> bool:
 
 
 def evidence_note(filename) -> str | None:
-    """Clasifica un archivo: 'foto', 'documento', 'chat', 'audio', 'word' o None si no se admite.
+    """Clasifica un archivo: 'foto', 'documento', 'chat', 'audio', 'video', 'word' o None si no se admite.
     Los .txt y .zip solo se aceptan si el archivo existe y es un chat de WhatsApp exportado."""
     ext = Path(filename).suffix.lower()
     if ext in claims.IMAGE_EXT:
@@ -75,6 +75,8 @@ def evidence_note(filename) -> str | None:
         return "documento"
     if ext in AUDIO_EXT:
         return "audio"
+    if ext in VIDEO_EXT:
+        return "video"
     if ext in WORD_EXT:
         return "word"
     if ext in whatsapp.CHAT_EXT:
@@ -134,13 +136,18 @@ def run_analysis(case: Case, registry_path: Path | None = None, use_llm: bool = 
         chats = load_chats(case, tl, _dt.fromisoformat(decl["fecha_siniestro"]))
         findings += whatsapp.analyze(decl, decl_ev, [(p, c) for p, c, _ in chats], registry)
         findings += chile.analyze(decl, decl_ev, docs)
-        events = forensic_timeline.build(decl, decl_ev, photos, docs, chats)
+        from evidex.claims import videos as videos_mod
+        vids = videos_mod.load(case)
+        findings += videos_mod.analyze(case, decl, decl_ev, vids, photos)
+        events = sorted(forensic_timeline.build(decl, decl_ev, photos, docs, chats) + videos_mod.events(vids),
+                        key=lambda e: e.ts)
         findings += forensic_timeline.impossibilities(decl, decl_ev, events, docs)
         from evidex.forensics import external
         findings += external.findings(photos, external.run(case, photos, load_config(case.root.parent))
                                       or _cached_external(case))
         net["timeline"] = events          # la línea de tiempo forense viaja con el resto del análisis
         net["chats"] = chats
+        net["videos"] = vids
         findings.sort(key=lambda f: (SEV_ORDER[f.severity], CATEGORIES.index(f.category) if f.category in CATEGORIES else 9))
         # el resumen destaca lo más grave; el detalle completo va en la sección de hallazgos
         key = [f for f in findings if f.severity == "alta"] or [f for f in findings if f.severity == "media"]
@@ -188,14 +195,14 @@ def _analyze_claim(case: Case, registry_path: Path | None = None, use_llm: bool 
     decl, decl_ev, photos, docs, findings, net, verified = run_analysis(case, registry_path, use_llm)
     rec = claims.recommendation(findings)
     score = claims.risk_score(findings)
-    if not photos and not docs and (case.root / "captura.json").exists():
+    if not photos and not docs and not net.get("videos") and (case.root / "captura.json").exists():
         # caso recién registrado que espera lo que suba el asegurado por el portal
         rec = ("Esperando evidencia del asegurado", "none")
     by_cat: dict[str, int] = {}
     for f in findings:
         by_cat[f.category] = by_cat.get(f.category, 0) + 1
     result = {
-        "photos": len(photos), "documents": len(docs), "findings": len(findings),
+        "photos": len(photos), "documents": len(docs), "videos": len(net.get("videos") or []), "findings": len(findings),
         "high": sum(1 for f in findings if f.severity == "alta"), "linked": len(net["neighbors"]),
         "score": score, "recommendation": rec[0], "level": rec[1],
         "categories": by_cat, "rules": sorted({f.rule for f in findings}),
@@ -204,7 +211,7 @@ def _analyze_claim(case: Case, registry_path: Path | None = None, use_llm: bool 
         result["trigger"] = f"reanálisis por vínculo con {trigger}"
     case.ledger.append("evidex", "claim_analyzed", decl["numero"], result)
     case.ledger.seal()
-    write_snapshot(case, photos, docs, findings, net.get("timeline") or [], decl)
+    write_snapshot(case, photos, docs, findings, net.get("timeline") or [], decl, net.get("videos") or [])
     (case.root / "informe.html").write_text(
         report.build_claim(case, decl, decl_ev, photos, findings, verified, rec, docs=docs, net=net, score=score),
         encoding="utf-8")
@@ -225,7 +232,7 @@ SNAPSHOT = "analisis.json"
 ANALYSIS_VERSION = "2026-10-16a"   # súbalo al agregar pruebas: los casos abiertos se reanalizan
 
 
-def write_snapshot(case: Case, photos, docs, findings, events=(), decl=None) -> None:
+def write_snapshot(case: Case, photos, docs, findings, events=(), decl=None, vids=()) -> None:
     """Guarda fotos, documentos y hallazgos del último análisis, para mostrarlos sin volver a analizar.
     Es un derivado del análisis (la fuente de verdad es la evidencia y la cadena de custodia)."""
     def ev_of(f):
@@ -263,7 +270,9 @@ def write_snapshot(case: Case, photos, docs, findings, events=(), decl=None) -> 
     timeline = [{"ts": e.ts.isoformat(timespec="minutes") if hasattr(e.ts, "isoformat") else str(e.ts), "kind": e.kind,
                  "title": e.title, "detail": e.detail, "ev": (e.ev or "").split(":")[0], "trust": e.trust,
                  "flags": list(e.flags)} for e in list(events)[:400]]
+    from evidex.claims import videos as videos_mod
     data = {"photos": shots, "docs": [doc(d) for d in docs], "timeline": timeline, "t0": t0,
+            "videos": [videos_mod.summary(v) for v in vids],
             "findings": [{"rule": f.rule, "severity": f.severity, "title": f.title, "summary": f.summary,
                           "category": f.category, "evidence": ev_of(f)} for f in findings]}
     (case.root / SNAPSHOT).write_text(json.dumps(data, ensure_ascii=False, indent=1, default=str), encoding="utf-8")

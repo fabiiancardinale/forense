@@ -23,9 +23,9 @@ BLUEPRINTS = (inspection.bp, panel.bp, claims.bp, portfolio.bp, investigations.b
 # vistas que no exigen sesión: ingreso y el portal del asegurado (se protege con su enlace secreto)
 PUBLIC_ENDPOINTS = {"auth.login", "auth.logout", "auth.second_factor", "static", "admin.client_logo"} | {f"portal.{e}" for e in
                                                               ("capture_page", "capture_upload", "portal_file",
-                                                               "portal_story", "portal_finish", "portal_remove")}
+                                                               "portal_story", "portal_finish", "portal_remove", "portal_video")}
 # lo único de /static que se puede abrir desde afuera: el diseño del portal del asegurado
-PORTAL_STATIC = {"/static/portal.css", "/static/fonts/manrope-latin-wght-normal.woff2",
+PORTAL_STATIC = {"/static/portal.css", "/static/subida_video.js", "/static/fonts/manrope-latin-wght-normal.woff2",
                  "/static/fonts/manrope-latin-ext-wght-normal.woff2", "/marca/cliente.png"}
 NO_NAV = PUBLIC_ENDPOINTS | {"claims.report", "investigations.inv_report"}
 

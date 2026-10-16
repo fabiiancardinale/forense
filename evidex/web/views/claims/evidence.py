@@ -42,6 +42,47 @@ def add_photos(cid):
     return _back(cid)
 
 
+@bp.post("/caso/<cid>/video")
+def video_upload(cid):
+    """Video del caso, subido por partes (ver evidex.web.chunks). Responde JSON."""
+    import shutil
+    from flask import jsonify
+    from evidex.core import upload_guard
+    from evidex.forensics import video
+    from evidex.inspection.validation import InvalidFile
+    from evidex.web import chunks
+    from evidex.web.common import current_user, cx
+    case = load_claim(cid)
+    who = (current_user() or {}).get("username", "demo")
+    try:
+        r = chunks.receive(cx.workdir, f"caso:{case.root.name}:{who}", request.form, request.files.get("parte"),
+                           video.VIDEO_EXT, video.MAX_BYTES)
+    except chunks.ChunkError as ex:
+        return jsonify(error=str(ex)), 400
+    if not r["done"]:
+        return jsonify(ok=True, next=r["next"])
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            from werkzeug.utils import secure_filename
+            name = secure_filename(r["name"]) or "video.mp4"
+            dest = Path(td) / name
+            shutil.move(str(r["path"]), dest)
+            try:
+                upload_guard.check(dest, name, "evidencia", timeout=60)
+            except InvalidFile as ex:
+                return jsonify(error=f"El video no se aceptó: {ex}"), 400
+            d = sha256_file(dest)
+            if service.has_evidence(case, d) and d not in case.purged():
+                return jsonify(ok=True, done=True, message="Ese video ya estaba en el caso.")
+            service.add_file(case, dest, note="video", analyst=actor_name() or None)
+    finally:
+        chunks.finish(r)
+    log_access("subir_video", name)
+    res = run_claim_analysis(case)
+    return jsonify(ok=True, done=True, message="Video agregado" + ("; analizando el caso." if res and res.get("background")
+                                                                   else " y caso reanalizado."))
+
+
 @bp.post("/caso/<cid>/archivo/<digest>/quitar")
 def evidence_exclude(cid, digest):
     case = load_claim(cid)
@@ -97,6 +138,7 @@ def evidence_purge(cid, digest):
     Bank(cx.workdir).purge(digest, actor_name() or "administrador")      # la copia del banco también se borra
     from evidex.claims import ia_texto
     ia_texto.olvidar_archivo(case, digest)                                 # y la transcripción, si era un audio
+    _forget_video(case, digest)                                            # y los cuadros, si era un video
     log_access("eliminar_archivo", f"{name} ({digest[:12]})")
     r = run_claim_analysis(case)
     flash(f"«{name}» eliminado definitivamente. Queda la constancia en el historial del caso"
@@ -214,6 +256,61 @@ def evidence_compare(cid, a, b):
     except Exception:
         abort(404)
     log_access("ver_archivo", f"comparación {_evidence_name(case, a)} / {_evidence_name(case, b)}")
+    return send_file(io.BytesIO(png), mimetype="image/png", max_age=0)
+
+
+def _forget_video(case, digest: str) -> None:
+    """Al eliminar un video, se borran también sus cuadros clave y sus datos guardados."""
+    import json
+    import shutil
+    from evidex.claims.videos import CACHE, FRAMES_DIR
+    shutil.rmtree(case.root / FRAMES_DIR / digest[:16], ignore_errors=True)
+    try:
+        data = json.loads((case.root / CACHE).read_text(encoding="utf-8"))
+        data.get("videos", {}).pop(digest, None)
+        data["pairs"] = {k: v for k, v in data.get("pairs", {}).items() if digest not in k}
+        (case.root / CACHE).write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    except (OSError, ValueError):
+        pass
+
+
+FRAME_NAME = re.compile(r"c\d{2}_\d{5}\.jpg")
+
+
+@bp.get("/caso/<cid>/video/<digest>/cuadro/<name>")
+def video_frame(cid, digest, name):
+    """Un cuadro clave de un video del caso."""
+    from evidex.claims.videos import FRAMES_DIR
+    case = load_claim(cid)
+    if not DIGEST.fullmatch(digest or "") or not FRAME_NAME.fullmatch(name or "") or not service.has_evidence(case, digest) \
+            or digest in case.purged():
+        abort(404)
+    path = case.root / FRAMES_DIR / digest[:16] / name
+    if not path.exists():
+        abort(404)
+    return send_file(path, mimetype="image/jpeg", max_age=3600)
+
+
+@bp.get("/caso/<cid>/comparar-video/<photo>/<vid>.png")
+def video_compare(cid, photo, vid):
+    """La foto y el cuadro del video que muestra lo mismo, lado a lado, con las zonas distintas marcadas."""
+    from evidex.claims import videos
+    from evidex.forensics import views
+    case = load_claim(cid)
+    for d in (photo, vid):
+        if not DIGEST.fullmatch(d or "") or not service.has_evidence(case, d) or d in case.purged():
+            abort(404)
+    best = videos.best_frame(case, photo, vid)
+    if not best:
+        abort(404)
+    frame, r = best
+    path = case.root / videos.FRAMES_DIR / vid[:16] / frame
+    zones = [{**z, "box": z["box_b"], "box_b": z["box"]} for z in r.get("zones", [])]   # foto a la izquierda
+    try:
+        png = views.side_by_side(case.evidence_dir / photo, path, zones)
+    except Exception:
+        abort(404)
+    log_access("ver_archivo", f"comparación {_evidence_name(case, photo)} / video")
     return send_file(io.BytesIO(png), mimetype="image/png", max_age=0)
 
 

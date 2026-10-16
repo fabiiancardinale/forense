@@ -10,7 +10,7 @@
 WhatsApp borra la fecha y el lugar de cada foto. Puede avanzar por partes y volver a este enlace hasta el {{ vence }}.</p></div>
 
 {% for sec in sections %}
-<section class="card" id="sec-{{ sec.kind }}"><h2><span class="n" id="n-{{ sec.kind }}">{{ loop.index }}</span>{{ sec.title }}</h2>
+<section class="card" id="sec-{{ sec.kind }}"><h2><span class="n" id="n-{{ sec.kind }}">{{ loop.index }}</span>{{ sec.title }}{% if sec.optional %} <span class="opt">opcional</span>{% endif %}</h2>
 <p class="lead">{{ sec.lead }}</p>
 {% if sec.kind == 'doc' and requested %}<div class="need">Le pedimos:<ul>{% for r in requested %}<li>{{ r }}</li>{% endfor %}</ul></div>{% endif %}
 <label class="pick">{{ sec.button }}<small>{{ sec.hint }}</small><input type="file" data-kind="{{ sec.kind }}" accept="{{ sec.accept }}" multiple></label>
@@ -21,7 +21,7 @@ WhatsApp borra la fecha y el lugar de cada foto. Puede avanzar por partes y volv
 </section>
 {% endfor %}
 
-<section class="card"><h2><span class="n">3</span>¿Qué pasó? <span class="opt">opcional</span></h2>
+<section class="card"><h2><span class="n">{{ sections|length + 1 }}</span>¿Qué pasó? <span class="opt">opcional</span></h2>
 <p class="lead">Cuéntelo con sus palabras: dónde iba, a qué hora, qué ocurrió.</p>
 <textarea id="story" maxlength="8000" placeholder="Escriba aquí…">{{ story or '' }}</textarea>
 <button class="btn sec" id="savestory" style="margin-top:10px">Guardar relato</button></section>
@@ -35,6 +35,7 @@ WhatsApp borra la fecha y el lugar de cada foto. Puede avanzar por partes y volv
 <p class="small" style="text-align:center;margin:8px 0 28px">Plataforma segura de entrega · Evidex by Zelekpress</p>
 </main>
 {% if not error %}
+<script src="{{ url_for('static', filename='subida_video.js') }}"></script>
 <script nonce="{{ csp_nonce }}">
 const $ = id => document.getElementById(id);
 async function api(url, opts){
@@ -48,11 +49,11 @@ async function api(url, opts){
   return {ok: r.ok, j: j || {}};
 }
 const base = location.pathname.replace(/\/$/, "");
-const count = {photo: {{ sections[0].files|length }}, doc: {{ sections[1].files|length }}};
-const queue = {photo: [], doc: []};
+const count = {photo: {{ sections[0].files|length }}, doc: {{ sections[1].files|length }}, video: {{ sections[2].files|length }}};
+const queue = {photo: [], doc: [], video: []};
 function bar(){ const ok = (count.photo > 0) + (count.doc > 0);
   $("bar").style.width = (50*ok) + "%"; $("bartxt").textContent = ok + " de 2 pasos completos";
-  for (const k of ["photo", "doc"]) { const n = $("n-" + k); n.className = "n" + (count[k] ? " ok" : ""); n.textContent = count[k] ? "✓" : (k === "photo" ? "1" : "2"); } }
+  for (const k of ["photo", "doc", "video"]) { const n = $("n-" + k); if (!n) continue; n.className = "n" + (count[k] ? " ok" : ""); n.textContent = count[k] ? "✓" : ({photo: "1", doc: "2", video: "3"})[k]; } }
 function say(t, bad){ const el = $("globalmsg"); el.hidden = false; el.className = "msg " + (bad ? "err" : "ok"); el.textContent = t; }
 bar();
 function rmButton(){ const b = Object.assign(document.createElement("button"), {type: "button", className: "rm", textContent: "Quitar"}); return b; }
@@ -73,7 +74,8 @@ document.querySelectorAll("input[type=file]").forEach(inp => inp.onchange = () =
     const th = isImg ? Object.assign(document.createElement("img"), {className: "th", src: URL.createObjectURL(f)})
                      : Object.assign(document.createElement("div"), {className: "th", textContent: (f.name.split(".").pop() || "").toUpperCase()});
     const right = document.createElement("div");
-    const t = Object.assign(document.createElement("input"), {placeholder: kind === "photo" ? "Título (ej: Parachoques trasero)" : "Título (ej: Licencia de conducir)", maxLength: 80});
+    if (kind === "video" && f.size > 300 * 1000 * 1000) { $("msg-video").hidden = false; $("msg-video").textContent = `«${f.name}» pesa más de 300 MB: no se puede subir.`; continue; }
+    const t = Object.assign(document.createElement("input"), {placeholder: kind === "photo" ? "Título (ej: Parachoques trasero)" : kind === "video" ? "Título (ej: Daño lateral)" : "Título (ej: Licencia de conducir)", maxLength: 80});
     t.oninput = () => t.classList.remove("bad");
     right.append(t, Object.assign(document.createElement("div"), {className: "fn", textContent: f.name}));
     row.append(th, right); box.appendChild(row);
@@ -87,12 +89,19 @@ document.querySelectorAll("button[id^=up-]").forEach(btn => btn.onclick = async 
   const missing = queue[kind].filter(q => q.input.value.trim().length < 3);
   missing.forEach(q => q.input.classList.add("bad"));
   const m = $("msg-" + kind);
-  if (missing.length) { missing[0].input.focus(); m.hidden = false; m.textContent = "Escriba un título para cada " + (kind === "photo" ? "foto" : "documento") + " antes de subir."; return; }
+  if (missing.length) { missing[0].input.focus(); m.hidden = false; m.textContent = "Escriba un título para cada " + ({photo: "foto", doc: "documento", video: "video"})[kind] + " antes de subir."; return; }
   m.hidden = true;
   btn.disabled = true; btn.textContent = "Subiendo…";
   for (const q of [...queue[kind]]) {
     const fd = new FormData(); fd.append("archivo", q.file, q.file.name); fd.append("kind", kind); fd.append("titulo", q.input.value.trim()); fd.append("modificado", String(q.file.lastModified || ""));
-    try { const {ok, j} = await api(base + "/archivo", {method:"POST", headers:{"X-CSRF-Token":{{ csrf_token()|tojson }}}, body:fd}); if (!ok) throw new Error(j.error || "No se pudo subir. Intente de nuevo.");
+    try { let ok, j;
+      if (kind === "video") {
+        j = await EvidexVideo.subir(q.file, base + "/video", {csrf: {{ csrf_token()|tojson }},
+              campos: {titulo: q.input.value.trim(), modificado: String(q.file.lastModified || "")},
+              alAvanzar: p => { btn.textContent = `Subiendo… ${p}%`; }});
+        ok = !!(j && j.done);
+      } else { ({ok, j} = await api(base + "/archivo", {method:"POST", headers:{"X-CSRF-Token":{{ csrf_token()|tojson }}}, body:fd})); }
+      if (!ok) throw new Error(j.error || "No se pudo subir. Intente de nuevo.");
       const li = document.createElement("li"); li.innerHTML = "✓ "; li.append(j.titulo); const sm = document.createElement("small"); sm.textContent = j.hora; li.append(sm);
       li.dataset.id = j.id; li.dataset.kind = j.tipo; li.append(rmButton());
       $("sent-" + j.tipo).appendChild(li); count[j.tipo]++; q.row.remove(); queue[kind].splice(queue[kind].indexOf(q), 1);
@@ -107,7 +116,7 @@ $("savestory").onclick = async () => {
   say(ok ? "Relato guardado." : j.error, !ok);
 };
 $("finish").onclick = async () => {
-  if (queue.photo.length || queue.doc.length) { say("Tiene archivos elegidos sin subir: escríbales un título y presione Subir.", true); return; }
+  if (queue.photo.length || queue.doc.length || queue.video.length) { say("Tiene archivos elegidos sin subir: escríbales un título y presione Subir.", true); return; }
   const falta = [count.photo ? "" : "fotos", count.doc ? "" : "documentos"].filter(Boolean);
   if (falta.length && !confirm("No ha subido " + falta.join(" ni ") + ". ¿Enviar de todas formas?")) return;
   if ($("story").value.trim().length >= 10) { const fd = new FormData(); fd.append("texto", $("story").value); await fetch(base + "/relato", {method:"POST", headers:{"X-CSRF-Token":{{ csrf_token()|tojson }}}, body:fd}); }

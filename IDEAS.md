@@ -223,6 +223,13 @@ No es "taller externo = sospechoso": se mira cada taller, en convenio o no, sobr
 - [ ] Montos fuera de rango para ese daño y ese modelo (media).
 - [ ] Coherencia entre las fotos del siniestro: color, modelo y patente del auto (media).
 - [ ] Huella del sensor: comprobar que varias fotos vienen del mismo teléfono aunque no tengan metadatos (grande).
+- [x] **Videos, parte 1 (16-10-2026):** subida por partes (8 MB, hasta 300 MB y 15 min, reintenta si se corta) desde
+      el caso y desde el portal del asegurado (máx. 3 por enlace). Datos con ffprobe: fecha de grabación, GPS, teléfono,
+      app de edición o recodificación. Alertas: grabado antes del siniestro, muy posterior, lejos del lugar, editado con
+      una app, sin fecha. 16 cuadros clave por video, comparados con cada foto del caso («La foto no calza con el video»,
+      con botón «Comparar con el video»). Reproductor y cuadros en la pestaña Fotos; el video entra a la línea de tiempo.
+- [ ] Videos, parte 2: patente leída en los cuadros (OCR), cuadros en el registro de redes (video reusado en otro
+      siniestro), modelo de IA sobre los cuadros, cortes y empalmes, C2PA en video, sonido.
 - [ ] **Revisión de videos** (grande), por partes:
   - Metadatos del video: fecha, GPS, teléfono y programa con que se grabó o editó (sirven igual que en las fotos).
   - Cortes y empalmes: saltos de imagen, cuadros repetidos o insertados, cambios de calidad a mitad del video.

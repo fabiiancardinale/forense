@@ -276,6 +276,10 @@ RULE_NAMES = {
     "copy_of_ai_photo": "Copia de una foto editada con IA",
     "ai_edit_of_original": "Versión editada con IA de una foto original",
     "damage_differs_between_photos": "El vehículo no se ve igual en dos fotos seguidas",
+    "video_no_date": "Video sin fecha de grabación", "video_before_claim": "Video grabado antes del siniestro",
+    "video_late": "Video muy posterior al siniestro", "video_far": "Video grabado lejos del lugar declarado",
+    "video_edited": "Video editado con una app", "video_reencoded": "Video recodificado",
+    "photo_differs_from_video": "La foto no calza con el video",
     "odd_ratio": "Proporción que no es de cámara",
 }
 

@@ -404,7 +404,8 @@ def analysts() -> list[dict]:
 
 MIME = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".pdf": "application/pdf", ".webp": "image/webp",
         ".ogg": "audio/ogg", ".opus": "audio/ogg", ".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".wav": "audio/wav",
-        ".webm": "audio/webm", ".aac": "audio/aac"}
+        ".webm": "audio/webm", ".aac": "audio/aac", ".mp4": "video/mp4", ".mov": "video/quicktime", ".m4v": "video/x-m4v",
+        ".3gp": "video/3gpp"}
 
 
 def send_evidence(case: Case, digest: str, mini: bool = False):
@@ -418,6 +419,12 @@ def send_evidence(case: Case, digest: str, mini: bool = False):
     name = next((e["data"]["original_name"] for e in case.ledger.entries()
                  if e["action"] == "evidence_added" and e["subject"] == digest), "archivo")
     ext = Path(name).suffix.lower()
+    if mini and ext in (".mp4", ".mov", ".m4v", ".3gp"):    # miniatura de un video: su primer cuadro clave
+        from evidex.claims.videos import FRAMES_DIR
+        first = sorted((case.root / FRAMES_DIR / digest[:16]).glob("c*.jpg"))
+        if not first:
+            abort(404)
+        path, ext = first[0], ".jpg"
     if mini or ext in (".heic", ".heif"):
         try:
             from PIL import Image, ImageOps
