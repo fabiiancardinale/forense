@@ -274,6 +274,8 @@ RULE_NAMES = {
     "ai_mark_cropped": "Recortada para ocultar la marca de IA", "cropped_in_claim": "Foto recortada de otra del caso",
     "changed_between_versions": "Zona cambiada entre dos versiones",
     "copy_of_ai_photo": "Copia de una foto editada con IA",
+    "ai_edit_of_original": "Versión editada con IA de una foto original",
+    "damage_differs_between_photos": "El vehículo no se ve igual en dos fotos seguidas",
     "odd_ratio": "Proporción que no es de cámara",
 }
 

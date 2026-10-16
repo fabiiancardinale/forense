@@ -55,7 +55,7 @@ ENDPOINTS = {
     "panel.dashboard": None, "panel.team": "equipo", "panel.reassign": "equipo",
     "claims.index": "ver_siniestros", "claims.case_view": "ver_siniestros", "claims.case_preview": "ver_siniestros", "claims.comment_add": "ver_siniestros", "claims.analysis_status": "ver_siniestros", "claims.report": "ver_siniestros",
     "claims.doc_version": "ver_siniestros", "claims.evidence_file": "ver_siniestros", "claims.evidence_metadata": "ver_siniestros",
-    "claims.evidence_zones": "ver_siniestros", "claims.evidence_zones_image": "ver_siniestros", "claims.export_zip": "ver_siniestros",
+    "claims.evidence_zones": "ver_siniestros", "claims.evidence_compare": "ver_siniestros", "claims.evidence_zones_image": "ver_siniestros", "claims.export_zip": "ver_siniestros",
     "claims.verify": "ver_siniestros", "claims.new_claim": "editar_siniestros", "claims.add_photos": "editar_siniestros",
     "claims.reanalyze": "editar_siniestros", "claims.decide": "editar_siniestros", "claims.capture_link": "editar_siniestros",
     "claims.capture_sent": "editar_siniestros", "claims.ia_tarea": "editar_siniestros", "claims.ia_transcribir": "editar_siniestros",

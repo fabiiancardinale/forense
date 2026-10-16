@@ -271,6 +271,18 @@ GUIDE: dict[str, tuple[str, str]] = {
         "perdió las marcas porque pasó por WhatsApp, redes sociales o una captura de pantalla, que las borran.",
         "Trátela igual que la original editada con IA: no la acepte como prueba y pida la foto original o una "
         "inspección presencial."),
+    "damage_differs_between_photos": (
+        "Dos fotos sacadas desde casi el mismo lugar, una tras otra, calzan punto a punto salvo en una zona. Si esa zona "
+        "es el daño, una de las fotos pudo editarse (con IA o un programa) para agrandarlo, agregarlo o borrarlo. También "
+        "puede ser algo que se movió entre las dos fotos.",
+        "Abra «Comparar las dos fotos» y mire la zona marcada en ambas. Si el daño cambia de tamaño o de forma entre una y "
+        "otra, pida las fotos originales o una inspección presencial."),
+    "ai_edit_of_original": (
+        "En el caso están las dos versiones de la misma toma: la foto original de la cámara (con sus datos y sin marcas "
+        "de IA) y una versión editada con inteligencia artificial (por ejemplo con Galaxy AI). La editada es la sospechosa; "
+        "la original sirve para ver qué se cambió.",
+        "Compare las dos fotos lado a lado, sobre todo en la zona del daño. Base la evaluación en la original y pregunte "
+        "al asegurado por qué envió una versión editada."),
     "phone_edit": (
         "El archivo guarda el historial de lo que se le hizo después de tomarlo: recortes, giros, cambios de luz o color, "
         "filtros, o que se creó a partir de otra foto. Puede ser inocente (encuadrar), pero cambia lo que se ve.",
@@ -297,6 +309,10 @@ WHY = {
                  "foto real. Aunque el cambio haya sido pequeño, la foto ya no prueba por sí sola cómo estaba el vehículo.",
     "copy_of_ai_photo": "Alta porque es la misma imagen que una foto editada con IA: perder las marcas al reenviarla "
                         "no cambia lo que muestra.",
+    "damage_differs_between_photos": "Media porque dos tomas seguidas pueden diferir por algo que se movió; alta si una "
+                                      "de las dos declara uso de IA.",
+    "ai_edit_of_original": "Alta porque se presentó una foto editada con IA junto a su original: la edición es "
+                           "deliberada y puede haber cambiado el daño.",
     "ai_watermark_removed": "Alta porque quitar la marca de IA es un acto deliberado para ocultar la edición.",
     "ai_label_visible": "Alta porque la propia imagen dice que fue generada o editada con IA.",
     "ai_mark_cropped": "Alta porque recortar justo la marca de IA es un intento de ocultar la edición.",

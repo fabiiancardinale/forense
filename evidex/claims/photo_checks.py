@@ -60,7 +60,9 @@ CHECKS = [
     ("Este siniestro", "Recorte de otra foto del caso (y marca de IA quitada)", ("cropped_in_claim", "ai_mark_cropped"),
      None),
     ("Este siniestro", "Zona borrada o cambiada respecto de otra versión", ("changed_between_versions",), None),
+    ("Este siniestro", "Daño distinto entre dos fotos seguidas", ("damage_differs_between_photos",), None),
     ("Este siniestro", "Copia de una foto editada con IA (aquí o en otro siniestro)", ("copy_of_ai_photo",), None),
+    ("Este siniestro", "Original y versión editada con IA presentadas juntas", ("ai_edit_of_original",), None),
     ("Este siniestro", "Fotos de varios teléfonos", ("multiple_devices",), None),
 ]
 

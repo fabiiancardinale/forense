@@ -162,3 +162,23 @@ def test_whatsapp_copy_inherits_ai_mark_in_claim_and_across_claims(tmp_path):
     assert rows[0]["ai"]
     rules = [f.rule for f in registry_findings(pw, {"numero": "SIN-B", "rut": ""}, rows, ["x:1"])]
     assert rules == ["reused_photo", "copy_of_ai_photo"]
+
+
+def test_original_de_camara_no_es_copia_de_la_editada(tmp_path):
+    """Original de cámara y su versión editada con Galaxy AI en el mismo caso: la alerta va sobre la editada."""
+    from evidex.claims.analysis import photo_set_findings
+    e = _exif()
+    e[0x8769] = {**e[0x8769], 0x829A: 1 / 120}                         # tiempo de exposición: la cámara lo graba
+    orig = tmp_path / "20261004_121956.jpg"
+    b = io.BytesIO()
+    textured_image(2, 800, 600).save(b, "JPEG", quality=92, exif=e)
+    orig.write_bytes(b.getvalue())
+    edit = _samsung_jpeg(tmp_path / "20261004_121956_editada.jpg", {"PEg_Info": json.dumps({"genAIType": 1}).encode()})
+    po, pe = _photo(orig), _photo(edit)
+    po.digest, pe.digest = "a" * 64, "b" * 64
+    assert (po.meta.get("forensics") or {}).get("exposure")
+    found = photo_set_findings([po, pe])
+    rules = {f.rule for f in found}
+    assert "copy_of_ai_photo" not in rules and "ai_edit_of_original" in rules
+    f = next(f for f in found if f.rule == "ai_edit_of_original")
+    assert "editada.jpg" in f.title and "original de la cámara" in f.summary

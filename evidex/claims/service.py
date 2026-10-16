@@ -222,7 +222,7 @@ def _analyze_claim(case: Case, registry_path: Path | None = None, use_llm: bool 
 
 # ---- resumen para la ficha del caso ----------------------------------------------------
 SNAPSHOT = "analisis.json"
-ANALYSIS_VERSION = "2026-10-14a"   # súbalo al agregar pruebas: los casos abiertos se reanalizan
+ANALYSIS_VERSION = "2026-10-16a"   # súbalo al agregar pruebas: los casos abiertos se reanalizan
 
 
 def write_snapshot(case: Case, photos, docs, findings, events=(), decl=None) -> None:

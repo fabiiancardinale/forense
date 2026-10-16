@@ -184,6 +184,39 @@ def evidence_zones_image(cid, digest):
     return send_file(io.BytesIO(png), mimetype="image/png", max_age=0)
 
 
+@bp.get("/caso/<cid>/comparar/<a>/<b>.png")
+def evidence_compare(cid, a, b):
+    """Dos fotos del caso lado a lado, alineadas, con las zonas que no son iguales marcadas en ambas."""
+    import json
+    from evidex.claims.analysis import PAIRS_CACHE, view_key
+    from evidex.forensics import views
+    case = load_claim(cid)
+    for d in (a, b):
+        if not DIGEST.fullmatch(d or "") or not service.has_evidence(case, d) or d in case.purged():
+            abort(404)
+    zones = None
+    try:
+        pairs = json.loads((case.root / PAIRS_CACHE).read_text(encoding="utf-8")).get("pairs", {})
+        if (r := pairs.get(view_key(a, b))) is not None:
+            zones = r.get("zones", [])
+        elif (r := pairs.get(view_key(b, a))) is not None:
+            zones = [{**z, "box": z["box_b"], "box_b": z["box"]} for z in r.get("zones", [])]
+    except (OSError, ValueError, AttributeError):
+        pass
+    if zones is None and views.available():
+        try:
+            r = views.compare(case.evidence_dir / a, case.evidence_dir / b)
+            zones = (r or {}).get("zones", [])
+        except Exception:
+            zones = []
+    try:
+        png = views.side_by_side(case.evidence_dir / a, case.evidence_dir / b, zones or [])
+    except Exception:
+        abort(404)
+    log_access("ver_archivo", f"comparación {_evidence_name(case, a)} / {_evidence_name(case, b)}")
+    return send_file(io.BytesIO(png), mimetype="image/png", max_age=0)
+
+
 META_SECTIONS = [("archivo", "Archivo"), ("samsung", "Samsung: datos propios del teléfono (SEF)"),
                  ("apple", "Apple"), ("google", "Google / Android (XMP de cámara)"), ("c2pa", "Credenciales de contenido (C2PA)"),
                  ("exif", "EXIF (todas las carpetas)"), ("fabricante", "Nota del fabricante (MakerNote)"), ("xmp", "XMP"),

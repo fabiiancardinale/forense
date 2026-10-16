@@ -206,6 +206,18 @@ No es "taller externo = sospechoso": se mira cada taller, en convenio o no, sobr
 - Por confirmar con BCI: qué pólizas permiten elegir taller (autos nuevos, servicio de la marca).
 
 ## Más detección
+- [x] **Comparar fotos alineándolas punto a punto (16-10-2026).** SIFT + homografía (OpenCV, Apache 2.0) y diferencia
+      con brillo igualado y tolerancia a desajustes de pocos píxeles. Encuentra zonas cambiadas entre la original y
+      la editada aunque estén giradas, recortadas, achicadas o muy editadas (antes fallaba en 3 de 8 pares del banco).
+      Banco propio: 8 de 8 pares detectados (zonas dentro de lo marcado), 0 falsas alarmas en 60 copias sin editar
+      (WhatsApp, giro, perspectiva, luz) y 0 en 190 pares de fotos distintas. Botón «Comparar las dos fotos» en el
+      Resumen con la zona marcada en ambas. Toma ~0,08 s por par (38 fotos ≈ 1 minuto, una sola vez por caso).
+- [x] Corregido: la foto original salía como «copia de una foto editada con IA». Ahora, si conserva los datos de la
+      cámara o su contenido difiere de la editada, la alerta va sobre la editada («versión editada con IA de una foto original»).
+- [ ] **Otra toma** (dos fotos seguidas desde casi el mismo lugar, una editada): implementado con umbrales estrictos,
+      pero sin fotos reales para calibrar. Pedir a Fabián 10–20 juegos: 2–3 fotos seguidas del mismo daño moviéndose un
+      poco, y una de ellas editada con Galaxy AI (agrandar o borrar daño).
+- [ ] Mostrar la comparación también en la pestaña Fotos (hoy solo desde el Resumen).
 - [ ] Comparar el daño con fotos del mismo auto (por patente) en siniestros anteriores (media).
 - [ ] Clima real del día y lugar contra lo que muestra la foto (media, requiere internet).
 - [ ] Montos fuera de rango para ese daño y ese modelo (media).

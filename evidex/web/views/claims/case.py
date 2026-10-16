@@ -31,6 +31,7 @@ from evidex.web.views.claims import bp
 TABS = [("resumen", "Resumen"), ("fotos", "Fotos"), ("documentos", "Documentos"), ("linea", "Línea de tiempo"), ("peritaje", "Peritaje"),
         ("asegurado", "Asegurado"), ("comentarios", "Comentarios"), ("informe", "Informe"), ("historial", "Historial")]
 SEV_ORDER = {"alta": 0, "media": 1, "baja": 2}
+PAIR_RULES = {"changed_between_versions", "damage_differs_between_photos", "ai_edit_of_original", "copy_of_ai_photo"}
 KIND_LABEL = {"foto": "Foto", "documento": "Documento", "chat": "Chat de WhatsApp", "audio": "Audio", "word": "Word"}
 
 
@@ -180,7 +181,8 @@ def _group_findings(findings, thumbs) -> list[dict]:
         ref = next((thumbs[e] for e in f["evidence"] if e in thumbs), None)
         base, _, rest = f["title"].partition(" (")
         label = rest[:-1] if rest.endswith(")") else (ref["title"] if ref else "")
-        g["findings"].append({**f, "ref": ref, "base": base, "label": label})
+        pair = [thumbs[e]["digest"] for e in f["evidence"] if e in thumbs][:2] if f["rule"] in PAIR_RULES else []
+        g["findings"].append({**f, "ref": ref, "base": base, "label": label, "pair": pair if len(pair) == 2 else None})
         if ref and ref not in g["refs"]:
             g["refs"].append(ref)
     out = []

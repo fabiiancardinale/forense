@@ -384,14 +384,18 @@ def registry_findings(p: "Photo", decl: dict, registry: list[dict], cite) -> lis
                 how = ("la misma toma: ambas llevan el mismo identificador único que la cámara graba en cada foto, "
                        "aunque la imagen se haya editado")
             if how:
-                ai_note = ""
+                ai_note, original = "", False
                 if r.get("ai") and not _ai_evidence(p):
-                    ai_note = (f" Además, esa foto declaraba uso de inteligencia artificial ({r['ai']}): esta copia "
-                               "llegó sin esas marcas.")
+                    original = bool(m.get("make") and fx.get("exposure")) and not WHATSAPP_NAME.search(p.name)
+                    ai_note = ((f" Además, esa foto declaraba uso de inteligencia artificial ({r['ai']}), y esta conserva "
+                                "los datos de la cámara: parece la original, y en el otro siniestro se presentó editada con IA.")
+                               if original else
+                               (f" Además, esa foto declaraba uso de inteligencia artificial ({r['ai']}): esta copia "
+                                "llegó sin esas marcas."))
                 out.append(Finding("reused_photo", "alta", f"Foto ya usada en otro siniestro ({p.name})",
                                    f"La foto {p.name} es {how}, igual a la foto {r['photo']} del siniestro {r['claim']}."
                                    + ai_note, cite, p.ts))
-                if ai_note:
+                if ai_note and not original:
                     out.append(Finding("copy_of_ai_photo", "alta", f"Copia de una foto editada con IA ({p.name})",
                                        f"La foto {p.name} es {how} de la foto {r['photo']} del siniestro {r['claim']}, "
                                        f"que declaraba uso de inteligencia artificial: {r['ai']}. La copia llegó sin "
@@ -417,9 +421,16 @@ def photo_set_findings(photos: list["Photo"]) -> list[Finding]:
     # la misma foto presentada dos veces (con otro nombre) o espejada para simular el otro lado
     seen = set()
     crops = _crop_pairs(ok)
+    vpairs = _view_pairs(ok)
+    key = lambda x, y: tuple(sorted((x.digest, y.digest)))
+    # pares cuyo contenido difiere: no son copias una de otra (la sin marcas de IA es la original, no una copia)
+    differs = {key(a, b) for a, b, c in vpairs if c["zones"]} | {key(a, b) for a, b, r in crops if r.get("change")}
+    vzones = {key(a, b) for a, b, c in vpairs if c["zones"]}
     for a, b, rel in crops:
         base, part = (a, b) if rel["base"] == "a" else (b, a)
-        change = rel.get("change")
+        change = rel.get("change") if key(a, b) not in vzones else None      # la alineación fina ubica mejor la zona
+        if key(a, b) in vzones:
+            seen.add((a.digest, b.digest))
         if change:
             seen.add((a.digest, b.digest))
             how = "es la foto" if rel["same"] else "es un recorte de la foto"
@@ -428,7 +439,7 @@ def photo_set_findings(photos: list["Photo"]) -> list[Finding]:
                                "algo se borró, se agregó o se cambió (por ejemplo con el borrador mágico o la edición "
                                "con IA del teléfono). Compare las dos fotos en esa zona.", [base.ev, part.ev], part.ts))
         if rel["same"]:
-            if (copy := _copy_of_ai(a, b, "es la misma imagen que la foto")):
+            if key(a, b) not in differs and (copy := _copy_of_ai(a, b, "es la misma imagen que la foto")):
                 seen.add((a.digest, b.digest))
                 out.append(copy)
             continue
@@ -440,13 +451,45 @@ def photo_set_findings(photos: list["Photo"]) -> list[Finding]:
                                f"La foto {part.name} es la foto {base.name} recortada (se quitó {sides}). La foto completa "
                                f"tiene el texto «{label}», y la recortada ya no lo muestra: se recortó para que no se note "
                                "que la imagen fue generada o editada con IA.", [base.ev, part.ev], part.ts))
-        elif (copy := _copy_of_ai(base, part, f"es un recorte (se quitó {sides}) de la foto")):
+        elif key(a, b) not in differs and (copy := _copy_of_ai(base, part, f"es un recorte (se quitó {sides}) de la foto")):
             out.append(copy)
         else:
             out.append(Finding("cropped_in_claim", "media", f"Una foto es recorte de otra ({part.name})",
                                f"La foto {part.name} es la foto {base.name} recortada (se quitó {sides}). Si se presentaron "
                                "como fotos distintas, o si la parte quitada mostraba algo (una marca, una fecha, otro "
                                "vehículo), hay que preguntar por qué.", [base.ev, part.ev], part.ts))
+    # alineación punto a punto: zonas distintas entre dos versiones de la misma toma o entre dos tomas seguidas
+    for a, b, cmp in vpairs:
+        if not cmp["zones"]:
+            if cmp["kind"] == "misma_toma" and (a.digest, b.digest) not in seen and (b.digest, a.digest) not in seen:
+                if (copy := _copy_of_ai(a, b, "es la misma toma (girada, recortada o ajustada) que la foto")):
+                    out.append(copy)
+                seen.add((a.digest, b.digest))
+            continue
+        seen.add((a.digest, b.digest))
+        edited, other, mark = _which_edited(a, b)
+        known = bool(mark) or _looks_camera_original(other, edited)
+        label = edited.name if known else f"{a.name} y {b.name}"
+        where = _zones_text(cmp["zones"])
+        n = len(cmp["zones"])
+        zonas = "una zona" if n == 1 else f"{n} zonas"
+        if cmp["kind"] == "misma_toma":
+            out.append(Finding("changed_between_versions", "alta", f"Zona cambiada entre dos versiones ({label})",
+                               f"Las fotos {edited.name} y {other.name} son la misma toma, pero en {zonas} ({where}) no "
+                               "son iguales: algo se borró, se agregó o se cambió (por ejemplo con el borrador mágico o la "
+                               "edición con IA del teléfono)." + (f" {edited.name} declara uso de IA ({mark})." if mark else "")
+                               + " Use «Comparar las dos fotos» para ver la zona marcada en ambas.",
+                               [edited.ev, other.ev], edited.ts))
+        else:
+            out.append(Finding("damage_differs_between_photos", "alta" if mark else "media",
+                               f"El vehículo no se ve igual en dos fotos seguidas ({label})",
+                               f"Las fotos {a.name} y {b.name} se tomaron desde casi el mismo lugar y calzan punto a punto, "
+                               f"salvo en {zonas} ({where}), donde se ven distintas. Si es la zona del daño, una de las dos "
+                               "pudo editarse para agrandarlo, agregarlo o borrarlo." +
+                               (f" {edited.name} declara uso de IA ({mark}): es la sospechosa." if mark else
+                                " También puede ser algo que se movió entre una foto y otra (una persona, una puerta).")
+                               + " Use «Comparar las dos fotos» para ver la zona marcada en ambas.",
+                               [edited.ev, other.ev], edited.ts))
     for i, a in enumerate(ok):
         for b in ok[i + 1:]:
             if a.digest == b.digest or (a.digest, b.digest) in seen:
@@ -462,7 +505,7 @@ def photo_set_findings(photos: list["Photo"]) -> list[Finding]:
                                    f"La foto {b.name} es la foto {a.name} invertida de izquierda a derecha. Se usa para "
                                    "mostrar el mismo daño como si fuera del otro costado del vehículo.",
                                    [a.ev, b.ev], b.ts))
-            elif (copy := _copy_of_ai(a, b, "es prácticamente la misma imagen que la foto")):
+            elif key(a, b) not in differs and (copy := _copy_of_ai(a, b, "es prácticamente la misma imagen que la foto")):
                 out.append(copy)
             elif bool(a.meta.get("from_word")) != bool(b.meta.get("from_word")):
                 w, s_ = (a, b) if a.meta.get("from_word") else (b, a)
@@ -503,7 +546,7 @@ def content_version():
     mid = learned.model_id()
     return f"{CONTENT_VERSION}+{mid}" if mid else CONTENT_VERSION
 PAIRS_CACHE = "analisis_pares.json"
-PAIRS_VERSION = 1          # súbalo si cambia cómo se comparan las fotos
+PAIRS_VERSION = 2          # súbalo si cambia cómo se comparan las fotos
 
 
 def _plain(v):
@@ -560,6 +603,68 @@ def _crop_pairs(photos: list["Photo"]) -> list[tuple]:
     return out
 
 
+VIEWS_MAX_PHOTOS = 80     # con más fotos no se comparan todas contra todas (tardaría demasiado)
+
+
+def view_key(a: str, b: str) -> str:
+    return f"v:{a}:{b}"
+
+
+def _view_pairs(photos: list["Photo"]) -> list[tuple]:
+    """Pares (a, b, comparación) de fotos que muestran lo mismo, alineadas punto a punto (evidex.forensics.views):
+    la misma toma (aunque esté girada, recortada o muy editada) u otra toma desde casi el mismo lugar."""
+    from evidex.forensics import views
+    files = [p for p in photos if p.path and Path(p.path).exists() and not p.meta.get("doc_image")]
+    if len(files) < 2 or len(files) > VIEWS_MAX_PHOTOS or not views.available():
+        return []
+    path, cache = _pairs_cache(files)
+    dirty, out = False, []
+    for i, a in enumerate(files):
+        for b in files[i + 1:]:
+            if a.digest == b.digest:
+                continue
+            key = view_key(a.digest, b.digest)
+            if key in cache:
+                cmp = cache[key]
+            else:
+                marks = bool(_ai_label(a) or _ai_label(b))
+                try:
+                    cmp = views.compare(a.path, b.path, ignore_marks=marks)
+                    if cmp and not cmp["zones"] and cmp["kind"] == "misma_toma":
+                        rev = views.compare(b.path, a.path, ignore_marks=marks)     # la referencia importa
+                        if rev and rev["zones"]:
+                            cmp = {**rev, "zones": [{**z, "box": z["box_b"], "box_b": z["box"]} for z in rev["zones"]]}
+                except Exception:
+                    cmp = None
+                cache[key], dirty = cmp, True
+            if cmp:
+                out.append((a, b, cmp))
+    if dirty and path is not None:
+        try:
+            _, fresh = _pairs_cache(files)
+            fresh.update({k: v for k, v in cache.items() if k.startswith("v:")})
+            path.write_text(json.dumps({"version": PAIRS_VERSION, "pairs": fresh}, default=_plain), encoding="utf-8")
+        except (OSError, TypeError, ValueError):
+            pass
+    return out
+
+
+def _which_edited(a: "Photo", b: "Photo") -> tuple["Photo", "Photo", str]:
+    """De dos versiones, cuál parece la editada: la que declara IA, o la que no conserva los datos de la cámara."""
+    ea, eb = _ai_evidence(a), _ai_evidence(b)
+    if bool(ea) != bool(eb):
+        return (a, b, ea) if ea else (b, a, eb)
+    ca, cb = _looks_camera_original(a, b), _looks_camera_original(b, a)
+    if ca != cb:
+        return (b, a, "") if ca else (a, b, "")
+    return (b, a, "")
+
+
+def _zones_text(zones: list[dict]) -> str:
+    places = list(dict.fromkeys(z["where"] for z in zones))
+    return places[0] if len(places) == 1 else ", ".join(places[:-1]) + " y " + places[-1]
+
+
 def _ai_label(p: "Photo") -> str | None:
     """La marca visible «Contenido generado por IA» leída en la imagen."""
     return derived.ai_label(((p.meta.get("content") or {}).get("ocr") or {}).get("text") or "")
@@ -579,13 +684,35 @@ def _ai_evidence(p: "Photo") -> str | None:
     return None
 
 
+def _looks_camera_original(p: "Photo", other: "Photo") -> bool:
+    """La foto conserva los datos de la cámara (marca y exposición), no viene de WhatsApp y no es más chica que la
+    otra: es la toma original, no una copia reenviada."""
+    m = p.meta
+    fx = m.get("forensics") or {}
+    if not (m.get("make") and fx.get("exposure")) or WHATSAPP_NAME.search(p.name) or m.get("from_word"):
+        return False
+    w, h = m.get("width") or 0, m.get("height") or 0
+    ow, oh = other.meta.get("width") or 0, other.meta.get("height") or 0
+    return w * h >= 0.9 * ow * oh
+
+
 def _copy_of_ai(a: "Photo", b: "Photo", how: str) -> "Finding | None":
-    """Si una de dos fotos que son la misma toma tiene marcas de IA y la otra no, la otra es una copia que
-    perdió las marcas (WhatsApp, captura de pantalla, recorte): hereda la alerta."""
+    """Una de dos fotos que son la misma toma tiene marcas de IA y la otra no.
+
+    - Si la otra perdió los datos (WhatsApp, captura, recorte, más chica), es una copia que perdió las marcas:
+      hereda la alerta (copy_of_ai_photo).
+    - Si la otra conserva los datos de la cámara y el mismo tamaño, es la foto ORIGINAL y la marcada es su versión
+      editada con IA: la alerta va sobre la editada (ai_edit_of_original), y la original sirve para comparar."""
     ea, eb = _ai_evidence(a), _ai_evidence(b)
     if bool(ea) == bool(eb):
         return None
     src, copy, mark = (a, b, ea) if ea else (b, a, eb)
+    if _looks_camera_original(copy, src):
+        return Finding("ai_edit_of_original", "alta", f"Versión editada con IA de otra foto del caso ({src.name})",
+                       f"La foto {src.name} declara uso de inteligencia artificial ({mark}) y corresponde a la misma toma que "
+                       f"{copy.name}, que es la foto original de la cámara (conserva sus datos y no tiene marcas de IA). "
+                       "Es decir, la foto original se editó con IA y se presentaron las dos. Compare ambas: la edición pudo "
+                       "agrandar, agregar o borrar daño.", [copy.ev, src.ev], src.ts)
     return Finding("copy_of_ai_photo", "alta", f"Copia de una foto editada con IA ({copy.name})",
                    f"La foto {copy.name} {how} {src.name}, que declara uso de inteligencia artificial: {mark}. "
                    f"La copia llegó sin esas marcas (WhatsApp, redes sociales o una captura las borran), pero la "
