@@ -7,4 +7,4 @@ rapidocr==3.10.0
 # ejecuta el modelo de IA (zonas editadas); sin él, Evidex funciona sin el modelo
 onnxruntime>=1.20,<2
 # Comparar fotos entre sí (alinear dos tomas): OpenCV, licencia Apache 2.0. rapidocr ya lo trae.
-opencv-python-headless>=4.8,<5
+opencv-python-headless>=4.8
