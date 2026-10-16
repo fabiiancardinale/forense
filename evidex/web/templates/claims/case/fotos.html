@@ -12,7 +12,7 @@
 <dt>Subió</dt><dd>{{ i.who }}</dd>
 <dt>Grabado</dt><dd>{{ (v.recorded or '')|replace('T', ' ') or 'sin fecha' }}</dd>
 <dt>Teléfono</dt><dd>{{ v.phone or '—' }}</dd>
-<dt>Duración</dt><dd>{% if v.duration is not none %}{{ v.duration|round|int }} s · {{ v.size }}{% else %}—{% endif %}</dd>
+<dt>Duración</dt><dd>{% if v.duration is number %}{{ v.duration|round|int }} s · {{ v.size }}{% else %}{{ "analizando…" if video_on else "—" }}{% endif %}</dd>
 <dt>Ubicación</dt><dd>{{ 'sí (GPS)' if v.gps else 'no' }}</dd>
 {% if v.editor %}<dt>Programa</dt><dd>{{ v.editor }}</dd>{% endif %}</dl>
 {% if i.findings %}<ul class="flinks">{% for f in i.findings %}<li class="{{ f.severity }}"><details class="why"><summary>{{ f.title|replace(' (' ~ i.name ~ ')', '') }}</summary>{% include "claims/case/_explain.html" %}</details></li>{% endfor %}</ul>{% endif %}

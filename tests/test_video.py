@@ -92,6 +92,8 @@ def test_video_en_el_caso_alertas_y_comparacion(tmp_path):
         s["csrf"] = "t"
     r = _subir(c, f"/caso/{case.root.name}/video", vid, "daño.mp4")
     assert r.status_code == 200 and r.get_json()["done"], r.get_data(as_text=True)
+    (case.root / service.SNAPSHOT).write_text('{"photos": [], "docs": [], "findings": []}')   # video aún sin analizar
+    assert c.get(f"/caso/{case.root.name}?tab=fotos").status_code == 200
     service.analyze_claim(case)
     snap = service.snapshot(case)
     rules = {f["rule"] for f in snap["findings"]}
