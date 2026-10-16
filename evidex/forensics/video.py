@@ -145,7 +145,7 @@ def frames(path, out_dir: Path, duration: float, n: int = FRAMES) -> list[dict]:
         t = round(min(duration - 0.05, step * (i + 0.5)), 1)
         name = f"c{i:02d}_{int(t * 10):05d}.jpg"
         try:
-            subprocess.run(["ffmpeg", "-v", "error", "-nostdin", "-ss", f"{t:.2f}", "-i", str(path), "-frames:v", "1",
+            subprocess.run(["ffmpeg", "-v", "error", "-nostdin", "-threads", "1", "-ss", f"{t:.2f}", "-i", str(path), "-frames:v", "1",
                             "-vf", f"scale='min({FRAME_SIDE},iw)':-2", "-q:v", "3", "-y", str(out_dir / name)],
                            capture_output=True, timeout=FRAMES_TIMEOUT / max(n, 1) + 10, check=False)
         except (OSError, subprocess.TimeoutExpired):

@@ -40,7 +40,11 @@ def analyze(case, registry_path: Path | None, timeout: int = TIMEOUT) -> dict:
     try:
         out = json.loads(proc.stdout.strip().splitlines()[-1])
     except (ValueError, IndexError) as ex:
-        raise AnalysisFailed("El análisis se interrumpió (memoria o archivo dañado).") from ex
+        # queda en el registro del servidor (journalctl) para saber por qué se cortó
+        sys.stderr.write(f"[evidex] análisis interrumpido en {Path(case.root).name}: código {proc.returncode}\n"
+                         + (proc.stderr or "")[-3000:] + "\n")
+        why = {-9: "memoria o tiempo", -24: "tiempo de CPU", -11: "un lector de archivos falló", -6: "un lector de archivos falló"}
+        raise AnalysisFailed(f"El análisis se interrumpió ({why.get(proc.returncode, 'memoria o archivo dañado')}).") from ex
     if not out.get("ok"):
         raise AnalysisFailed(out.get("error") or "El análisis no pudo completarse.")
     return out["result"]

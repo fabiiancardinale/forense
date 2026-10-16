@@ -53,9 +53,15 @@ def _load(path: str) -> np.ndarray:
         return np.asarray(im)
 
 
+def _cv2():
+    import cv2
+    cv2.setNumThreads(1)          # el análisis corre con tiempo de CPU limitado: sin hilos extra
+    return cv2
+
+
 @lru_cache(maxsize=48)
 def _features(path: str, mtime: float):
-    import cv2
+    cv2 = _cv2()
     g = _load(path)
     sift = cv2.SIFT_create(nfeatures=4000)
     kp, des = sift.detectAndCompute(g, None)
@@ -84,7 +90,7 @@ def compare(path_a, path_b, ignore_marks: bool = False) -> dict | None:
     """Alinea b sobre a. Devuelve None si no muestran lo mismo; si no:
     {"kind": "misma_toma"|"otra_toma", "inliers", "ratio", "err", "cover", "noise",
      "zones": [{"box": [x0,y0,x1,y1] en a, "box_b": en b, "where", "strength", "area"}]}."""
-    import cv2
+    cv2 = _cv2()
     from evidex.forensics.derived import where
     A, pa, da = features(path_a)
     Bm, pb, db = features(path_b)
